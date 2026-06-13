@@ -1,0 +1,171 @@
+# Visual Song Book
+
+> A premium, cross-platform church hymnal management and live projection app built with Flutter.
+
+![Visual Song Book](assets/images/logo.png)
+
+---
+
+## Overview
+
+**Visual Song Book** is a desktop-first (with mobile support) application designed for church worship teams and audio-visual operators. It provides a clean, fast interface for managing a songbook database and projecting lyrics to a secondary screen — all in a single, polished app.
+
+The app uses **SQLite via Drift** as its single source of truth, with support for importing legacy Microsoft Access `.mdb` songbook files and portable `.vsbook` backup archives.
+
+---
+
+## Features
+
+### 🎵 Song Management
+- Full **CRUD** for songs: title, number, key, author, copyright, category, and lyrics body
+- Category filtering (General, Kiswahili, Uncategorized) with live search across title, number, and lyrics
+- Verse/chorus structure parser — the app understands `CHORUS` and `VERSE N` blocks
+- Auto-suggest next song number on create
+
+### 📽️ Live Projection
+- **Desktop (Windows / Linux / macOS)**: Opens a dedicated secondary window on any connected screen using `desktop_multi_window`. Operator controls stay in the main window; lyrics appear full-screen in the projection window
+- **Mobile / Tablet**: Push to `/projection` route in immersive sticky fullscreen mode (`SystemUiMode.immersiveSticky`)
+- Keyboard navigation: **Arrow keys** and **Space** to advance slides, **Escape** to clear
+- Swipe gestures on mobile: swipe left = next slide, swipe right = previous
+- **Auto-insert Chorus** mode: automatically repeats the chorus between each verse during projection
+- Adjustable font size (24–80 px) with real-time IPC sync to the projection window
+- Wakelock support to prevent the screen from sleeping during a service
+
+### 📥 Import & Export
+- **Legacy VSB / MDB import**: Reads Microsoft Access `.mdb` files via the `mdb-tools` CLI (Linux/macOS) and imports all songs and categories into SQLite
+- **`.vsbook` backup**: Platform-independent ZIP archive containing the SQLite database. Supports both export (backup) and import (restore)
+
+### 🎨 Design
+- Dark mode by default — optimised for a dim operator environment
+- Material 3 design system with a premium **Teal M3** colour scheme (`FlexColorScheme`)
+- Custom **Outfit** font for UI chrome, **Lora** for lyrics preview, **Roboto Mono** for the lyrics editor
+- Cinematic projection screen: radial gradient background, text drop-shadow and teal glow, animated slide transitions
+- Branded launcher icons and native splash screen across all platforms
+
+---
+
+## Architecture
+
+```
+lib/
+├── core/
+│   ├── providers/         # Riverpod providers (DB, importers, settings)
+│   └── utils/             # Verse parser, helpers
+├── data/
+│   ├── db/                # Drift SQLite schema & DAOs (songbook_db.dart)
+│   └── importers/         # MDB (vsb_importer.dart) & .vsbook (vsbook_importer.dart)
+├── features/
+│   ├── projection/        # ProjectionController + ProjectionOutputView
+│   ├── song_editor/       # SongEditorView (create / edit)
+│   └── song_list/         # MainDashboardPage (songs, projection controls, settings)
+├── routing/
+│   └── app_router.dart    # GoRouter config (main + projection window routes)
+└── main.dart              # App entry point, theme setup, window init
+```
+
+**State management**: `flutter_riverpod` with `riverpod_annotation` code generation  
+**Database**: `drift` (type-safe SQLite) + `drift_flutter` + `sqlite3_flutter_libs`  
+**Routing**: `go_router`  
+**Multi-window IPC**: `desktop_multi_window` via `WindowMethodChannel('projection_channel')`
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+| Tool | Notes |
+|---|---|
+| Flutter ≥ 3.32 | `flutter --version` |
+| Dart SDK ≥ 3.12 | Included with Flutter |
+| `mdb-tools` (optional) | Required for `.mdb` import on Linux/macOS — `sudo apt install mdb-tools` |
+
+### Running the app
+
+```bash
+# Get dependencies
+flutter pub get
+
+# Run on Linux desktop (recommended for full multi-window support)
+flutter run -d linux
+
+# Run on Android
+flutter run -d android
+
+# Run on Windows
+flutter run -d windows
+```
+
+### Running tests
+
+```bash
+flutter test
+```
+
+### Regenerating database code (after schema changes)
+
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
+
+### Regenerating launcher icons / splash screen
+
+```bash
+dart run flutter_launcher_icons
+dart run flutter_native_splash:create
+```
+
+---
+
+## Projection Window Architecture
+
+On **desktop**, the projection window runs as a separate Dart Isolate (spawned by `desktop_multi_window`). Standard Riverpod state does **not** automatically cross Isolate boundaries, so the app uses lightweight IPC:
+
+```
+Main window                          Projection window
+────────────────                     ─────────────────────────────
+ProjectionController (Riverpod)  →   WindowMethodChannel('projection_channel')
+  .selectSlide(index)                  → setState({ text, fontSize })
+  .setFontSize(size)
+```
+
+The projection window listens on `WindowMethodChannel` and renders whatever text+fontSize it receives, independently of the main window's Riverpod tree.
+
+---
+
+## Supported Platforms
+
+| Platform | Song CRUD | Projection (secondary window) | MDB Import |
+|---|---|---|---|
+| Linux | ✅ | ✅ Multi-window | ✅ (mdb-tools) |
+| Windows | ✅ | ✅ Multi-window | ⚠️ (requires mdb-tools port) |
+| macOS | ✅ | ✅ Multi-window | ✅ (mdb-tools via Homebrew) |
+| Android | ✅ | ✅ Fullscreen immersive | ❌ |
+| iOS | ✅ | ✅ Fullscreen immersive | ❌ |
+
+---
+
+## Changelog
+
+### v1.1.0 (2026-06-13)
+- **Branding**: AI-generated app icon (hymnal + cross + music notes, teal gradient); native splash screen with dark teal background
+- **UI Polish**: Premium card-grouped song editor, cinematic projection view with Outfit font and radial gradient, lyric preview using Lora serif, animated slide dot indicators
+- **Projection**: Swipe gestures on mobile, slide transition animations (fade + slide), teal glow on operator preview screen
+- **Navigation**: Upgraded to Material 3 `NavigationBar` on mobile, `NavigationRail` with brand logo header on desktop
+- **Global theme**: `FlexSubThemesData` with rounded inputs (r16), cards (r20), dialogs (r24)
+
+### v1.0.0 (Initial Release)
+- Drift SQLite database with Songs and Categories tables
+- Full song CRUD via `SongEditorView`
+- Verse/chorus parser with `autoInsertChorus` mode
+- Multi-window desktop projection via `desktop_multi_window` IPC
+- Mobile fullscreen projection via `SystemUiMode.immersiveSticky`
+- Legacy `.mdb` import via `mdb-tools` CLI
+- `.vsbook` portable backup (ZIP) export and restore
+- `FlexColorScheme` Teal M3 dark theme, `go_router` navigation
+
+---
+
+## License
+
+Private — not published to pub.dev.
