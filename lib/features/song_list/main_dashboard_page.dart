@@ -1060,6 +1060,7 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
   bool _isImporting = false;
   String? _importStatus;
   bool _isExporting = false;
+  bool _isDeletingArchives = false;
 
   Future<void> _importMdb() async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -1239,6 +1240,93 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
     }
   }
 
+  Future<void> _deleteArchives() async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    setState(() => _isDeletingArchives = true);
+
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        allowMultiple: true,
+      );
+
+      if (result == null || result.files.isEmpty) {
+        setState(() => _isDeletingArchives = false);
+        return;
+      }
+
+      final archives = result.files.where((f) {
+        final name = f.name.toLowerCase();
+        return name.endsWith('.vsbook') || name.endsWith('.vsb') || name.endsWith('.mdb');
+      }).toList();
+
+      if (archives.isEmpty) {
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(content: Text('No archive files (.vsbook, .vsb, .mdb) selected.')),
+        );
+        setState(() => _isDeletingArchives = false);
+        return;
+      }
+
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Delete Archives'),
+          content: Text(
+            'Delete ${archives.length} archive file(s) from disk?\n\n'
+            '${archives.map((f) => '  • ${f.name}').join('\n')}\n\n'
+            'This only removes the files on disk. Songs already imported into the database will not be affected.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) {
+        setState(() => _isDeletingArchives = false);
+        return;
+      }
+      if (!mounted) return;
+
+      int deleted = 0;
+      int failed = 0;
+      for (final file in archives) {
+        try {
+          final diskFile = File(file.path!);
+          if (await diskFile.exists()) {
+            await diskFile.delete();
+            deleted++;
+          }
+        } catch (_) {
+          failed++;
+        }
+      }
+
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Deleted $deleted archive file(s) from disk.'
+              '${failed > 0 ? " $failed failed to delete." : ""}'),
+        ),
+      );
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Failed to delete archives: $e')),
+      );
+    } finally {
+      setState(() => _isDeletingArchives = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final projectionState = ref.watch(projectionControllerProvider);
@@ -1309,6 +1397,48 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
                             label: const Text('Export .vsbook Backup'),
                           ),
                         ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Manage Archives
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.archive_outlined, size: 28),
+                          SizedBox(width: 12),
+                          Text('Manage Archives',
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Delete exported .vsbook backups or imported .vsb/.mdb source files from disk. Songs already in the database are not affected.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _isDeletingArchives ? null : _deleteArchives,
+                        icon: _isDeletingArchives
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.delete_outline),
+                        label: Text(_isDeletingArchives
+                            ? 'Selecting files...'
+                            : 'Delete Archive Files'),
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                        ),
                       ),
                     ],
                   ),
