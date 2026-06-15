@@ -4,6 +4,40 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final Color iconBackground;
+  final Color iconColor;
+  final String title;
+
+  const _SectionHeader({
+    required this.icon,
+    required this.iconBackground,
+    required this.iconColor,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: iconBackground,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: iconColor, size: 22),
+        ),
+        const SizedBox(width: 14),
+        Text(title,
+            style: const TextStyle(
+                fontSize: 18, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+}
+
 class ImportExportCard extends StatelessWidget {
   final bool isImporting;
   final String? importStatus;
@@ -24,58 +58,60 @@ class ImportExportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Card(
+      elevation: 0,
+      color: theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
-              children: [
-                Icon(Icons.import_export, size: 28),
-                SizedBox(width: 12),
-                Text('Database Import & Export',
-                    style: TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold)),
-              ],
+            _SectionHeader(
+              icon: Icons.import_export,
+              iconBackground: theme.colorScheme.primaryContainer,
+              iconColor: theme.colorScheme.onPrimaryContainer,
+              title: 'Import & Export',
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Visual Song Book can import legacy VSB or Microsoft Access MDB files directly, as well as restore portable .vsbook backups.',
-              style: TextStyle(color: Colors.grey),
+            Text(
+              'Import legacy VSB or MDB files, or restore .vsbook backups.',
+              style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
             ),
-            const SizedBox(height: 16),
             if (isImporting) ...[
+              const SizedBox(height: 20),
               Row(
                 children: [
                   const SizedBox(
-                      width: 20,
-                      height: 20,
+                      width: 18, height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2)),
                   const SizedBox(width: 12),
-                  Text(importStatus ?? 'Processing...'),
+                  Text(importStatus ?? 'Processing...',
+                      style: TextStyle(color: theme.colorScheme.primary)),
                 ],
               ),
-              const SizedBox(height: 16),
             ],
+            const SizedBox(height: 20),
             Wrap(
-              spacing: 12,
-              runSpacing: 12,
+              spacing: 10,
+              runSpacing: 10,
               children: [
-                ElevatedButton.icon(
+                _ActionButton(
                   onPressed: isImporting ? null : onImportMdb,
-                  icon: const Icon(Icons.folder_open),
-                  label: const Text('Import VSB / MDB File'),
+                  icon: Icons.folder_open,
+                  label: 'Import VSB / MDB',
                 ),
-                ElevatedButton.icon(
+                _ActionButton(
                   onPressed: isImporting ? null : onImportVsBook,
-                  icon: const Icon(Icons.settings_backup_restore),
-                  label: const Text('Restore .vsbook Backup'),
+                  icon: Icons.settings_backup_restore,
+                  label: 'Restore .vsbook',
                 ),
-                ElevatedButton.icon(
+                _ActionButton(
                   onPressed: isExporting || isImporting ? null : onExportVsBook,
-                  icon: const Icon(Icons.cloud_upload),
-                  label: const Text('Export .vsbook Backup'),
+                  icon: Icons.cloud_upload,
+                  label: 'Export .vsbook',
+                  outlined: true,
                 ),
               ],
             ),
@@ -86,91 +122,70 @@ class ImportExportCard extends StatelessWidget {
   }
 }
 
-class ManageArchivesCard extends StatelessWidget {
-  final bool isDeletingArchives;
-  final VoidCallback onDeleteArchives;
-
-  const ManageArchivesCard({
-    super.key,
-    required this.isDeletingArchives,
-    required this.onDeleteArchives,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.archive_outlined, size: 28),
-                SizedBox(width: 12),
-                Text('Manage Archives',
-                    style: TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Delete exported .vsbook backups or imported .vsb/.mdb source files from disk. Songs already in the database are not affected.',
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: isDeletingArchives ? null : onDeleteArchives,
-              icon: isDeletingArchives
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.delete_outline),
-              label: Text(isDeletingArchives
-                  ? 'Selecting files...'
-                  : 'Delete Archive Files'),
-              style: ElevatedButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class ScreenPreferencesCard extends ConsumerWidget {
-  const ScreenPreferencesCard({super.key});
+class ProjectionPreferencesCard extends ConsumerWidget {
+  const ProjectionPreferencesCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final projectionState = ref.watch(projectionControllerProvider);
-    final projectionNotifier = ref.read(projectionControllerProvider.notifier);
+    final theme = Theme.of(context);
+    final state = ref.watch(projectionControllerProvider);
+    final notifier = ref.read(projectionControllerProvider.notifier);
 
     return Card(
+      elevation: 0,
+      color: theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
-              children: [
-                Icon(Icons.video_settings, size: 28),
-                SizedBox(width: 12),
-                Text('Screen Preferences',
-                    style: TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold)),
-              ],
+            _SectionHeader(
+              icon: Icons.video_settings,
+              iconBackground: theme.colorScheme.secondaryContainer,
+              iconColor: theme.colorScheme.onSecondaryContainer,
+              title: 'Projection Preferences',
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             SwitchListTile(
-              title: const Text('Prevent Screen Sleep (Wakelock)'),
-              subtitle: const Text(
-                  'Keeps the screen awake during projection operator view'),
-              value: projectionState.keepAwake,
-              onChanged: projectionNotifier.setKeepAwake,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Prevent Screen Sleep',
+                  style: TextStyle(fontWeight: FontWeight.w500)),
+              subtitle: const Text('Keeps the display awake'),
+              value: state.keepAwake,
+              onChanged: notifier.setKeepAwake,
+            ),
+            const Divider(height: 32),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Auto-insert Chorus',
+                  style: TextStyle(fontWeight: FontWeight.w500)),
+              subtitle: const Text('Repeat chorus between verses'),
+              value: state.autoInsertChorus,
+              onChanged: notifier.setAutoInsertChorus,
+            ),
+            const Divider(height: 32),
+            const Text('Font Size', style: TextStyle(fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.format_size, size: 20, color: Colors.grey),
+                Expanded(
+                  child: Slider(
+                    value: state.fontSize,
+                    min: 16,
+                    max: 96,
+                    divisions: 16,
+                    label: '${state.fontSize.round()}pt',
+                    onChanged: notifier.setFontSize,
+                  ),
+                ),
+                SizedBox(
+                  width: 40,
+                  child: Text('${state.fontSize.round()}pt',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
             ),
           ],
         ),
@@ -184,32 +199,88 @@ class AboutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Card(
+      elevation: 0,
+      color: theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
-              children: [
-                Icon(Icons.info_outline, size: 28),
-                SizedBox(width: 12),
-                Text('About & Diagnostics',
-                    style: TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'This application treats SQLite (via Drift) as its source of truth. When importing legacy MDB songbooks, it converts and structures them into the SQLite database. Backups (.vsbook) are platform-independent ZIP files containing the SQLite database and metadata.',
+            _SectionHeader(
+              icon: Icons.info_outline,
+              iconBackground: theme.colorScheme.tertiaryContainer,
+              iconColor: theme.colorScheme.onTertiaryContainer,
+              title: 'About',
             ),
             const SizedBox(height: 16),
-            Text('System Platform: ${kIsWeb ? "Web Browser" : Platform.operatingSystem.toUpperCase()}'),
-            const SizedBox(height: 8),
-            const Text('MDB CLI Helper: mdb-tools (detected)'),
+            _InfoRow(
+              label: 'Platform',
+              value: kIsWeb ? 'Web' : Platform.operatingSystem.toUpperCase(),
+            ),
+            const SizedBox(height: 6),
+            const _InfoRow(label: 'MDB Support', value: 'mdb-tools helper'),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+  final IconData icon;
+  final String label;
+  final bool outlined;
+
+  const _ActionButton({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+    this.outlined = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (outlined) {
+      return OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _InfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text('$label: ',
+            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+        Text(value, style: const TextStyle(fontSize: 13)),
+      ],
     );
   }
 }

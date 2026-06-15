@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,7 +18,6 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   bool _isImporting = false;
   String? _importStatus;
   bool _isExporting = false;
-  bool _isDeletingArchives = false;
 
   Future<void> _importMdb() async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -195,93 +193,6 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     }
   }
 
-  Future<void> _deleteArchives() async {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    setState(() => _isDeletingArchives = true);
-
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
-        allowMultiple: true,
-      );
-
-      if (result == null || result.files.isEmpty) {
-        setState(() => _isDeletingArchives = false);
-        return;
-      }
-
-      final archives = result.files.where((f) {
-        final name = f.name.toLowerCase();
-        return name.endsWith('.vsbook') || name.endsWith('.vsb') || name.endsWith('.mdb');
-      }).toList();
-
-      if (archives.isEmpty) {
-        scaffoldMessenger.showSnackBar(
-          const SnackBar(content: Text('No archive files (.vsbook, .vsb, .mdb) selected.')),
-        );
-        setState(() => _isDeletingArchives = false);
-        return;
-      }
-
-      if (!mounted) return;
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Delete Archives'),
-          content: Text(
-            'Delete ${archives.length} archive file(s) from disk?\n\n'
-            '${archives.map((f) => '  • ${f.name}').join('\n')}\n\n'
-            'This only removes the files on disk. Songs already imported into the database will not be affected.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        ),
-      );
-
-      if (confirmed != true) {
-        setState(() => _isDeletingArchives = false);
-        return;
-      }
-      if (!mounted) return;
-
-      int deleted = 0;
-      int failed = 0;
-      for (final file in archives) {
-        try {
-          final diskFile = File(file.path!);
-          if (await diskFile.exists()) {
-            await diskFile.delete();
-            deleted++;
-          }
-        } catch (_) {
-          failed++;
-        }
-      }
-
-      if (!mounted) return;
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text('Deleted $deleted archive file(s) from disk.'
-              '${failed > 0 ? " $failed failed to delete." : ""}'),
-        ),
-      );
-    } catch (e) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Failed to delete archives: $e')),
-      );
-    } finally {
-      setState(() => _isDeletingArchives = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -290,7 +201,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
         child: Container(
           constraints: const BoxConstraints(maxWidth: 800),
           child: ListView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24),
             children: [
               ImportExportCard(
                 isImporting: _isImporting,
@@ -300,14 +211,9 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                 onImportVsBook: _importVsBook,
                 onExportVsBook: _exportVsBook,
               ),
-              const SizedBox(height: 16),
-              ManageArchivesCard(
-                isDeletingArchives: _isDeletingArchives,
-                onDeleteArchives: _deleteArchives,
-              ),
-              const SizedBox(height: 16),
-              const ScreenPreferencesCard(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
+              const ProjectionPreferencesCard(),
+              const SizedBox(height: 20),
               const AboutCard(),
             ],
           ),
