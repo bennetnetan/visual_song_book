@@ -191,10 +191,18 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     state = state.copyWith(isSecondaryWindowOpen: isOpen);
   }
 
+  /// Manually triggers synchronization of the current slide to the secondary window.
+  void syncCurrentSlide() {
+    _syncSecondaryWindow();
+  }
+
   void _syncSecondaryWindow() {
     if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       final slide = state.currentSlide;
-      const channel = WindowMethodChannel('projection_channel');
+      const channel = WindowMethodChannel(
+        'projection_channel',
+        mode: ChannelMode.unidirectional,
+      );
       channel.invokeMethod('update_slide', {
         'text': slide?.text ?? '',
         'fontSize': state.fontSize,

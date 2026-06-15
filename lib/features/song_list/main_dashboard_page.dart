@@ -280,11 +280,14 @@ class _SongsTab extends ConsumerWidget {
                     // Dynamic category chips from DB
                     ...listState.categories.expand((cat) => [
                       const SizedBox(width: 8),
-                      _buildCategoryChip(
-                        context,
-                        label: cat.name,
-                        selected: listState.selectedCategoryId == cat.id,
-                        onSelected: () => listNotifier.selectCategory(cat.id),
+                      GestureDetector(
+                        onLongPress: () => _confirmDeleteCategory(context, ref, cat),
+                        child: _buildCategoryChip(
+                          context,
+                          label: cat.name,
+                          selected: listState.selectedCategoryId == cat.id,
+                          onSelected: () => listNotifier.selectCategory(cat.id),
+                        ),
                       ),
                     ]),
                     const SizedBox(width: 8),
@@ -692,6 +695,34 @@ class _SongsTab extends ConsumerWidget {
       ),
     );
   }
+
+  void _confirmDeleteCategory(BuildContext context, WidgetRef ref, Category cat) async {
+    final songCount = await ref.read(songRepositoryProvider).getSongCountByCategory(cat.id);
+    if (!context.mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Collection'),
+        content: Text(
+          'Are you sure you want to delete "$cat.name" and all $songCount song(s) in it?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await ref.read(songListControllerProvider.notifier).deleteCategory(cat.id);
+              ref.read(selectedSongIdProvider.notifier).state = null;
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ================= PROJECTION TAB =================
@@ -723,6 +754,10 @@ class _ProjectionTab extends ConsumerWidget {
                   ),
                 );
                 await window.show();
+                // Give the sub-window engine a moment to spin up and bind IPC handlers, then push the current slide state
+                Future.delayed(const Duration(milliseconds: 600), () {
+                  ref.read(projectionControllerProvider.notifier).syncCurrentSlide();
+                });
               } else {
                 // On mobile
                 context.push('/projection');
@@ -1062,10 +1097,26 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
 
       final importResult = await activeImporter.import(source);
       if (importResult.success) {
+        final buffer = StringBuffer()
+          ..write('Imported ${importResult.songsImported} songs, ${importResult.categoriesImported} categories.');
+        if (importResult.songsAdded > 0) {
+          buffer.write(' ${importResult.songsAdded} new,');
+        }
+        if (importResult.songsAlreadyExisted > 0) {
+          buffer.write(' ${importResult.songsAlreadyExisted} already existed,');
+        }
+        if (importResult.newSongTitles.length <= 5) {
+          for (final title in importResult.newSongTitles) {
+            buffer.write('\n  • $title');
+          }
+        } else if (importResult.newSongTitles.isNotEmpty) {
+          buffer.write('\n  ${importResult.newSongTitles.length} new songs added');
+        }
         scaffoldMessenger.showSnackBar(
           SnackBar(
-              content: Text(
-                  'Imported successfully! ${importResult.songsImported} songs, ${importResult.categoriesImported} categories.')),
+            content: Text(buffer.toString()),
+            duration: const Duration(seconds: 8),
+          ),
         );
         ref.read(songListControllerProvider.notifier).fetchSongs(); // Re-trigger load
       } else {
@@ -1115,10 +1166,26 @@ class _SettingsTabState extends ConsumerState<_SettingsTab> {
 
       final importResult = await activeImporter.import(source);
       if (importResult.success) {
+        final buffer = StringBuffer()
+          ..write('Restored ${importResult.songsImported} songs, ${importResult.categoriesImported} categories.');
+        if (importResult.songsAdded > 0) {
+          buffer.write(' ${importResult.songsAdded} new,');
+        }
+        if (importResult.songsAlreadyExisted > 0) {
+          buffer.write(' ${importResult.songsAlreadyExisted} already existed,');
+        }
+        if (importResult.newSongTitles.length <= 5) {
+          for (final title in importResult.newSongTitles) {
+            buffer.write('\n  • $title');
+          }
+        } else if (importResult.newSongTitles.isNotEmpty) {
+          buffer.write('\n  ${importResult.newSongTitles.length} new songs added');
+        }
         scaffoldMessenger.showSnackBar(
           SnackBar(
-              content: Text(
-                  'Restored successfully! ${importResult.songsImported} songs, ${importResult.categoriesImported} categories.')),
+            content: Text(buffer.toString()),
+            duration: const Duration(seconds: 8),
+          ),
         );
         ref.read(songListControllerProvider.notifier).fetchSongs(); // Re-trigger load
       } else {

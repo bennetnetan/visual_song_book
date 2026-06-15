@@ -6,6 +6,7 @@
 #endif
 
 #include "flutter/generated_plugin_registrant.h"
+#include <desktop_multi_window/desktop_multi_window_plugin.h>
 
 struct _MyApplication {
   GtkApplication parent_instance;
@@ -13,6 +14,10 @@ struct _MyApplication {
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
+
+static void on_window_created(FlPluginRegistry* registry) {
+  fl_register_plugins(registry);
+}
 
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication* self, FlView* view) {
@@ -74,6 +79,9 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_realize(GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+
+  // Register multi-window callback immediately after plugin registration
+  desktop_multi_window_plugin_set_window_created_callback(on_window_created);
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }

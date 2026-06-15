@@ -11,6 +11,9 @@ void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (args.isNotEmpty && args.first == 'multi_window') {
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      await windowManager.ensureInitialized();
+    }
     runApp(
       const ProviderScope(
         child: MyApp(isProjectionWindow: true),

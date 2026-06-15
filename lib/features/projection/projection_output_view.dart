@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 
 class ProjectionOutputView extends ConsumerStatefulWidget {
@@ -16,11 +17,12 @@ class ProjectionOutputView extends ConsumerStatefulWidget {
 }
 
 class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WindowListener {
   String _ipcText = '';
   double _ipcFontSize = 40.0;
   bool _isSecondaryWindow = false;
   late AnimationController _fadeController;
+  bool _isClosing = false;
 
   @override
   void initState() {
@@ -40,11 +42,18 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     if (!kIsWeb &&
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       _setupSecondaryWindowChannel();
+      windowManager.addListener(this);
+      if (Platform.isLinux) {
+        windowManager.setPreventClose(true);
+      }
     }
   }
 
   void _setupSecondaryWindowChannel() {
-    const channel = WindowMethodChannel('projection_channel');
+    const channel = WindowMethodChannel(
+      'projection_channel',
+      mode: ChannelMode.unidirectional,
+    );
     channel.setMethodCallHandler((call) async {
       if (call.method == 'update_slide') {
         if (!mounted) return null;
@@ -60,10 +69,45 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
   }
 
   @override
+  void onWindowClose() async {
+    if (Platform.isLinux) {
+      await _handleManualClose();
+    } else {
+      await windowManager.close();
+    }
+  }
+
+  Future<void> _handleManualClose() async {
+    if (_isClosing) return;
+    _isClosing = true;
+
+    try {
+      await windowManager.hide();
+    } catch (_) {}
+
+    try {
+      windowManager.removeListener(this);
+    } catch (_) {}
+
+    // Wait for the graphics pipeline/engine to finish pending render calls before close
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    try {
+      await windowManager.close();
+    } catch (e) {
+      debugPrint('Error during manual close on Linux: $e');
+    }
+  }
+
+  @override
   void dispose() {
     _fadeController.dispose();
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+    if (!kIsWeb &&
+        (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      windowManager.removeListener(this);
     }
     super.dispose();
   }
