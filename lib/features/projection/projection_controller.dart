@@ -196,19 +196,37 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     _syncSecondaryWindow();
   }
 
-  void _syncSecondaryWindow() {
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-      final slide = state.currentSlide;
-      const channel = WindowMethodChannel(
-        'projection_channel',
-        mode: ChannelMode.unidirectional,
-      );
-      channel.invokeMethod('update_slide', {
-        'text': slide?.text ?? '',
-        'fontSize': state.fontSize,
-      }).catchError((e) {
-        // Ignore unregistered channel error when secondary window is not open/ready
-      });
+  void _syncSecondaryWindow() async {
+    if (kIsWeb) return;
+    if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return;
+
+    final slide = state.currentSlide;
+    final text = slide?.text ?? '';
+    final fontSize = state.fontSize;
+
+    debugPrint('Broadcasting slide update: "$text" (Size: $fontSize)');
+
+    try {
+      // Get all open windows
+      final controllers = await WindowController.getAll();
+      final currentWindow = await WindowController.fromCurrentEngine();
+      
+      // We want to send to all OTHER windows.
+      for (final controller in controllers) {
+        if (controller.windowId == currentWindow.windowId) continue; 
+        
+        debugPrint('Sending update to window ID: ${controller.windowId}');
+        await controller.invokeMethod('update_slide', {
+          'text': text,
+          'fontSize': fontSize,
+        }).then((result) {
+          debugPrint('Update successful for window ${controller.windowId}: $result');
+        }).catchError((e) {
+          debugPrint('Update failed for window ${controller.windowId}: $e');
+        });
+      }
+    } catch (e) {
+      debugPrint('Error during secondary window sync: $e');
     }
   }
 }

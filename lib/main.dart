@@ -4,13 +4,14 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/routing/app_router.dart';
 import 'package:window_manager/window_manager.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (args.isNotEmpty && args.first == 'multi_window') {
+  if (args.isNotEmpty && (args.first == 'multi_window' || args.first == 'Projection Output')) {
     if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       await windowManager.ensureInitialized();
     }
@@ -44,13 +45,14 @@ void main(List<String> args) async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   final bool isProjectionWindow;
 
   const MyApp({super.key, this.isProjectionWindow = false});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
     return MaterialApp.router(
       title: 'Visual Song Book',
       debugShowCheckedModeBanner: false,
@@ -80,7 +82,7 @@ class MyApp extends StatelessWidget {
           navigationRailUseIndicator: true,
         ),
       ),
-      themeMode: ThemeMode.dark, // Default to dark mode for church operator environments
+      themeMode: themeMode,
 
       // Routing
       routerConfig: isProjectionWindow ? projectionRouter : appRouter,

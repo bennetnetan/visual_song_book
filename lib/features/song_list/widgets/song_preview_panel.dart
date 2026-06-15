@@ -76,7 +76,7 @@ class SongPreviewPanel extends ConsumerWidget {
                   .read(projectionControllerProvider.notifier)
                   .setSong(song);
               ref.read(activeDashboardTabProvider.notifier).state =
-                  1;
+                  4;
             },
             icon: const Icon(Icons.tv),
             label: const Text('Send to Projector'),

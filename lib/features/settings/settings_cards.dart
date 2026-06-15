@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 
 class _SectionHeader extends StatelessWidget {
@@ -186,6 +187,62 @@ class ProjectionPreferencesCard extends ConsumerWidget {
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AppearanceCard extends ConsumerWidget {
+  const AppearanceCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final themeMode = ref.watch(themeModeProvider);
+    final notifier = ref.read(themeModeProvider.notifier);
+
+    return Card(
+      elevation: 0,
+      color: theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SectionHeader(
+              icon: Icons.palette_outlined,
+              iconBackground: theme.colorScheme.secondaryContainer,
+              iconColor: theme.colorScheme.onSecondaryContainer,
+              title: 'Appearance',
+            ),
+            const SizedBox(height: 20),
+            SegmentedButton<ThemeMode>(
+              segments: const [
+                ButtonSegment(
+                  value: ThemeMode.light,
+                  icon: Icon(Icons.light_mode),
+                  label: Text('Light'),
+                ),
+                ButtonSegment(
+                  value: ThemeMode.dark,
+                  icon: Icon(Icons.dark_mode),
+                  label: Text('Dark'),
+                ),
+                ButtonSegment(
+                  value: ThemeMode.system,
+                  icon: Icon(Icons.settings),
+                  label: Text('System'),
+                ),
+              ],
+              selected: {themeMode},
+              onSelectionChanged: (selected) {
+                notifier.setThemeMode(selected.first);
+              },
+              showSelectedIcon: false,
             ),
           ],
         ),

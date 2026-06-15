@@ -263,6 +263,8 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
                   fieldDecoration: _fieldDecoration,
                 ),
                 const SizedBox(height: 16),
+                LivePreviewCard(lyrics: _bodyController.text),
+                const SizedBox(height: 16),
                 LyricsCard(
                   charCount: lyricsCharCount,
                   bodyController: _bodyController,

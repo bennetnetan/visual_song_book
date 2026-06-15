@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -212,12 +213,104 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                 onExportVsBook: _exportVsBook,
               ),
               const SizedBox(height: 20),
+              _DataSourcesCard(),
+              const SizedBox(height: 20),
               const ProjectionPreferencesCard(),
+              const SizedBox(height: 20),
+              const AppearanceCard(),
               const SizedBox(height: 20),
               const AboutCard(),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DataSourcesCard extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final repo = ref.watch(songRepositoryProvider);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.source_outlined, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Manage Data Sources',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'View and manage songs based on their import source. This is useful for removing old collections before pushing updates.',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            FutureBuilder<List<String>>(
+              future: repo.getDistinctSourcePaths(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final sources = snapshot.data ?? [];
+                if (sources.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text('No external sources found.', style: TextStyle(fontStyle: FontStyle.italic)),
+                  );
+                }
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: sources.length,
+                  separatorBuilder: (_, __) => const Divider(),
+                  itemBuilder: (context, index) {
+                    final source = sources[index];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(source.split(Platform.pathSeparator).last, style: const TextStyle(fontSize: 14)),
+                      subtitle: Text(source, style: const TextStyle(fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                        onPressed: () => _confirmDeleteSource(context, ref, source),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteSource(BuildContext context, WidgetRef ref, String sourcePath) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Collection'),
+        content: Text('Are you sure you want to delete all songs imported from:\n\n$sourcePath?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await ref.read(songRepositoryProvider).deleteSongsBySource(sourcePath);
+              ref.read(songListControllerProvider.notifier).fetchSongs();
+            },
+            child: const Text('Delete All', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }

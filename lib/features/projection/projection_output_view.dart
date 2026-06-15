@@ -49,20 +49,19 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     }
   }
 
-  void _setupSecondaryWindowChannel() {
-    const channel = WindowMethodChannel(
-      'projection_channel',
-      mode: ChannelMode.unidirectional,
-    );
-    channel.setMethodCallHandler((call) async {
+  void _setupSecondaryWindowChannel() async {
+    final controller = await WindowController.fromCurrentEngine();
+    controller.setWindowMethodHandler((call) async {
+      debugPrint('Received IPC method call: ${call.method}');
+      
       if (call.method == 'update_slide') {
         if (!mounted) return null;
         setState(() {
           _isSecondaryWindow = true;
           _ipcText = call.arguments['text'] ?? '';
-          _ipcFontSize =
-              (call.arguments['fontSize'] as num?)?.toDouble() ?? 40.0;
+          _ipcFontSize = (call.arguments['fontSize'] as num?)?.toDouble() ?? 40.0;
         });
+        debugPrint('Updated secondary window text: "$_ipcText"');
       }
       return 'OK';
     });

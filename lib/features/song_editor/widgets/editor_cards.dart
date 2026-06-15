@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:visual_song_book/core/utils/verse_parser.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/features/song_editor/widgets/section_card.dart';
 
@@ -240,6 +241,88 @@ class LyricsCard extends StatelessWidget {
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+class LivePreviewCard extends StatelessWidget {
+  final String lyrics;
+
+  const LivePreviewCard({super.key, required this.lyrics});
+
+  @override
+  Widget build(BuildContext context) {
+    final parsedVerses = VerseParser.parse(lyrics);
+    final slides = VerseParser.buildSlideSequence(parsedVerses);
+
+    return SectionCard(
+      icon: Icons.preview_rounded,
+      title: 'Projection Preview',
+      children: [
+        if (slides.isEmpty)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Text('Type some lyrics to see a preview.', style: TextStyle(color: Colors.grey)),
+            ),
+          )
+        else
+          SizedBox(
+            height: 200,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: slides.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final slide = slides[index];
+                return AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white24,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              slide.label,
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Expanded(
+                            child: Center(
+                              child: Text(
+                                slide.text,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.outfit(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
       ],
     );
   }

@@ -103,6 +103,24 @@ class SongRepository {
     });
   }
 
+  // === Source Management ===
+
+  /// Fetches distinct source paths from the songs table
+  Future<List<String>> getDistinctSourcePaths() async {
+    final query = db.selectOnly(db.songs, distinct: true)..addColumns([db.songs.sourcePath]);
+    final result = await query.get();
+    return result
+        .map((row) => row.read(db.songs.sourcePath))
+        .where((path) => path != null)
+        .cast<String>()
+        .toList();
+  }
+
+  /// Deletes all songs associated with a specific source path
+  Future<int> deleteSongsBySource(String sourcePath) {
+    return (db.delete(db.songs)..where((t) => t.sourcePath.equals(sourcePath))).go();
+  }
+
   // === History ===
 
   /// Adds a song to the history. Keeps only the last 50 accessed items.

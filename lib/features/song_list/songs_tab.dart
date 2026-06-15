@@ -55,231 +55,221 @@ class SongsTab extends ConsumerWidget {
         ? listState.songs.where((s) => s.id == selectedSongId).firstOrNull
         : null;
 
-    return Row(
-      children: [
-        Expanded(
-          flex: 3,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
-                child: TextField(
-                  onChanged: listNotifier.setQuery,
-                  decoration: InputDecoration(
-                    hintText: 'Search title, number, or lyrics...',
-                    hintStyle: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                    ),
-                    prefixIcon: Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
-                    suffixIcon: listState.query.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () => listNotifier.setQuery(''),
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(28),
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(28),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
-                        width: 1,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(28),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.primary,
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: Row(
-                  children: [
-                    _buildCategoryChip(
-                      context,
-                      label: 'All',
-                      selected: listState.selectedCategoryId == null && !listState.showUncategorizedOnly,
-                      onSelected: () => listNotifier.selectCategory(null),
-                    ),
-                    ...listState.categories.expand((cat) => [
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onLongPress: () => _confirmDeleteCategory(context, ref, cat),
-                        child: _buildCategoryChip(
-                          context,
-                          label: cat.name,
-                          selected: listState.selectedCategoryId == cat.id,
-                          onSelected: () => listNotifier.selectCategory(cat.id),
+    return Scaffold(
+      floatingActionButton: (!isLargeScreen && selectedSong != null)
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                ref.read(projectionControllerProvider.notifier).setSong(selectedSong);
+                ref.read(activeDashboardTabProvider.notifier).state = 4;
+              },
+              icon: const Icon(Icons.tv),
+              label: const Text('Project Now'),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+            )
+          : null,
+      body: Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          onChanged: listNotifier.setQuery,
+                          decoration: InputDecoration(
+                            hintText: 'Search title, number, or lyrics...',
+                            hintStyle: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                            ),
+                            prefixIcon: Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
+                            suffixIcon: listState.query.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () => listNotifier.setQuery(''),
+                                  )
+                                : null,
+                            filled: true,
+                            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(28),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(28),
+                              borderSide: BorderSide(
+                                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+                                width: 1,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(28),
+                              borderSide: BorderSide(
+                                color: Theme.of(context).colorScheme.primary,
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ]),
-                    const SizedBox(width: 8),
-                    _buildCategoryChip(
-                      context,
-                      label: 'Uncategorized',
-                      selected: listState.showUncategorizedOnly,
-                      onSelected: () => listNotifier.selectCategory(null, uncategorizedOnly: true),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: listState.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : listState.songs.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                      const SizedBox(width: 8),
+                      PopupMenuButton<SongSortMode>(
+                        icon: const Icon(Icons.sort),
+                        tooltip: 'Sort By',
+                        onSelected: listNotifier.setSortMode,
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: SongSortMode.byNumber,
+                            child: Row(
                               children: [
-                                Icon(Icons.library_books_outlined,
-                                    size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'No songs found.',
-                                  style: TextStyle(
-                                      fontSize: 18, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
-                                ),
-                                const SizedBox(height: 16),
-                                ElevatedButton.icon(
-                                  onPressed: () => context.push('/song-editor'),
-                                  icon: const Icon(Icons.add),
-                                  label: const Text('Add Song Manually'),
-                                ),
+                                Icon(Icons.format_list_numbered),
+                                SizedBox(width: 8),
+                                Text('Number'),
                               ],
                             ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.only(bottom: 24),
-                            itemCount: listState.songs.length,
-                            itemBuilder: (context, index) {
-                              final song = listState.songs[index];
-                              final isSelected = song.id == selectedSongId;
-                              return SongListItem(
-                                song: song,
-                                isSelected: isSelected,
-                                onTap: () {
-                                  ref.read(selectedSongIdProvider.notifier).state = song.id;
-                                  if (!isLargeScreen) {
-                                    _showSongOptionsBottomSheet(context, ref, song);
-                                  }
-                                },
-                              );
-                            },
                           ),
-              ),
-            ],
-          ),
-        ),
-        if (isLargeScreen) ...[
-          const VerticalDivider(width: 1, thickness: 1),
-          Expanded(
-            flex: 4,
-            child: selectedSong != null
-                ? SongPreviewPanel(song: selectedSong)
-                : Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.library_music_outlined,
-                          size: 72,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Select a song to preview',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                          const PopupMenuItem(
+                            value: SongSortMode.byTitle,
+                            child: Row(
+                              children: [
+                                Icon(Icons.sort_by_alpha),
+                                SizedBox(width: 8),
+                                Text('Alphabetical'),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                          const PopupMenuItem(
+                            value: SongSortMode.byKey,
+                            child: Row(
+                              children: [
+                                Icon(Icons.music_note),
+                                SizedBox(width: 8),
+                                Text('By Key'),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
+                ),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Row(
+                    children: [
+                      _buildCategoryChip(
+                        context,
+                        label: 'All',
+                        selected: listState.selectedCategoryId == null && !listState.showUncategorizedOnly,
+                        onSelected: () => listNotifier.selectCategory(null),
+                      ),
+                      ...listState.categories.expand((cat) => [
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onLongPress: () => _confirmDeleteCategory(context, ref, cat),
+                          child: _buildCategoryChip(
+                            context,
+                            label: cat.name,
+                            selected: listState.selectedCategoryId == cat.id,
+                            onSelected: () => listNotifier.selectCategory(cat.id),
+                          ),
+                        ),
+                      ]),
+                      const SizedBox(width: 8),
+                      _buildCategoryChip(
+                        context,
+                        label: 'Uncategorized',
+                        selected: listState.showUncategorizedOnly,
+                        onSelected: () => listNotifier.selectCategory(null, uncategorizedOnly: true),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: listState.isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : listState.songs.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.library_books_outlined,
+                                      size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No songs found.',
+                                    style: TextStyle(
+                                        fontSize: 18, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton.icon(
+                                    onPressed: () => context.push('/song-editor'),
+                                    icon: const Icon(Icons.add),
+                                    label: const Text('Add Song Manually'),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: EdgeInsets.only(
+                                bottom: !isLargeScreen && selectedSongId != null ? 88 : 24,
+                              ),
+                              itemCount: listState.songs.length,
+                              itemBuilder: (context, index) {
+                                final song = listState.songs[index];
+                                final isSelected = song.id == selectedSongId;
+                                return SongListItem(
+                                  song: song,
+                                  isSelected: isSelected,
+                                  onTap: () {
+                                    ref.read(selectedSongIdProvider.notifier).state = song.id;
+                                  },
+                                  onDoubleTap: () {
+                                    ref.read(projectionControllerProvider.notifier).setSong(song);
+                                    ref.read(activeDashboardTabProvider.notifier).state = 4;
+                                  },
+                                );
+                              },
+                            ),
+                ),
+              ],
+            ),
           ),
-        ],
-      ],
-    );
-  }
-
-  void _showSongOptionsBottomSheet(BuildContext context, WidgetRef ref, Song song) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: Text('${song.songNum}. ${song.title}',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(song.author ?? 'Unknown Author'),
-              ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(Icons.tv),
-                title: const Text('Send to Projector'),
-                onTap: () {
-                  ref.read(projectionControllerProvider.notifier).setSong(song);
-                  ref.read(activeDashboardTabProvider.notifier).state = 1;
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.edit),
-                title: const Text('Edit Song'),
-                onTap: () {
-                  Navigator.pop(context);
-                  context.push('/song-editor?id=${song.id}');
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: const Text('Delete Song', style: TextStyle(color: Colors.red)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _confirmDelete(context, ref, song.id, song.title);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _confirmDelete(
-      BuildContext context, WidgetRef ref, int songId, String title) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Song'),
-        content: Text('Are you sure you want to delete "$title"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await ref.read(songRepositoryProvider).deleteSong(songId);
-              ref.read(selectedSongIdProvider.notifier).state = null;
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
+          if (isLargeScreen) ...[
+            const VerticalDivider(width: 1, thickness: 1),
+            Expanded(
+              flex: 4,
+              child: selectedSong != null
+                  ? SongPreviewPanel(song: selectedSong)
+                  : Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.library_music_outlined,
+                            size: 72,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Select a song to preview',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
+          ],
         ],
       ),
     );

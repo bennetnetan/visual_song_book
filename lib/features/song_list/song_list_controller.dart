@@ -4,6 +4,12 @@ import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/repositories/song_repository.dart';
 
+enum SongSortMode {
+  byNumber,
+  byTitle,
+  byKey,
+}
+
 class SongListState {
   final String query;
   final int? selectedCategoryId; // null means "All" or "Uncategorized" depending on boolean, let's use -1 for uncategorized
@@ -12,6 +18,7 @@ class SongListState {
   final List<Category> categories;
   final bool isLoading;
   final String? error;
+  final SongSortMode sortMode;
 
   SongListState({
     required this.query,
@@ -21,6 +28,7 @@ class SongListState {
     required this.categories,
     required this.isLoading,
     required this.error,
+    required this.sortMode,
   });
 
   SongListState copyWith({
@@ -31,6 +39,7 @@ class SongListState {
     List<Category>? categories,
     bool? isLoading,
     String? error,
+    SongSortMode? sortMode,
   }) {
     return SongListState(
       query: query ?? this.query,
@@ -40,6 +49,7 @@ class SongListState {
       categories: categories ?? this.categories,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
+      sortMode: sortMode ?? this.sortMode,
     );
   }
 
@@ -52,6 +62,7 @@ class SongListState {
       categories: [],
       isLoading: true,
       error: null,
+      sortMode: SongSortMode.byNumber,
     );
   }
 }
@@ -97,6 +108,13 @@ class SongListController extends StateNotifier<SongListState> {
     fetchSongs();
   }
 
+  /// Sets the sort mode
+  void setSortMode(SongSortMode mode) {
+    if (state.sortMode == mode) return;
+    state = state.copyWith(sortMode: mode);
+    fetchSongs();
+  }
+
   Future<void> deleteCategory(int categoryId) async {
     await _repository.deleteCategory(categoryId);
     if (state.selectedCategoryId == categoryId) {
@@ -122,26 +140,50 @@ class SongListController extends StateNotifier<SongListState> {
           filtered = results.where((s) => s.categoryId == state.selectedCategoryId).toList();
         }
 
+        // Apply manual sorting to search results
+        _sortList(filtered);
+
         state = state.copyWith(songs: filtered, isLoading: false);
       } else {
         // No search query: listen to direct streams for real-time updates when editing/adding songs
         state = state.copyWith(isLoading: false);
+        
+        Stream<List<Song>> stream;
         if (state.showUncategorizedOnly) {
-          _songsSub = _repository.watchSongsByCategory(null).listen((songsList) {
-            state = state.copyWith(songs: songsList);
-          });
+          stream = _repository.watchSongsByCategory(null);
         } else if (state.selectedCategoryId != null) {
-          _songsSub = _repository.watchSongsByCategory(state.selectedCategoryId).listen((songsList) {
-            state = state.copyWith(songs: songsList);
-          });
+          stream = _repository.watchSongsByCategory(state.selectedCategoryId);
         } else {
-          _songsSub = _repository.watchSongs().listen((songsList) {
-            state = state.copyWith(songs: songsList);
-          });
+          stream = _repository.watchSongs();
         }
+
+        _songsSub = stream.listen((songsList) {
+          final sortedList = List<Song>.from(songsList);
+          _sortList(sortedList);
+          state = state.copyWith(songs: sortedList);
+        });
       }
     } catch (e) {
       state = state.copyWith(songs: [], isLoading: false, error: e.toString());
+    }
+  }
+
+  void _sortList(List<Song> list) {
+    switch (state.sortMode) {
+      case SongSortMode.byNumber:
+        list.sort((a, b) => a.songNum.compareTo(b.songNum));
+        break;
+      case SongSortMode.byTitle:
+        list.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+        break;
+      case SongSortMode.byKey:
+        list.sort((a, b) {
+          if (a.key == null && b.key == null) return a.songNum.compareTo(b.songNum);
+          if (a.key == null) return 1;
+          if (b.key == null) return -1;
+          return a.key!.compareTo(b.key!);
+        });
+        break;
     }
   }
 
