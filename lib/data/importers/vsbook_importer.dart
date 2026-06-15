@@ -161,6 +161,14 @@ class VsBookImporter implements SongbookImporter {
         ));
       }
 
+      // Snapshot existing songs before clearing, for comparison
+      final preExisting = await (db.select(db.songs)
+            ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
+          .get();
+      final preExistingKeys = preExisting
+          .map((s) => '${s.songNum}|${s.title.toLowerCase().trim()}')
+          .toSet();
+
       // Insert into our active database
       await db.transaction(() async {
         await db.delete(db.history).go();
@@ -176,9 +184,24 @@ class VsBookImporter implements SongbookImporter {
         });
       });
 
+      // Compare imported songs against what existed before
+      final newSongTitles = <String>[];
+      int alreadyExisted = 0;
+      for (final companion in songCompanions) {
+        final key = '${companion.songNum.value}|${companion.title.value.toLowerCase().trim()}';
+        if (preExistingKeys.contains(key)) {
+          alreadyExisted++;
+        } else {
+          newSongTitles.add(companion.title.value);
+        }
+      }
+
       return ImportResult.success(
         songs: songCompanions.length,
         categories: categoryCompanions.length,
+        added: newSongTitles.length,
+        alreadyExisted: alreadyExisted,
+        newTitles: newSongTitles,
       );
     } finally {
       tempDb?.dispose();
@@ -245,6 +268,14 @@ class VsBookImporter implements SongbookImporter {
       ));
     }
 
+    // Snapshot existing songs before clearing, for comparison
+    final preExisting = await (db.select(db.songs)
+          ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
+        .get();
+    final preExistingKeys = preExisting
+        .map((s) => '${s.songNum}|${s.title.toLowerCase().trim()}')
+        .toSet();
+
     await db.transaction(() async {
       await db.delete(db.history).go();
       await db.delete(db.songs).go();
@@ -259,9 +290,24 @@ class VsBookImporter implements SongbookImporter {
       });
     });
 
+    // Compare imported songs against what existed before
+    final newSongTitles = <String>[];
+    int alreadyExisted = 0;
+    for (final companion in songCompanions) {
+      final key = '${companion.songNum.value}|${companion.title.value.toLowerCase().trim()}';
+      if (preExistingKeys.contains(key)) {
+        alreadyExisted++;
+      } else {
+        newSongTitles.add(companion.title.value);
+      }
+    }
+
     return ImportResult.success(
       songs: songCompanions.length,
       categories: categoryCompanions.length,
+      added: newSongTitles.length,
+      alreadyExisted: alreadyExisted,
+      newTitles: newSongTitles,
     );
   }
 }

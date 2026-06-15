@@ -89,6 +89,20 @@ class SongRepository {
     return db.into(db.categories).insertOnConflictUpdate(companion);
   }
 
+  Future<int> getSongCountByCategory(int categoryId) {
+    return (db.select(db.songs)..where((t) => t.categoryId.equals(categoryId)))
+        .map((row) => row.id)
+        .get()
+        .then((ids) => ids.length);
+  }
+
+  Future<void> deleteCategory(int categoryId) async {
+    await db.transaction(() async {
+      await (db.delete(db.songs)..where((t) => t.categoryId.equals(categoryId))).go();
+      await (db.delete(db.categories)..where((t) => t.id.equals(categoryId))).go();
+    });
+  }
+
   // === History ===
 
   /// Adds a song to the history. Keeps only the last 50 accessed items.
