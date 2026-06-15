@@ -198,6 +198,8 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       channel.invokeMethod('update_slide', {
         'text': slide?.text ?? '',
         'fontSize': state.fontSize,
+      }).catchError((e) {
+        // Ignore unregistered channel error when secondary window is not open/ready
       });
     }
   }

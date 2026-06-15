@@ -277,20 +277,16 @@ class _SongsTab extends ConsumerWidget {
                       selected: listState.selectedCategoryId == null && !listState.showUncategorizedOnly,
                       onSelected: () => listNotifier.selectCategory(null),
                     ),
-                    const SizedBox(width: 8),
-                    _buildCategoryChip(
-                      context,
-                      label: 'General',
-                      selected: listState.selectedCategoryId == 1,
-                      onSelected: () => listNotifier.selectCategory(1),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildCategoryChip(
-                      context,
-                      label: 'Kiswahili',
-                      selected: listState.selectedCategoryId == 2,
-                      onSelected: () => listNotifier.selectCategory(2),
-                    ),
+                    // Dynamic category chips from DB
+                    ...listState.categories.expand((cat) => [
+                      const SizedBox(width: 8),
+                      _buildCategoryChip(
+                        context,
+                        label: cat.name,
+                        selected: listState.selectedCategoryId == cat.id,
+                        onSelected: () => listNotifier.selectCategory(cat.id),
+                      ),
+                    ]),
                     const SizedBox(width: 8),
                     _buildCategoryChip(
                       context,
@@ -336,13 +332,14 @@ class _SongsTab extends ConsumerWidget {
                               final isSelected = song.id == selectedSongId;
                               return Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.35)
-                                        : Colors.transparent,
+                                child: Material(
+                                  color: isSelected
+                                      ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.35)
+                                      : Colors.transparent,
+                                  clipBehavior: Clip.antiAlias,
+                                  shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
+                                    side: BorderSide(
                                       color: isSelected
                                           ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
                                           : Colors.transparent,

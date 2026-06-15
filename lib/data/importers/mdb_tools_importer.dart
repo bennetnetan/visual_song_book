@@ -52,10 +52,19 @@ class MdbToolsImporter implements SongbookImporter {
       }
 
       // 3. Parse CSVs
-      const csvConverter = CsvToListConverter();
-      
-      final categoriesRows = csvConverter.convert(categoriesResult.stdout as String);
-      final songsRows = csvConverter.convert(songsResult.stdout as String);
+      // mdb-export uses \r\r\n (double CR) within quoted multiline fields
+      // and \r\n as the record separator. Normalise everything to \n so the
+      // CSV parser can handle multiline body text correctly.
+      final rawCategories = _normalizeMdbCsv(categoriesResult.stdout as String);
+      final rawSongs = _normalizeMdbCsv(songsResult.stdout as String);
+
+      const csvConverter = CsvToListConverter(
+        eol: '\n',
+        shouldParseNumbers: false, // keep all values as strings; we parse manually
+      );
+
+      final categoriesRows = csvConverter.convert(rawCategories);
+      final songsRows = csvConverter.convert(rawSongs);
 
       if (categoriesRows.isEmpty || songsRows.isEmpty) {
         return ImportResult.failure('Exported tables contain no data.');
@@ -174,6 +183,14 @@ class MdbToolsImporter implements SongbookImporter {
         });
       });
 
+      if (songCompanions.isEmpty) {
+        return ImportResult.failure(
+          'No songs could be parsed from the file. '
+          'The Songs table may be empty, or the CSV format is not recognised. '
+          'Parsed ${songsRows.length - 1} raw rows, 0 valid songs.',
+        );
+      }
+
       return ImportResult.success(
         songs: songCompanions.length,
         categories: categoryCompanions.length,
@@ -181,6 +198,19 @@ class MdbToolsImporter implements SongbookImporter {
     } catch (e) {
       return ImportResult.failure('Error during import: $e');
     }
+  }
+
+  /// Normalises line endings from mdb-export output.
+  ///
+  /// mdb-export on Linux uses \r\r\n (double CR + LF) at the end of each
+  /// line inside a quoted multiline field, and \r\n as the record separator.
+  /// Normalise to bare \n so that [CsvToListConverter(eol: '\n')] can parse
+  /// the file correctly without breaking on the embedded newlines in lyrics.
+  String _normalizeMdbCsv(String raw) {
+    return raw
+        .replaceAll('\r\r\n', '\n') // double-CR within quoted lyrics
+        .replaceAll('\r\n', '\n')   // standard CRLF record separator
+        .replaceAll('\r', '\n');    // any stray lone CR
   }
 
   /// Parses date format "10/24/12 17:46:23" into DateTime
