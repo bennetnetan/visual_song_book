@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
+import 'package:visual_song_book/features/song_editor/widgets/editor_cards.dart';
 
 class SongEditorView extends ConsumerStatefulWidget {
   final int? songId;
@@ -57,7 +58,6 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
           _selectedCategoryId = song.categoryId;
         }
       } else {
-        // Auto-suggest next song number
         final songs = await repo.getSongs();
         if (songs.isNotEmpty) {
           _numberController.text = (songs.last.songNum + 1).toString();
@@ -245,206 +245,29 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(24.0, 16.0, 24.0, 32.0),
               children: [
-                // ── Identification Card ──────────────────────────────
-                _SectionCard(
-                  icon: Icons.tag_rounded,
-                  title: 'Identification',
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: TextFormField(
-                            controller: _numberController,
-                            keyboardType: TextInputType.number,
-                            decoration: _fieldDecoration(
-                              'Song Number',
-                              prefix: const Icon(Icons.tag, size: 20),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Required';
-                              }
-                              if (int.tryParse(value.trim()) == null) {
-                                return 'Must be an integer';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          flex: 5,
-                          child: TextFormField(
-                            controller: _titleController,
-                            textCapitalization: TextCapitalization.words,
-                            decoration: _fieldDecoration('Title'),
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Required';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                IdentificationCard(
+                  numberController: _numberController,
+                  titleController: _titleController,
+                  fieldDecoration: _fieldDecoration,
                 ),
-
                 const SizedBox(height: 16),
-
-                // ── Metadata Card ────────────────────────────────────
-                _SectionCard(
-                  icon: Icons.info_outline_rounded,
-                  title: 'Metadata',
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _keyController,
-                            decoration: _fieldDecoration(
-                              'Key',
-                              hint: 'e.g., G, C min',
-                              prefix: const Icon(Icons.music_note_outlined, size: 20),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: DropdownButtonFormField<int?>(
-                            initialValue: _selectedCategoryId,
-                            decoration: _fieldDecoration('Category'),
-                            borderRadius: BorderRadius.circular(14),
-                            items: [
-                              const DropdownMenuItem<int?>(
-                                value: null,
-                                child: Text('Uncategorized'),
-                              ),
-                              ..._categories.map((c) => DropdownMenuItem<int?>(
-                                    value: c.id,
-                                    child: Text(c.name),
-                                  ))
-                            ],
-                            onChanged: (val) {
-                              setState(() => _selectedCategoryId = val);
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _authorController,
-                            decoration: _fieldDecoration(
-                              'Author',
-                              prefix: const Icon(Icons.person_outline, size: 20),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _copyrightController,
-                            decoration: _fieldDecoration(
-                              'Copyright',
-                              prefix: const Icon(Icons.copyright_outlined, size: 20),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                MetadataCard(
+                  keyController: _keyController,
+                  authorController: _authorController,
+                  copyrightController: _copyrightController,
+                  selectedCategoryId: _selectedCategoryId,
+                  categories: _categories,
+                  onCategoryChanged: (val) {
+                    setState(() => _selectedCategoryId = val);
+                  },
+                  fieldDecoration: _fieldDecoration,
                 ),
-
                 const SizedBox(height: 16),
-
-                // ── Lyrics Card ──────────────────────────────────────
-                _SectionCard(
-                  icon: Icons.menu_book_rounded,
-                  title: 'Lyrics',
-                  trailing: Text(
-                    '$lyricsCharCount chars',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerLowest,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      child: TextFormField(
-                        controller: _bodyController,
-                        maxLines: 20,
-                        keyboardType: TextInputType.multiline,
-                        style: GoogleFonts.robotoMono(
-                          fontSize: 14,
-                          height: 1.6,
-                        ),
-                        decoration: InputDecoration(
-                          hintText:
-                              'VERSE 1\nAmazing grace, how sweet the sound...\n\nCHORUS\nPraise the Lord...\n\nVERSE 2\n...',
-                          hintStyle: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                            fontSize: 13,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.all(16),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Song lyrics cannot be empty';
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.5),
-                        ),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.tips_and_updates_outlined, size: 16,
-                              color: Theme.of(context).colorScheme.secondary),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Separate verses with a blank line. Start a block with "CHORUS" or "VERSE N" to label it.',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSecondaryContainer,
-                                  ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                LyricsCard(
+                  charCount: lyricsCharCount,
+                  bodyController: _bodyController,
                 ),
-
                 const SizedBox(height: 32),
-
-                // ── Save Button ──────────────────────────────────────
                 FilledButton.icon(
                   onPressed: _isLoading ? null : _save,
                   icon: const Icon(Icons.save_rounded),
@@ -463,63 +286,6 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// A reusable titled section card for grouping form fields.
-class _SectionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final Widget? trailing;
-  final List<Widget> children;
-
-  const _SectionCard({
-    required this.icon,
-    required this.title,
-    this.trailing,
-    required this.children,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.35),
-        ),
-      ),
-      color: Theme.of(context).colorScheme.surfaceContainer.withValues(alpha: 0.25),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  title.toUpperCase(),
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                ),
-                const Spacer(),
-                if (trailing != null) trailing!,
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Divider(height: 1),
-            const SizedBox(height: 20),
-            ...children,
-          ],
         ),
       ),
     );
