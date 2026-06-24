@@ -25,12 +25,34 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
   void initState() {
     super.initState();
     _focusNode = FocusNode(debugLabel: 'ProjectionTabFocus');
+    _setupMainWindowHandler();
   }
 
   @override
   void dispose() {
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _setupMainWindowHandler() async {
+    if (kIsWeb) return;
+    if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return;
+
+    try {
+      final controller = await WindowController.fromCurrentEngine();
+      controller.setWindowMethodHandler((call) async {
+        if (call.method == 'navigate_slide') {
+          final action = call.arguments['action'] as String?;
+          final notifier = ref.read(projectionControllerProvider.notifier);
+          if (action == 'prev') {
+            notifier.prevSlide();
+          } else if (action == 'next') {
+            notifier.nextSlide();
+          }
+        }
+        return 'OK';
+      });
+    } catch (_) {}
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
@@ -324,22 +346,6 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
                                   padding: const EdgeInsets.all(12.0),
                                   child: Column(
                                     children: [
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.format_size, size: 20),
-                                          const SizedBox(width: 8),
-                                          const Text('Font Size'),
-                                          Expanded(
-                                            child: Slider(
-                                              min: 24,
-                                              max: 80,
-                                              value: state.fontSize,
-                                              onChanged: notifier.setFontSize,
-                                            ),
-                                          ),
-                                          Text('${state.fontSize.round()} px'),
-                                        ],
-                                      ),
                                       SwitchListTile(
                                         title: const Text('Auto-insert Chorus'),
                                         subtitle: const Text('Show chorus between verses'),

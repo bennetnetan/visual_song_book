@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/routing/app_router.dart';
+import 'package:screen_retriever/screen_retriever.dart';
 import 'package:window_manager/window_manager.dart';
 
 void main(List<String> args) async {
@@ -13,6 +14,21 @@ void main(List<String> args) async {
   if (args.isNotEmpty && (args.first == 'multi_window' || args.first == 'Projection Output')) {
     if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       await windowManager.ensureInitialized();
+      await windowManager.setFullScreen(true);
+      await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+
+      try {
+        final displays = await screenRetriever.getAllDisplays();
+        if (displays.length > 1) {
+          final secondDisplay = displays[1];
+          await windowManager.setBounds(Rect.fromLTWH(
+            secondDisplay.visiblePosition!.dx,
+            secondDisplay.visiblePosition!.dy,
+            secondDisplay.size.width,
+            secondDisplay.size.height,
+          ));
+        }
+      } catch (_) {}
     }
     runApp(
       const ProviderScope(
@@ -52,39 +68,40 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp.router(
-      title: 'Visual Song Book',
-      debugShowCheckedModeBanner: false,
+        title: 'Visual Song Book',
+        debugShowCheckedModeBanner: false,
 
-      // Premium styling using Teal M3 scheme
-      theme: FlexThemeData.light(
-        scheme: FlexScheme.tealM3,
-        useMaterial3: true,
-        fontFamily: 'Inter',
-        subThemesData: const FlexSubThemesData(
-          inputDecoratorBorderType: FlexInputBorderType.outline,
-          inputDecoratorRadius: 16.0,
-          cardRadius: 20.0,
-          dialogRadius: 24.0,
-          navigationRailUseIndicator: true,
+        // Premium styling using Teal M3 scheme
+        theme: FlexThemeData.light(
+          scheme: FlexScheme.tealM3,
+          useMaterial3: true,
+          fontFamily: 'Inter',
+          subThemesData: const FlexSubThemesData(
+            inputDecoratorBorderType: FlexInputBorderType.outline,
+            inputDecoratorRadius: 16.0,
+            cardRadius: 20.0,
+            dialogRadius: 24.0,
+            navigationRailUseIndicator: true,
+          ),
         ),
-      ),
-      darkTheme: FlexThemeData.dark(
-        scheme: FlexScheme.tealM3,
-        useMaterial3: true,
-        fontFamily: 'Inter',
-        subThemesData: const FlexSubThemesData(
-          inputDecoratorBorderType: FlexInputBorderType.outline,
-          inputDecoratorRadius: 16.0,
-          cardRadius: 20.0,
-          dialogRadius: 24.0,
-          navigationRailUseIndicator: true,
+        darkTheme: FlexThemeData.dark(
+          scheme: FlexScheme.tealM3,
+          useMaterial3: true,
+          fontFamily: 'Inter',
+          subThemesData: const FlexSubThemesData(
+            inputDecoratorBorderType: FlexInputBorderType.outline,
+            inputDecoratorRadius: 16.0,
+            cardRadius: 20.0,
+            dialogRadius: 24.0,
+            navigationRailUseIndicator: true,
+          ),
         ),
-      ),
-      themeMode: themeMode,
+        themeMode: themeMode,
 
-      // Routing
-      routerConfig: isProjectionWindow ? projectionRouter : appRouter,
+        // Routing
+        routerConfig: isProjectionWindow ? projectionRouter : appRouter,
     );
   }
 }

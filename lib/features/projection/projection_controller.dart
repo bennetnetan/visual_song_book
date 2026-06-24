@@ -90,20 +90,15 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         autoInsertChorus: savedAutoChorus,
       );
 
-      // Apply initial keep awake state
       if (state.keepAwake) {
         WakelockPlus.enable();
       }
     } catch (_) {
-      // Ignore shared_prefs loading errors in stubs/tests
     }
   }
 
-  /// Sets the current song and parses its verses
   void setSong(Song song) {
-    // Parse verses
     final parsedVerses = VerseParser.parse(song.body);
-    // Build sequence
     final sequence = VerseParser.buildSlideSequence(
       parsedVerses,
       autoInsertChorus: state.autoInsertChorus,
@@ -115,12 +110,10 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       currentSlideIndex: 0,
     );
 
-    // Record song to history in repository
     _songRepository.addToHistory(song.id);
     _syncSecondaryWindow();
   }
 
-  /// Clears the current projection (shows blank screen)
   void clearSong() {
     state = state.copyWith(
       currentSong: () => null,
@@ -130,7 +123,6 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     _syncSecondaryWindow();
   }
 
-  /// Moves to the next slide
   void nextSlide() {
     if (state.slides.isEmpty) return;
     if (state.currentSlideIndex < state.slides.length - 1) {
@@ -139,7 +131,6 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     }
   }
 
-  /// Moves to the previous slide
   void prevSlide() {
     if (state.slides.isEmpty) return;
     if (state.currentSlideIndex > 0) {
@@ -148,7 +139,6 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     }
   }
 
-  /// Jumps directly to slide index
   void selectSlide(int index) {
     if (index >= 0 && index < state.slides.length) {
       state = state.copyWith(currentSlideIndex: index);
@@ -156,25 +146,21 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     }
   }
 
-  /// Adjusts the display font size
   Future<void> setFontSize(double size) async {
     state = state.copyWith(fontSize: size.clamp(16.0, 96.0));
     await _prefs?.setDouble('projection_font_size', state.fontSize);
     _syncSecondaryWindow();
   }
 
-  /// Toggles whether chorus is automatically inserted between verses
   Future<void> setAutoInsertChorus(bool value) async {
     state = state.copyWith(autoInsertChorus: value);
     await _prefs?.setBool('projection_auto_chorus', value);
-    
-    // Rebuild sequence if a song is currently loaded
+
     if (state.currentSong != null) {
       setSong(state.currentSong!);
     }
   }
 
-  /// Toggles screen keep-awake lock status
   Future<void> setKeepAwake(bool value) async {
     state = state.copyWith(keepAwake: value);
     await _prefs?.setBool('projection_keep_awake', value);
@@ -186,12 +172,10 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     }
   }
 
-  /// Sets whether the secondary output window is currently active/open
   void setSecondaryWindowOpen(bool isOpen) {
     state = state.copyWith(isSecondaryWindowOpen: isOpen);
   }
 
-  /// Manually triggers synchronization of the current slide to the secondary window.
   void syncCurrentSlide() {
     _syncSecondaryWindow();
   }
@@ -207,14 +191,12 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     debugPrint('Broadcasting slide update: "$text" (Size: $fontSize)');
 
     try {
-      // Get all open windows
       final controllers = await WindowController.getAll();
       final currentWindow = await WindowController.fromCurrentEngine();
-      
-      // We want to send to all OTHER windows.
+
       for (final controller in controllers) {
-        if (controller.windowId == currentWindow.windowId) continue; 
-        
+        if (controller.windowId == currentWindow.windowId) continue;
+
         debugPrint('Sending update to window ID: ${controller.windowId}');
         await controller.invokeMethod('update_slide', {
           'text': text,

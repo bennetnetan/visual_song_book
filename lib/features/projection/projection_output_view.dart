@@ -19,7 +19,6 @@ class ProjectionOutputView extends ConsumerStatefulWidget {
 class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     with SingleTickerProviderStateMixin, WindowListener {
   String _ipcText = '';
-  double _ipcFontSize = 40.0;
   bool _isSecondaryWindow = false;
   late AnimationController _fadeController;
   bool _isClosing = false;
@@ -59,12 +58,22 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
         setState(() {
           _isSecondaryWindow = true;
           _ipcText = call.arguments['text'] ?? '';
-          _ipcFontSize = (call.arguments['fontSize'] as num?)?.toDouble() ?? 40.0;
         });
         debugPrint('Updated secondary window text: "$_ipcText"');
       }
       return 'OK';
     });
+  }
+
+  Future<void> _sendNavigateToMain(String action) async {
+    try {
+      final controllers = await WindowController.getAll();
+      final currentWindow = await WindowController.fromCurrentEngine();
+      for (final c in controllers) {
+        if (c.windowId == currentWindow.windowId) continue;
+        await c.invokeMethod('navigate_slide', {'action': action});
+      }
+    } catch (_) {}
   }
 
   @override
@@ -118,8 +127,8 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
 
     final String activeText =
         _isSecondaryWindow ? _ipcText : (state.currentSlide?.text ?? '');
-    final double activeFontSize =
-        _isSecondaryWindow ? _ipcFontSize : state.fontSize;
+    // Font size is fixed at 40pt for consistent projection output
+    const double activeFontSize = 40.0;
     final String slideKey = _isSecondaryWindow
         ? 'ipc_${_ipcText.hashCode}'
         : '${state.currentSong?.id}_${state.currentSlideIndex}';
@@ -231,10 +240,38 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                 ),
               ),
 
-              // Subtle slide indicator dots at the bottom (secondary window / main window only)
-              if (!_isSecondaryWindow && state.slides.isNotEmpty)
+              // Navigation arrows for secondary window (desktop projector)
+              if (_isSecondaryWindow && state.slides.isNotEmpty)
                 Positioned(
-                  bottom: 20,
+                  bottom: 32,
+                  left: 0,
+                  right: 0,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_circle_left,
+                            size: 48, color: Colors.white54),
+                        onPressed: () => _sendNavigateToMain('prev'),
+                        splashRadius: 28,
+                        hoverColor: Colors.white.withValues(alpha: 0.1),
+                      ),
+                      const SizedBox(width: 48),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_circle_right,
+                            size: 48, color: Colors.white54),
+                        onPressed: () => _sendNavigateToMain('next'),
+                        splashRadius: 28,
+                        hoverColor: Colors.white.withValues(alpha: 0.1),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Slide indicator dots at the bottom
+              if (state.slides.isNotEmpty)
+                Positioned(
+                  bottom: _isSecondaryWindow ? 96 : 20,
                   left: 0,
                   right: 0,
                   child: _SlideIndicator(
