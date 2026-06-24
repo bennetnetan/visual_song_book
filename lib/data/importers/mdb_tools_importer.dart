@@ -25,8 +25,7 @@ class MdbToolsImporter implements SongbookImporter {
     return false;
   }
 
-  @override
-  Future<ImportResult> import(ImportSource source) async {
+  Future<ImportResult> import(ImportSource source, {String? overrideCategoryName}) async {
     if (source.filePath == null) {
       return ImportResult.failure('No file path provided.');
     }
@@ -39,11 +38,8 @@ class MdbToolsImporter implements SongbookImporter {
     try {
       // 1. Export Categories CSV
       final categoriesResult = await Process.run('mdb-export', [file.path, 'Categories']);
-      if (categoriesResult.exitCode != 0) {
-        return ImportResult.failure(
-            'Failed to export Categories table: ${categoriesResult.stderr}');
-      }
-
+      // We don't fail immediately if Categories table fails, as we might use overrideCategoryName
+      
       // 2. Export Songs CSV
       final songsResult = await Process.run('mdb-export', [file.path, 'Songs']);
       if (songsResult.exitCode != 0) {
@@ -52,48 +48,85 @@ class MdbToolsImporter implements SongbookImporter {
       }
 
       // 3. Parse CSVs
-      // mdb-export uses \r\r\n (double CR) within quoted multiline fields
-      // and \r\n as the record separator. Normalise everything to \n so the
-      // CSV parser can handle multiline body text correctly.
-      final rawCategories = _normalizeMdbCsv(categoriesResult.stdout as String);
+      final rawCategories = categoriesResult.exitCode == 0 
+          ? _normalizeMdbCsv(categoriesResult.stdout as String)
+          : null;
       final rawSongs = _normalizeMdbCsv(songsResult.stdout as String);
 
       const csvConverter = CsvToListConverter(
         eol: '\n',
-        shouldParseNumbers: false, // keep all values as strings; we parse manually
+        shouldParseNumbers: false,
       );
 
-      final categoriesRows = csvConverter.convert(rawCategories);
+      final categoriesRows = rawCategories != null ? csvConverter.convert(rawCategories) : [];
       final songsRows = csvConverter.convert(rawSongs);
 
-      if (categoriesRows.isEmpty || songsRows.isEmpty) {
-        return ImportResult.failure('Exported tables contain no data.');
+      if (songsRows.isEmpty) {
+        return ImportResult.failure('Exported Songs table contains no data.');
       }
 
-      // 4. Map and Insert Categories
-      // MDB Schema: ID, Name
-      // First row is header
-      final categoriesHeader = categoriesRows.first.map((e) => e.toString().toUpperCase()).toList();
-      final idIndex = categoriesHeader.indexOf('ID');
-      final nameIndex = categoriesHeader.indexOf('NAME');
-
-      if (idIndex == -1 || nameIndex == -1) {
-        return ImportResult.failure('Invalid Categories table header.');
+      // 4. Map Categories
+      final existingCategories = await db.select(db.categories).get();
+      final existingCategoryMap = {
+        for (final cat in existingCategories) cat.name.toLowerCase().trim(): cat.id
+      };
+      
+      int maxCategoryId = 0;
+      for (final cat in existingCategories) {
+        if (cat.id > maxCategoryId) {
+          maxCategoryId = cat.id;
+        }
       }
 
-      final List<CategoriesCompanion> categoryCompanions = [];
-      for (int i = 1; i < categoriesRows.length; i++) {
-        final row = categoriesRows[i];
-        if (row.length <= idIndex || row.length <= nameIndex) continue;
+      final Map<int, int> categoryIdMap = {};
+      final List<CategoriesCompanion> categoriesToInsert = [];
 
-        final id = int.tryParse(row[idIndex].toString());
-        final name = row[nameIndex].toString().trim();
-
-        if (id != null && name.isNotEmpty) {
-          categoryCompanions.add(CategoriesCompanion.insert(
-            id: Value(id),
-            name: name,
+      // Handle Override Category (Songbook name as category)
+      int? forcedCategoryId;
+      if (overrideCategoryName != null) {
+        final nameLower = overrideCategoryName.toLowerCase().trim();
+        if (existingCategoryMap.containsKey(nameLower)) {
+          forcedCategoryId = existingCategoryMap[nameLower]!;
+        } else {
+          maxCategoryId++;
+          forcedCategoryId = maxCategoryId;
+          existingCategoryMap[nameLower] = forcedCategoryId;
+          categoriesToInsert.add(CategoriesCompanion.insert(
+            id: Value(forcedCategoryId),
+            name: overrideCategoryName,
           ));
+        }
+      }
+
+      if (categoriesRows.isNotEmpty) {
+        final categoriesHeader = categoriesRows.first.map((e) => e.toString().toUpperCase()).toList();
+        final idIndex = categoriesHeader.indexOf('ID');
+        final nameIndex = categoriesHeader.indexOf('NAME');
+
+        if (idIndex != -1 && nameIndex != -1) {
+          for (int i = 1; i < categoriesRows.length; i++) {
+            final row = categoriesRows[i];
+            if (row.length <= idIndex || row.length <= nameIndex) continue;
+
+            final rawId = int.tryParse(row[idIndex].toString());
+            final name = row[nameIndex].toString().trim();
+
+            if (rawId != null && name.isNotEmpty) {
+              final nameLower = name.toLowerCase();
+              if (existingCategoryMap.containsKey(nameLower)) {
+                categoryIdMap[rawId] = existingCategoryMap[nameLower]!;
+              } else {
+                maxCategoryId++;
+                final newId = maxCategoryId;
+                categoryIdMap[rawId] = newId;
+                existingCategoryMap[nameLower] = newId;
+                categoriesToInsert.add(CategoriesCompanion.insert(
+                  id: Value(newId),
+                  name: name,
+                ));
+              }
+            }
+          }
         }
       }
 
@@ -143,10 +176,13 @@ class MdbToolsImporter implements SongbookImporter {
         final cleanedAuthor = author == 'null' || author == '' ? null : author;
         final cleanedSearch = search == 'null' || search == '' ? null : search;
 
-        // Map Category ID (Treat 0 as null since 0 means uncategorized)
-        final categoryIdValue = (rawCategoryId == null || rawCategoryId == 0)
-            ? const Value<int?>.absent()
-            : Value<int?>(rawCategoryId);
+        // Map Category ID
+        int? mappedCategoryId;
+        if (forcedCategoryId != null) {
+          mappedCategoryId = forcedCategoryId;
+        } else if (rawCategoryId != null && rawCategoryId != 0) {
+          mappedCategoryId = categoryIdMap[rawCategoryId];
+        }
 
         songCompanions.add(SongsCompanion.insert(
           songNum: songNum,
@@ -157,7 +193,7 @@ class MdbToolsImporter implements SongbookImporter {
           search: Value(cleanedSearch),
           copyright: Value(cleanedCopyright),
           author: Value(cleanedAuthor),
-          categoryId: categoryIdValue,
+          categoryId: Value(mappedCategoryId),
           sourceSongId: Value(rawSongId),
           sourcePath: Value(file.path),
           sourceFormat: const Value('vsb'),
@@ -174,14 +210,18 @@ class MdbToolsImporter implements SongbookImporter {
 
       // Execute in a transaction for maximum speed and integrity
       await db.transaction(() async {
-        // Clear existing tables to prevent duplicate keys on full re-import
-        // Or we could upsert. Since this is an import of a legacy file, we clear first
-        await db.delete(db.history).go();
-        await db.delete(db.songs).go();
-        await db.delete(db.categories).go();
+        // Delete only history and songs that were previously imported from this exact file path
+        final songsToDelete = db.select(db.songs)..where((t) => t.sourcePath.equals(file.path));
+        final songsToDeleteList = await songsToDelete.get();
+        final songIdsToDelete = songsToDeleteList.map((s) => s.id).toList();
+        
+        if (songIdsToDelete.isNotEmpty) {
+          await (db.delete(db.history)..where((t) => t.songId.isIn(songIdsToDelete))).go();
+          await (db.delete(db.songs)..where((t) => t.id.isIn(songIdsToDelete))).go();
+        }
 
-        // Insert categories
-        for (final companion in categoryCompanions) {
+        // Insert new categories
+        for (final companion in categoriesToInsert) {
           await db.into(db.categories).insertOnConflictUpdate(companion);
         }
 
@@ -213,7 +253,7 @@ class MdbToolsImporter implements SongbookImporter {
 
       return ImportResult.success(
         songs: songCompanions.length,
-        categories: categoryCompanions.length,
+        categories: categoryIdMap.length,
         added: newSongTitles.length,
         alreadyExisted: alreadyExisted,
         newTitles: newSongTitles,

@@ -91,6 +91,30 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     }
   }
 
+  Future<void> _importBundled() async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    setState(() {
+      _isImporting = true;
+      _importStatus = 'Importing bundled songbooks...';
+    });
+
+    try {
+      await ref.read(songListControllerProvider.notifier).checkAndImportDefaultSongbooks(force: true);
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(content: Text('Bundled songbooks imported successfully.')),
+      );
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Failed to import bundled books: $e')),
+      );
+    } finally {
+      setState(() {
+        _isImporting = false;
+        _importStatus = null;
+      });
+    }
+  }
+
   Future<void> _importVsBook() async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     setState(() {
@@ -209,6 +233,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                 importStatus: _importStatus,
                 isExporting: _isExporting,
                 onImportMdb: _importMdb,
+                onImportBundled: _importBundled,
                 onImportVsBook: _importVsBook,
                 onExportVsBook: _exportVsBook,
               ),

@@ -44,6 +44,7 @@ class ImportExportCard extends StatelessWidget {
   final String? importStatus;
   final bool isExporting;
   final VoidCallback onImportMdb;
+  final VoidCallback onImportBundled;
   final VoidCallback onImportVsBook;
   final VoidCallback onExportVsBook;
 
@@ -53,6 +54,7 @@ class ImportExportCard extends StatelessWidget {
     required this.importStatus,
     required this.isExporting,
     required this.onImportMdb,
+    required this.onImportBundled,
     required this.onImportVsBook,
     required this.onExportVsBook,
   });
@@ -98,6 +100,11 @@ class ImportExportCard extends StatelessWidget {
               spacing: 10,
               runSpacing: 10,
               children: [
+                _ActionButton(
+                  onPressed: isImporting ? null : onImportBundled,
+                  icon: Icons.library_add,
+                  label: 'Import Bundled Books',
+                ),
                 _ActionButton(
                   onPressed: isImporting ? null : onImportMdb,
                   icon: Icons.folder_open,

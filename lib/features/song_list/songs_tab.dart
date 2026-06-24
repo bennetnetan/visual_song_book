@@ -166,8 +166,8 @@ class SongsTab extends ConsumerWidget {
                       _buildCategoryChip(
                         context,
                         label: 'All',
-                        selected: listState.selectedCategoryId == null && !listState.showUncategorizedOnly,
-                        onSelected: () => listNotifier.selectCategory(null),
+                        selected: listState.selectedCategoryId == -2,
+                        onSelected: () => listNotifier.selectCategory(-2),
                       ),
                       ...listState.categories.expand((cat) => [
                         const SizedBox(width: 8),
@@ -283,7 +283,7 @@ class SongsTab extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Collection'),
         content: Text(
-          'Are you sure you want to delete "$cat.name" and all $songCount song(s) in it?',
+          'Are you sure you want to delete "${cat.name}" and all $songCount song(s) in it?',
         ),
         actions: [
           TextButton(

@@ -1,7 +1,12 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
+import 'package:visual_song_book/data/importers/mdb_tools_importer.dart';
+import 'package:visual_song_book/data/importers/vsb_importer.dart';
 import 'package:visual_song_book/data/repositories/song_repository.dart';
 
 enum SongSortMode {
@@ -56,7 +61,7 @@ class SongListState {
   factory SongListState.initial() {
     return SongListState(
       query: '',
-      selectedCategoryId: null,
+      selectedCategoryId: -2, // -2 for All
       showUncategorizedOnly: false,
       songs: [],
       categories: [],
@@ -75,6 +80,71 @@ class SongListController extends StateNotifier<SongListState> {
 
   SongListController(this._repository) : super(SongListState.initial()) {
     _init();
+    checkAndImportDefaultSongbooks();
+  }
+
+  /// Automatically imports bundled default songbooks on first launch (empty DB).
+  /// Extracts each .vsb from Flutter assets to a temp file and imports via MdbToolsImporter.
+  /// On mobile/web (where mdb-tools is unavailable), this is silently skipped.
+  Future<void> checkAndImportDefaultSongbooks({bool force = false}) async {
+    try {
+      // Only run when the database is completely empty, unless forced
+      if (!force) {
+        final songs = await _repository.getSongs();
+        if (songs.isNotEmpty) return;
+      }
+
+      const bundledSongbooks = [
+        'assets/songbooks/Full Song Book.vsb',
+        'assets/songbooks/Injili Song Book.vsb',
+      ];
+
+      final importer = MdbToolsImporter(_repository.db);
+
+      // MdbToolsImporter only works on desktop platforms with mdb-tools installed
+      final testSource = ImportSource.fromFile('test.vsb');
+      if (!importer.canImport(testSource)) return;
+
+      state = state.copyWith(
+        isLoading: true,
+        error: 'Loading default song books...',
+      );
+
+      final tempDir = await getTemporaryDirectory();
+      int totalImported = 0;
+
+      for (final assetPath in bundledSongbooks) {
+        try {
+          // Load asset bytes
+          final byteData = await rootBundle.load(assetPath);
+          final bytes = byteData.buffer.asUint8List();
+
+          // Write to a temp file so MdbToolsImporter (which uses mdb-export CLI) can read it
+          final fileName = assetPath.split('/').last;
+          final tempFile = File('${tempDir.path}/$fileName');
+          await tempFile.writeAsBytes(bytes);
+
+          final source = ImportSource.fromFile(tempFile.path);
+          if (importer.canImport(source)) {
+            // Extract book name from asset path to use as category name
+            // e.g. "assets/songbooks/Injili Song Book.vsb" -> "Injili Song Book"
+            final bookName = fileName.replaceAll('.vsb', '').replaceAll('.mdb', '');
+            final result = await importer.import(source, overrideCategoryName: bookName);
+            if (result.success) totalImported += result.songsImported;
+          }
+
+          // Clean up temp file
+          if (await tempFile.exists()) await tempFile.delete();
+        } catch (_) {
+          // Skip individual files that fail — don't abort the whole process
+        }
+      }
+
+      state = state.copyWith(isLoading: false, error: null);
+      if (totalImported > 0) fetchSongs();
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: null);
+    }
   }
 
   void _init() {
@@ -136,7 +206,7 @@ class SongListController extends StateNotifier<SongListState> {
         List<Song> filtered = results;
         if (state.showUncategorizedOnly) {
           filtered = results.where((s) => s.categoryId == null).toList();
-        } else if (state.selectedCategoryId != null) {
+        } else if (state.selectedCategoryId != null && state.selectedCategoryId != -2) {
           filtered = results.where((s) => s.categoryId == state.selectedCategoryId).toList();
         }
 
@@ -151,7 +221,7 @@ class SongListController extends StateNotifier<SongListState> {
         Stream<List<Song>> stream;
         if (state.showUncategorizedOnly) {
           stream = _repository.watchSongsByCategory(null);
-        } else if (state.selectedCategoryId != null) {
+        } else if (state.selectedCategoryId != null && state.selectedCategoryId != -2) {
           stream = _repository.watchSongsByCategory(state.selectedCategoryId);
         } else {
           stream = _repository.watchSongs();
