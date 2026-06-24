@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:visual_song_book/core/widgets/neomorphic_widgets.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
-import 'package:visual_song_book/core/providers/appearance_provider.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 
 class SectionHeader extends StatelessWidget {
@@ -121,9 +120,6 @@ class AppearanceCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
     final notifier = ref.read(themeModeProvider.notifier);
-    final appFontSize = ref.watch(appFontSizeProvider);
-    final appFontNotifier = ref.read(appFontSizeProvider.notifier);
-    final theme = Theme.of(context);
 
     return NeoRaisedCard(
       child: Column(
@@ -136,53 +132,6 @@ class AppearanceCard extends ConsumerWidget {
             accentColor: Colors.purple,
           ),
           const SizedBox(height: 24),
-          // Font Size
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Font Size',
-                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w500),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(999),
-                      boxShadow: NeoShadows.insetSmall(context),
-                    ),
-                    child: Text(
-                      '${appFontSize.round()}pt',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.tertiary,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  const Icon(Icons.format_size, size: 20, color: Colors.grey),
-                  Expanded(
-                    child: NeoSlider(
-                      value: appFontSize,
-                      min: 12,
-                      max: 72,
-                      onChanged: appFontNotifier.setFontSize,
-                    ),
-                  ),
-                  const Icon(Icons.format_size, size: 24, color: Colors.grey),
-                ],
-              ),
-            ],
-          ),
-          const _Divider(),
           // Theme Selector
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
