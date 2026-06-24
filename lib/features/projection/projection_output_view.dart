@@ -288,6 +288,24 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                 ),
               ),
 
+              // Back / exit button (mobile / web fullscreen only)
+              if (!_isSecondaryWindow)
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: SafeArea(
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white54, size: 28),
+                      onPressed: () {
+                        notifier.clearSong();
+                        if (context.mounted) Navigator.of(context).pop();
+                      },
+                      tooltip: 'Exit projection',
+                      splashRadius: 24,
+                    ),
+                  ),
+                ),
+
               // Navigation arrows for secondary window (desktop projector)
               if (_isSecondaryWindow && state.slides.isNotEmpty)
                 Positioned(

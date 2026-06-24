@@ -26,24 +26,34 @@ class SetsTab extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Sets',
-          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
+        leading: !isLargeScreen && state.selectedSetId != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: notifier.clearSelection,
+              )
+            : null,
+        title: Text(
+          !isLargeScreen && state.selectedSetId != null
+              ? notifier.selectedSet?.name ?? 'Set'
+              : 'Sets',
+          style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: 'New Set',
-            onPressed: () => _showCreateDialog(context, ref),
-          ),
+          if (isLargeScreen || state.selectedSetId == null)
+            IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: 'New Set',
+              onPressed: () => _showCreateDialog(context, ref),
+            ),
         ],
       ),
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Row(
+          : isLargeScreen
+          ? Row(
               children: [
                 SizedBox(
-                  width: isLargeScreen ? 280 : 220,
+                  width: 280,
                   child: _SetList(
                     sets: state.sets,
                     selectedId: state.selectedSetId,
@@ -76,37 +86,52 @@ class SetsTab extends ConsumerWidget {
                             ],
                           ),
                         )
-                      : _SetDetail(
-                          setObj: notifier.selectedSet!,
-                          items: state.setItems,
-                          availableSongs: state.availableSongs,
-                          selectedSetId: state.selectedSetId!,
-                          onAddSong: (songId) => notifier.addSongToSet(
-                            state.selectedSetId!,
-                            songId,
-                          ),
-                          onRemoveSong: (songId) => notifier.removeSongFromSet(
-                            state.selectedSetId!,
-                            songId,
-                          ),
-                          onProject: () async {
-                            await ref
-                                .read(projectionControllerProvider.notifier)
-                                .projectSongSet(
-                                  state.selectedSetId!,
-                                  state.setItems,
-                                );
-                            ref
-                                .read(setRepositoryProvider)
-                                .recordSetProjection(
-                                  state.selectedSetId!,
-                                  notifier.selectedSet!.name,
-                                );
-                          },
-                        ),
+                      : _buildSetDetail(state, notifier, ref),
                 ),
               ],
-            ),
+            )
+          // Mobile: single-column — list or detail
+          : state.selectedSetId == null
+          ? _SetList(
+              sets: state.sets,
+              selectedId: state.selectedSetId,
+              onSelect: notifier.selectSet,
+              onCreate: () => _showCreateDialog(context, ref),
+              onDelete: (id) =>
+                  _confirmDelete(context, ref, id, state.sets),
+            )
+          : _buildSetDetail(state, notifier, ref),
+    );
+  }
+
+  Widget _buildSetDetail(SetsState state, SetsController notifier, WidgetRef ref) {
+    return _SetDetail(
+      setObj: notifier.selectedSet!,
+      items: state.setItems,
+      availableSongs: state.availableSongs,
+      selectedSetId: state.selectedSetId!,
+      onAddSong: (songId) => notifier.addSongToSet(
+        state.selectedSetId!,
+        songId,
+      ),
+      onRemoveSong: (songId) => notifier.removeSongFromSet(
+        state.selectedSetId!,
+        songId,
+      ),
+      onProject: () async {
+        await ref
+            .read(projectionControllerProvider.notifier)
+            .projectSongSet(
+              state.selectedSetId!,
+              state.setItems,
+            );
+        ref
+            .read(setRepositoryProvider)
+            .recordSetProjection(
+              state.selectedSetId!,
+              notifier.selectedSet!.name,
+            );
+      },
     );
   }
 

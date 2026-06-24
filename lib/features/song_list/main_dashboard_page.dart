@@ -165,19 +165,25 @@ class MainDashboardPage extends ConsumerWidget {
       ),
       bottomNavigationBar: !isLargeScreen
           ? NavigationBar(
-              selectedIndex: [0, 3, 4, 5].contains(activeTab)
-                  ? [0, 3, 4, 5].indexOf(activeTab)
-                  : 0,
+              selectedIndex: activeTab,
               onDestinationSelected: (index) {
-                final mappedIndices = [0, 3, 4, 5];
-                ref.read(activeDashboardTabProvider.notifier).state =
-                    mappedIndices[index];
+                ref.read(activeDashboardTabProvider.notifier).state = index;
               },
               destinations: const [
                 NavigationDestination(
                   icon: Icon(Icons.music_note_outlined),
                   selectedIcon: Icon(Icons.music_note),
                   label: 'Songs',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.playlist_add_check_outlined),
+                  selectedIcon: Icon(Icons.playlist_add_check),
+                  label: 'Sets',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.menu_book_outlined),
+                  selectedIcon: Icon(Icons.menu_book),
+                  label: 'Bible',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.history_outlined),

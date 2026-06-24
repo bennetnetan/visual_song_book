@@ -26,15 +26,21 @@ class BibleTab extends ConsumerWidget {
     return Scaffold(
       body: !state.isLoaded
           ? const Center(child: CircularProgressIndicator())
+          : !isLargeScreen && state.selectedBookId == null
+          // Mobile: full-screen book picker when no book is selected
+          ? _BookPicker(books: state.books, onSelect: notifier.selectBook)
+          // Desktop layout or mobile with book selected
           : Row(
               children: [
-                // Left navigation pane - books list
-                _BookNav(
-                  books: state.books,
-                  selectedId: state.selectedBookId,
-                  onSelect: notifier.selectBook,
-                ),
-                const VerticalDivider(width: 1, thickness: 1),
+                // Left navigation pane - books list (desktop only)
+                if (isLargeScreen) ...[
+                  _BookNav(
+                    books: state.books,
+                    selectedId: state.selectedBookId,
+                    onSelect: notifier.selectBook,
+                  ),
+                  const VerticalDivider(width: 1, thickness: 1),
+                ],
                 // Main reading area
                 Expanded(
                   child: Column(
@@ -43,6 +49,8 @@ class BibleTab extends ConsumerWidget {
                       _SearchBar(
                         query: state.query,
                         onChanged: notifier.search,
+                        showBackButton: !isLargeScreen && state.selectedBookId != null,
+                        onBack: notifier.clearSelection,
                       ),
                       // Content area
                       Expanded(
@@ -166,6 +174,62 @@ class BibleTab extends ConsumerWidget {
   }
 }
 
+class _BookPicker extends StatelessWidget {
+  final List<BibleBook> books;
+  final ValueChanged<int> onSelect;
+
+  const _BookPicker({required this.books, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+          child: Text(
+            'SELECT A BOOK',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.2,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            itemCount: books.length,
+            itemBuilder: (context, index) {
+              final book = books[index];
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => onSelect(book.id),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Text(
+                      book.name,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _BookNav extends StatelessWidget {
   final List<BibleBook> books;
   final int? selectedId;
@@ -230,34 +294,55 @@ class _BookNav extends StatelessWidget {
 class _SearchBar extends StatelessWidget {
   final String query;
   final ValueChanged<String> onChanged;
+  final bool showBackButton;
+  final VoidCallback? onBack;
 
-  const _SearchBar({required this.query, required this.onChanged});
+  const _SearchBar({
+    required this.query,
+    required this.onChanged,
+    this.showBackButton = false,
+    this.onBack,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-      child: TextField(
-        onChanged: onChanged,
-        controller: query.isNotEmpty ? TextEditingController.fromValue(TextEditingValue(text: query)) : null,
-        decoration: InputDecoration(
-          hintText: 'Search scripture, topics...',
-          prefixIcon: Icon(Icons.search, color: theme.colorScheme.primary),
-          suffixIcon: query.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear, size: 20),
-                  onPressed: () => onChanged(''),
-                )
-              : null,
-          filled: true,
-          fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(28),
-            borderSide: BorderSide.none,
+      padding: EdgeInsets.fromLTRB(showBackButton ? 4 : 20, 16, 20, 4),
+      child: Row(
+        children: [
+          if (showBackButton)
+            IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: onBack,
+              tooltip: 'Back to books',
+            ),
+          Expanded(
+            child: TextField(
+              onChanged: onChanged,
+              controller: query.isNotEmpty
+                  ? TextEditingController.fromValue(TextEditingValue(text: query))
+                  : null,
+              decoration: InputDecoration(
+                hintText: 'Search scripture, topics...',
+                prefixIcon: Icon(Icons.search, color: theme.colorScheme.primary),
+                suffixIcon: query.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 20),
+                        onPressed: () => onChanged(''),
+                      )
+                    : null,
+                filled: true,
+                fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(28),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
           ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
-        ),
+        ],
       ),
     );
   }
