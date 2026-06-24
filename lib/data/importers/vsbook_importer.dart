@@ -70,7 +70,9 @@ class VsBookImporter implements SongbookImporter {
       }
 
       if (metadataJsonFile == null) {
-        return ImportResult.failure('Invalid .vsbook format: missing metadata.json');
+        return ImportResult.failure(
+          'Invalid .vsbook format: missing metadata.json',
+        );
       }
 
       // 1. Process via SQLite if dbFile exists
@@ -84,7 +86,8 @@ class VsBookImporter implements SongbookImporter {
       }
 
       return ImportResult.failure(
-          'Invalid .vsbook format: no SQLite database or JSON songs file found.');
+        'Invalid .vsbook format: no SQLite database or JSON songs file found.',
+      );
     } catch (e) {
       return ImportResult.failure('Error importing .vsbook: $e');
     }
@@ -92,7 +95,10 @@ class VsBookImporter implements SongbookImporter {
 
   Future<ImportResult> _importFromSqliteFile(ArchiveFile dbFile) async {
     final tempDir = await getTemporaryDirectory();
-    final tempDbPath = p.join(tempDir.path, 'temp_import_${DateTime.now().millisecondsSinceEpoch}.db');
+    final tempDbPath = p.join(
+      tempDir.path,
+      'temp_import_${DateTime.now().millisecondsSinceEpoch}.db',
+    );
     final tempFile = File(tempDbPath);
     await tempFile.writeAsBytes(dbFile.content as List<int>);
 
@@ -109,10 +115,9 @@ class VsBookImporter implements SongbookImporter {
           final id = row['id'] as int?;
           final name = row['name'] as String?;
           if (id != null && name != null) {
-            categoryCompanions.add(CategoriesCompanion.insert(
-              id: Value(id),
-              name: name,
-            ));
+            categoryCompanions.add(
+              CategoriesCompanion.insert(id: Value(id), name: name),
+            );
           }
         }
       } catch (_) {
@@ -143,28 +148,34 @@ class VsBookImporter implements SongbookImporter {
         final sourcePath = row['source_path'] as String?;
         final sourceFormat = row['source_format'] as String?;
 
-        final parsedModified = modifiedStr != null ? DateTime.tryParse(modifiedStr) : null;
+        final parsedModified = modifiedStr != null
+            ? DateTime.tryParse(modifiedStr)
+            : null;
 
-        songCompanions.add(SongsCompanion.insert(
-          songNum: songNum,
-          title: title,
-          body: body,
-          key: Value(key),
-          modified: Value(parsedModified),
-          search: Value(search),
-          copyright: Value(copyright),
-          author: Value(author),
-          categoryId: categoryId != null ? Value(categoryId) : const Value<int?>.absent(),
-          sourceSongId: Value(sourceSongId),
-          sourcePath: Value(sourcePath),
-          sourceFormat: Value(sourceFormat),
-        ));
+        songCompanions.add(
+          SongsCompanion.insert(
+            songNum: songNum,
+            title: title,
+            body: body,
+            key: Value(key),
+            modified: Value(parsedModified),
+            search: Value(search),
+            copyright: Value(copyright),
+            author: Value(author),
+            categoryId: categoryId != null
+                ? Value(categoryId)
+                : const Value<int?>.absent(),
+            sourceSongId: Value(sourceSongId),
+            sourcePath: Value(sourcePath),
+            sourceFormat: Value(sourceFormat),
+          ),
+        );
       }
 
       // Snapshot existing songs before clearing, for comparison
-      final preExisting = await (db.select(db.songs)
-            ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
-          .get();
+      final preExisting = await (db.select(
+        db.songs,
+      )..orderBy([(t) => OrderingTerm.asc(t.songNum)])).get();
       final preExistingKeys = preExisting
           .map((s) => '${s.songNum}|${s.title.toLowerCase().trim()}')
           .toSet();
@@ -188,7 +199,8 @@ class VsBookImporter implements SongbookImporter {
       final newSongTitles = <String>[];
       int alreadyExisted = 0;
       for (final companion in songCompanions) {
-        final key = '${companion.songNum.value}|${companion.title.value.toLowerCase().trim()}';
+        final key =
+            '${companion.songNum.value}|${companion.title.value.toLowerCase().trim()}';
         if (preExistingKeys.contains(key)) {
           alreadyExisted++;
         } else {
@@ -212,22 +224,26 @@ class VsBookImporter implements SongbookImporter {
   }
 
   Future<ImportResult> _importFromJsonFiles(
-      ArchiveFile songsFile, ArchiveFile? categoriesFile) async {
+    ArchiveFile songsFile,
+    ArchiveFile? categoriesFile,
+  ) async {
     final songsContent = utf8.decode(songsFile.content as List<int>);
     final List<dynamic> songsJson = json.decode(songsContent) as List<dynamic>;
 
     final List<CategoriesCompanion> categoryCompanions = [];
     if (categoriesFile != null) {
-      final categoriesContent = utf8.decode(categoriesFile.content as List<int>);
-      final List<dynamic> categoriesJson = json.decode(categoriesContent) as List<dynamic>;
+      final categoriesContent = utf8.decode(
+        categoriesFile.content as List<int>,
+      );
+      final List<dynamic> categoriesJson =
+          json.decode(categoriesContent) as List<dynamic>;
       for (final item in categoriesJson) {
         final id = item['id'] as int?;
         final name = item['name'] as String?;
         if (id != null && name != null) {
-          categoryCompanions.add(CategoriesCompanion.insert(
-            id: Value(id),
-            name: name,
-          ));
+          categoryCompanions.add(
+            CategoriesCompanion.insert(id: Value(id), name: name),
+          );
         }
       }
     }
@@ -250,28 +266,34 @@ class VsBookImporter implements SongbookImporter {
       final sourcePath = item['source_path'] as String?;
       final sourceFormat = item['source_format'] as String?;
 
-      final parsedModified = modifiedStr != null ? DateTime.tryParse(modifiedStr) : null;
+      final parsedModified = modifiedStr != null
+          ? DateTime.tryParse(modifiedStr)
+          : null;
 
-      songCompanions.add(SongsCompanion.insert(
-        songNum: songNum,
-        title: title,
-        body: body,
-        key: Value(key),
-        modified: Value(parsedModified),
-        search: Value(search),
-        copyright: Value(copyright),
-        author: Value(author),
-        categoryId: categoryId != null ? Value(categoryId) : const Value<int?>.absent(),
-        sourceSongId: Value(sourceSongId),
-        sourcePath: Value(sourcePath),
-        sourceFormat: Value(sourceFormat),
-      ));
+      songCompanions.add(
+        SongsCompanion.insert(
+          songNum: songNum,
+          title: title,
+          body: body,
+          key: Value(key),
+          modified: Value(parsedModified),
+          search: Value(search),
+          copyright: Value(copyright),
+          author: Value(author),
+          categoryId: categoryId != null
+              ? Value(categoryId)
+              : const Value<int?>.absent(),
+          sourceSongId: Value(sourceSongId),
+          sourcePath: Value(sourcePath),
+          sourceFormat: Value(sourceFormat),
+        ),
+      );
     }
 
     // Snapshot existing songs before clearing, for comparison
-    final preExisting = await (db.select(db.songs)
-          ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
-        .get();
+    final preExisting = await (db.select(
+      db.songs,
+    )..orderBy([(t) => OrderingTerm.asc(t.songNum)])).get();
     final preExistingKeys = preExisting
         .map((s) => '${s.songNum}|${s.title.toLowerCase().trim()}')
         .toSet();
@@ -294,7 +316,8 @@ class VsBookImporter implements SongbookImporter {
     final newSongTitles = <String>[];
     int alreadyExisted = 0;
     for (final companion in songCompanions) {
-      final key = '${companion.songNum.value}|${companion.title.value.toLowerCase().trim()}';
+      final key =
+          '${companion.songNum.value}|${companion.title.value.toLowerCase().trim()}';
       if (preExistingKeys.contains(key)) {
         alreadyExisted++;
       } else {

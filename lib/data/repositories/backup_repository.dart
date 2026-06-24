@@ -30,11 +30,7 @@ class BackupRepository {
     final archive = Archive();
 
     // 1. Add SQLite database
-    archive.addFile(ArchiveFile(
-      'songs.db',
-      dbBytes.length,
-      dbBytes,
-    ));
+    archive.addFile(ArchiveFile('songs.db', dbBytes.length, dbBytes));
 
     // 2. Add metadata.json
     final metadata = {
@@ -43,11 +39,9 @@ class BackupRepository {
       'appName': 'Visual Song Book',
     };
     final metadataBytes = utf8.encode(json.encode(metadata));
-    archive.addFile(ArchiveFile(
-      'metadata.json',
-      metadataBytes.length,
-      metadataBytes,
-    ));
+    archive.addFile(
+      ArchiveFile('metadata.json', metadataBytes.length, metadataBytes),
+    );
 
     // Encode Zip file
     final zipEncoder = ZipEncoder();

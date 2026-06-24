@@ -13,7 +13,9 @@ class NeoShadows {
           blurRadius: 12,
         ),
         BoxShadow(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.15),
+          color: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.15),
           offset: const Offset(-4, -4),
           blurRadius: 10,
         ),
@@ -43,7 +45,9 @@ class NeoShadows {
           blurRadius: 8,
         ),
         BoxShadow(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
+          color: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
           offset: const Offset(-3, -3),
           blurRadius: 6,
         ),
@@ -74,7 +78,9 @@ class NeoShadows {
           inset: true,
         ),
         BoxShadow(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.12),
+          color: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.12),
           offset: const Offset(-3, -3),
           blurRadius: 8,
           inset: true,
@@ -108,7 +114,9 @@ class NeoShadows {
           inset: true,
         ),
         BoxShadow(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
+          color: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
           offset: const Offset(-2, -2),
           blurRadius: 5,
           inset: true,
@@ -130,7 +138,6 @@ class NeoShadows {
       ),
     ];
   }
-
 }
 
 class NeoRaisedCard extends StatelessWidget {
@@ -245,7 +252,9 @@ class _NeoButtonState extends State<NeoButton> {
             blurRadius: 8,
           ),
           BoxShadow(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
+            color: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
             offset: const Offset(-3, -3),
             blurRadius: 6,
           ),
@@ -276,7 +285,9 @@ class _NeoButtonState extends State<NeoButton> {
           blurRadius: 8,
         ),
         BoxShadow(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
+          color: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
           offset: const Offset(-3, -3),
           blurRadius: 6,
         ),
@@ -309,7 +320,9 @@ class _NeoButtonState extends State<NeoButton> {
     final button = MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      cursor: widget.onPressed != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      cursor: widget.onPressed != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
       child: GestureDetector(
         onTapDown: (_) => setState(() => _isPressed = true),
         onTapUp: (_) => setState(() => _isPressed = false),
@@ -367,11 +380,7 @@ class NeoToggle extends StatelessWidget {
   final bool value;
   final ValueChanged<bool> onChanged;
 
-  const NeoToggle({
-    super.key,
-    required this.value,
-    required this.onChanged,
-  });
+  const NeoToggle({super.key, required this.value, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -387,7 +396,9 @@ class NeoToggle extends StatelessWidget {
         decoration: BoxDecoration(
           color: value
               ? theme.colorScheme.primary
-              : (isDark ? theme.colorScheme.surfaceContainerHigh : theme.colorScheme.surfaceContainerHighest),
+              : (isDark
+                    ? theme.colorScheme.surfaceContainerHigh
+                    : theme.colorScheme.surfaceContainerHighest),
           borderRadius: BorderRadius.circular(9999),
           boxShadow: value
               ? [
@@ -457,12 +468,7 @@ class NeoSlider extends StatelessWidget {
         thumbShape: const _NeoThumbShape(),
         trackShape: const _NeoTrackShape(),
       ),
-      child: Slider(
-        value: value,
-        min: min,
-        max: max,
-        onChanged: onChanged,
-      ),
+      child: Slider(value: value, min: min, max: max, onChanged: onChanged),
     );
   }
 }
@@ -539,7 +545,8 @@ class _NeoTrackShape extends SliderTrackShape {
   }) {
     final double trackHeight = sliderTheme.trackHeight!;
     final double trackLeft = offset.dx;
-    final double trackTop = offset.dy + (parentBox.size.height - trackHeight) / 2;
+    final double trackTop =
+        offset.dy + (parentBox.size.height - trackHeight) / 2;
     final double trackWidth = parentBox.size.width;
     return Rect.fromLTWH(trackLeft, trackTop, trackWidth, trackHeight);
   }
@@ -565,12 +572,17 @@ class _NeoTrackShape extends SliderTrackShape {
       isEnabled: isEnabled,
       isDiscrete: isDiscrete,
     );
-    final RRect rrect = RRect.fromRectAndRadius(rect, const Radius.circular(999));
+    final RRect rrect = RRect.fromRectAndRadius(
+      rect,
+      const Radius.circular(999),
+    );
 
     final double fraction = (thumbCenter.dx - rect.left) / rect.width;
 
-    final Color trackBg = (sliderTheme.inactiveTrackColor ?? const Color(0xFFE8EAF0));
-    final Color trackFill = (sliderTheme.activeTrackColor ?? Colors.blue).withValues(alpha: 0.3);
+    final Color trackBg =
+        (sliderTheme.inactiveTrackColor ?? const Color(0xFFE8EAF0));
+    final Color trackFill = (sliderTheme.activeTrackColor ?? Colors.blue)
+        .withValues(alpha: 0.3);
 
     // Draw background track
     final bgPaint = Paint()..color = trackBg;
@@ -586,8 +598,16 @@ class _NeoTrackShape extends SliderTrackShape {
 
     // Draw filled portion (left of thumb)
     if (fraction > 0) {
-      final fillRect = Rect.fromLTWH(rect.left, rect.top, rect.width * fraction, rect.height);
-      final fillRRect = RRect.fromRectAndRadius(fillRect, const Radius.circular(999));
+      final fillRect = Rect.fromLTWH(
+        rect.left,
+        rect.top,
+        rect.width * fraction,
+        rect.height,
+      );
+      final fillRRect = RRect.fromRectAndRadius(
+        fillRect,
+        const Radius.circular(999),
+      );
       final fillPaint = Paint()..color = trackFill;
       canvas.drawRRect(fillRRect, fillPaint);
     }
@@ -626,7 +646,9 @@ class NeoSegmentedControl<T> extends StatelessWidget {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? theme.colorScheme.primary : Colors.transparent,
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: isSelected
                       ? [
@@ -641,7 +663,9 @@ class NeoSegmentedControl<T> extends StatelessWidget {
                 child: Center(
                   child: DefaultTextStyle(
                     style: GoogleFonts.plusJakartaSans(
-                      color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant,
+                      color: isSelected
+                          ? theme.colorScheme.onPrimary
+                          : theme.colorScheme.onSurfaceVariant,
                       fontWeight: FontWeight.w500,
                       fontSize: 14,
                     ),

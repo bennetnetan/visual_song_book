@@ -10,7 +10,9 @@ import 'package:visual_song_book/data/importers/vsbook_importer.dart';
 import 'package:visual_song_book/features/settings/settings_cards.dart';
 import 'package:visual_song_book/features/song_list/song_list_controller.dart';
 
-final selectedSettingsCategoryProvider = StateProvider<String>((ref) => 'General');
+final selectedSettingsCategoryProvider = StateProvider<String>(
+  (ref) => 'General',
+);
 
 class SettingsTab extends ConsumerStatefulWidget {
   const SettingsTab({super.key});
@@ -32,9 +34,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     });
 
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
-      );
+      final result = await FilePicker.platform.pickFiles(type: FileType.any);
 
       if (result == null || result.files.single.path == null) {
         setState(() {
@@ -49,17 +49,22 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
 
       final importers = ref.read(importersProvider);
       final source = ImportSource.fromFile(path);
-      final activeImporter = importers.where((imp) => imp.canImport(source)).firstOrNull;
+      final activeImporter = importers
+          .where((imp) => imp.canImport(source))
+          .firstOrNull;
 
       if (activeImporter == null) {
         throw Exception(
-            'No importer supports this file on this platform. Direct .mdb import requires Desktop platforms with mdb-tools installed.');
+          'No importer supports this file on this platform. Direct .mdb import requires Desktop platforms with mdb-tools installed.',
+        );
       }
 
       final importResult = await activeImporter.import(source);
       if (importResult.success) {
         final buffer = StringBuffer()
-          ..write('Imported ${importResult.songsImported} songs, ${importResult.categoriesImported} categories.');
+          ..write(
+            'Imported ${importResult.songsImported} songs, ${importResult.categoriesImported} categories.',
+          );
         scaffoldMessenger.showSnackBar(
           SnackBar(content: Text(buffer.toString())),
         );
@@ -87,9 +92,13 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     });
 
     try {
-      await ref.read(songListControllerProvider.notifier).checkAndImportDefaultSongbooks(force: true);
+      await ref
+          .read(songListControllerProvider.notifier)
+          .checkAndImportDefaultSongbooks(force: true);
       scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('Bundled songbooks imported successfully.')),
+        const SnackBar(
+          content: Text('Bundled songbooks imported successfully.'),
+        ),
       );
     } catch (e) {
       scaffoldMessenger.showSnackBar(
@@ -111,9 +120,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     });
 
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
-      );
+      final result = await FilePicker.platform.pickFiles(type: FileType.any);
 
       if (result == null || result.files.single.path == null) {
         setState(() {
@@ -135,7 +142,9 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
       final importResult = await activeImporter.import(source);
       if (importResult.success) {
         scaffoldMessenger.showSnackBar(
-          SnackBar(content: Text('Restored ${importResult.songsImported} songs.')),
+          SnackBar(
+            content: Text('Restored ${importResult.songsImported} songs.'),
+          ),
         );
         ref.read(songListControllerProvider.notifier).fetchSongs();
       } else {
@@ -292,31 +301,41 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
               _SidebarItem(
                 title: 'General',
                 isSelected: selectedCategory == 'General',
-                onTap: () => ref.read(selectedSettingsCategoryProvider.notifier).state = 'General',
+                onTap: () =>
+                    ref.read(selectedSettingsCategoryProvider.notifier).state =
+                        'General',
               ),
               const SizedBox(height: 8),
               _SidebarItem(
                 title: 'Display',
                 isSelected: selectedCategory == 'Display',
-                onTap: () => ref.read(selectedSettingsCategoryProvider.notifier).state = 'Display',
+                onTap: () =>
+                    ref.read(selectedSettingsCategoryProvider.notifier).state =
+                        'Display',
               ),
               const SizedBox(height: 8),
               _SidebarItem(
                 title: 'Library',
                 isSelected: selectedCategory == 'Library',
-                onTap: () => ref.read(selectedSettingsCategoryProvider.notifier).state = 'Library',
+                onTap: () =>
+                    ref.read(selectedSettingsCategoryProvider.notifier).state =
+                        'Library',
               ),
               const SizedBox(height: 8),
               _SidebarItem(
                 title: 'Advanced',
                 isSelected: selectedCategory == 'Advanced',
-                onTap: () => ref.read(selectedSettingsCategoryProvider.notifier).state = 'Advanced',
+                onTap: () =>
+                    ref.read(selectedSettingsCategoryProvider.notifier).state =
+                        'Advanced',
               ),
               const SizedBox(height: 8),
               _SidebarItem(
                 title: 'About',
                 isSelected: selectedCategory == 'About',
-                onTap: () => ref.read(selectedSettingsCategoryProvider.notifier).state = 'About',
+                onTap: () =>
+                    ref.read(selectedSettingsCategoryProvider.notifier).state =
+                        'About',
               ),
             ],
           ),
@@ -482,7 +501,10 @@ class _DataSourcesCard extends ConsumerWidget {
                   child: Center(
                     child: Text(
                       'No external sources found.',
-                      style: GoogleFonts.plusJakartaSans(fontStyle: FontStyle.italic, color: Colors.grey),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontStyle: FontStyle.italic,
+                        color: Colors.grey,
+                      ),
                     ),
                   ),
                 );
@@ -502,7 +524,9 @@ class _DataSourcesCard extends ConsumerWidget {
                               children: [
                                 Text(
                                   source.split(Platform.pathSeparator).last,
-                                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w500),
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -518,7 +542,10 @@ class _DataSourcesCard extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          _DeleteButton(onPressed: () => _confirmDeleteSource(context, ref, source)),
+                          _DeleteButton(
+                            onPressed: () =>
+                                _confirmDeleteSource(context, ref, source),
+                          ),
                         ],
                       ),
                     ),
@@ -540,21 +567,35 @@ class _DataSourcesCard extends ConsumerWidget {
     );
   }
 
-  void _confirmDeleteSource(BuildContext context, WidgetRef ref, String sourcePath) {
+  void _confirmDeleteSource(
+    BuildContext context,
+    WidgetRef ref,
+    String sourcePath,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Collection'),
-        content: Text('Are you sure you want to delete all songs imported from:\n\n$sourcePath?'),
+        content: Text(
+          'Are you sure you want to delete all songs imported from:\n\n$sourcePath?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              await ref.read(songRepositoryProvider).deleteSongsBySource(sourcePath);
+              await ref
+                  .read(songRepositoryProvider)
+                  .deleteSongsBySource(sourcePath);
               ref.read(songListControllerProvider.notifier).fetchSongs();
             },
-            child: const Text('Delete All', style: TextStyle(color: Colors.red)),
+            child: const Text(
+              'Delete All',
+              style: TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -606,7 +647,11 @@ class _DangerZoneSection extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.delete_forever, color: theme.colorScheme.error, size: 20),
+              Icon(
+                Icons.delete_forever,
+                color: theme.colorScheme.error,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Remove All Collections',
@@ -624,14 +669,22 @@ class _DangerZoneSection extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete All Data'),
-        content: const Text('This will wipe all imported songs and categories. This action cannot be undone.'),
+        content: const Text(
+          'This will wipe all imported songs and categories. This action cannot be undone.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
             },
-            child: const Text('Wipe Everything', style: TextStyle(color: Colors.red)),
+            child: const Text(
+              'Wipe Everything',
+              style: TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -665,7 +718,9 @@ class _DeleteButton extends StatelessWidget {
             ),
             BoxShadow(
               color: isDark
-                  ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.1)
+                  ? theme.colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.1,
+                    )
                   : Colors.white.withValues(alpha: 0.6),
               offset: const Offset(-4, -4),
               blurRadius: 8,
@@ -688,13 +743,9 @@ class _AdvancedSettingsPlaceholder extends StatelessWidget {
         children: [
           SectionHeader(icon: Icons.code, title: 'Advanced'),
           SizedBox(height: 24),
-          Center(
-            child: Text('Advanced developer settings will appear here.'),
-          ),
+          Center(child: Text('Advanced developer settings will appear here.')),
         ],
       ),
     );
   }
 }
-
-

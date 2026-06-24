@@ -25,6 +25,8 @@ class AppFontSizeNotifier extends StateNotifier<double> {
   }
 }
 
-final appFontSizeProvider = StateNotifierProvider<AppFontSizeNotifier, double>((ref) {
+final appFontSizeProvider = StateNotifierProvider<AppFontSizeNotifier, double>((
+  ref,
+) {
   return AppFontSizeNotifier();
 });

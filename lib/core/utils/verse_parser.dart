@@ -24,18 +24,12 @@ class VerseParser {
       if (firstLine == 'CHORUS' || firstLine.startsWith('CHORUS:')) {
         // It's a chorus! Strip the first line and use the rest as text.
         final text = lines.skip(1).join('\n').trim();
-        verses.add(Verse(
-          label: 'C',
-          text: text,
-          order: i + 1,
-        ));
+        verses.add(Verse(label: 'C', text: text, order: i + 1));
       } else {
         // It's a regular verse.
-        verses.add(Verse(
-          label: 'V$verseCounter',
-          text: paragraph,
-          order: i + 1,
-        ));
+        verses.add(
+          Verse(label: 'V$verseCounter', text: paragraph, order: i + 1),
+        );
         verseCounter++;
       }
     }
@@ -45,7 +39,10 @@ class VerseParser {
 
   /// Builds a sequence of slides for projection.
   /// If a chorus exists, it is automatically repeated between verses if requested.
-  static List<Verse> buildSlideSequence(List<Verse> verses, {bool autoInsertChorus = true}) {
+  static List<Verse> buildSlideSequence(
+    List<Verse> verses, {
+    bool autoInsertChorus = true,
+  }) {
     if (verses.isEmpty) return [];
 
     final List<Verse> sequence = [];
@@ -58,7 +55,7 @@ class VerseParser {
 
     for (int i = 0; i < verses.length; i++) {
       final current = verses[i];
-      
+
       // If we are auto-inserting chorus and this is not the chorus itself
       if (autoInsertChorus && hasChorus && !current.isChorus) {
         // If it's a verse and we already added a slide and the last slide wasn't the chorus,
@@ -67,12 +64,15 @@ class VerseParser {
           sequence.add(chorus);
         }
       }
-      
+
       sequence.add(current);
     }
 
     // Optional: if the last slide is a verse and we want to end on chorus
-    if (autoInsertChorus && hasChorus && sequence.isNotEmpty && !sequence.last.isChorus) {
+    if (autoInsertChorus &&
+        hasChorus &&
+        sequence.isNotEmpty &&
+        !sequence.last.isChorus) {
       sequence.add(chorus);
     }
 

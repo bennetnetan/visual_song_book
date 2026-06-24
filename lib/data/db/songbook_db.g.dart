@@ -1513,6 +1513,1805 @@ class HistoryCompanion extends UpdateCompanion<HistoryData> {
   }
 }
 
+class $SongSetsTable extends SongSets with TableInfo<$SongSetsTable, SongSet> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SongSetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 200),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _occasionMeta = const VerificationMeta(
+    'occasion',
+  );
+  @override
+  late final GeneratedColumn<String> occasion = GeneratedColumn<String>(
+    'occasion',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, notes, occasion, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'song_sets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SongSet> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('occasion')) {
+      context.handle(
+        _occasionMeta,
+        occasion.isAcceptableOrUnknown(data['occasion']!, _occasionMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SongSet map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SongSet(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      occasion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}occasion'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SongSetsTable createAlias(String alias) {
+    return $SongSetsTable(attachedDatabase, alias);
+  }
+}
+
+class SongSet extends DataClass implements Insertable<SongSet> {
+  final int id;
+  final String name;
+  final String? notes;
+  final String? occasion;
+  final DateTime createdAt;
+  const SongSet({
+    required this.id,
+    required this.name,
+    this.notes,
+    this.occasion,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || occasion != null) {
+      map['occasion'] = Variable<String>(occasion);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  SongSetsCompanion toCompanion(bool nullToAbsent) {
+    return SongSetsCompanion(
+      id: Value(id),
+      name: Value(name),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      occasion: occasion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(occasion),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory SongSet.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SongSet(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      occasion: serializer.fromJson<String?>(json['occasion']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'notes': serializer.toJson<String?>(notes),
+      'occasion': serializer.toJson<String?>(occasion),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  SongSet copyWith({
+    int? id,
+    String? name,
+    Value<String?> notes = const Value.absent(),
+    Value<String?> occasion = const Value.absent(),
+    DateTime? createdAt,
+  }) => SongSet(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    notes: notes.present ? notes.value : this.notes,
+    occasion: occasion.present ? occasion.value : this.occasion,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  SongSet copyWithCompanion(SongSetsCompanion data) {
+    return SongSet(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      occasion: data.occasion.present ? data.occasion.value : this.occasion,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SongSet(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('notes: $notes, ')
+          ..write('occasion: $occasion, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, notes, occasion, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SongSet &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.notes == this.notes &&
+          other.occasion == this.occasion &&
+          other.createdAt == this.createdAt);
+}
+
+class SongSetsCompanion extends UpdateCompanion<SongSet> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<String?> notes;
+  final Value<String?> occasion;
+  final Value<DateTime> createdAt;
+  const SongSetsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.occasion = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  SongSetsCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    this.notes = const Value.absent(),
+    this.occasion = const Value.absent(),
+    required DateTime createdAt,
+  }) : name = Value(name),
+       createdAt = Value(createdAt);
+  static Insertable<SongSet> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<String>? notes,
+    Expression<String>? occasion,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (notes != null) 'notes': notes,
+      if (occasion != null) 'occasion': occasion,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  SongSetsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<String?>? notes,
+    Value<String?>? occasion,
+    Value<DateTime>? createdAt,
+  }) {
+    return SongSetsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      notes: notes ?? this.notes,
+      occasion: occasion ?? this.occasion,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (occasion.present) {
+      map['occasion'] = Variable<String>(occasion.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SongSetsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('notes: $notes, ')
+          ..write('occasion: $occasion, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SongSetItemsTable extends SongSetItems
+    with TableInfo<$SongSetItemsTable, SongSetItem> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SongSetItemsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _setIdMeta = const VerificationMeta('setId');
+  @override
+  late final GeneratedColumn<int> setId = GeneratedColumn<int>(
+    'set_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES song_sets (id)',
+    ),
+  );
+  static const VerificationMeta _songIdMeta = const VerificationMeta('songId');
+  @override
+  late final GeneratedColumn<int> songId = GeneratedColumn<int>(
+    'song_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES songs (id)',
+    ),
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, setId, songId, position, notes];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'song_set_items';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SongSetItem> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('set_id')) {
+      context.handle(
+        _setIdMeta,
+        setId.isAcceptableOrUnknown(data['set_id']!, _setIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_setIdMeta);
+    }
+    if (data.containsKey('song_id')) {
+      context.handle(
+        _songIdMeta,
+        songId.isAcceptableOrUnknown(data['song_id']!, _songIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_songIdMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_positionMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SongSetItem map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SongSetItem(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      setId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}set_id'],
+      )!,
+      songId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}song_id'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}position'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+    );
+  }
+
+  @override
+  $SongSetItemsTable createAlias(String alias) {
+    return $SongSetItemsTable(attachedDatabase, alias);
+  }
+}
+
+class SongSetItem extends DataClass implements Insertable<SongSetItem> {
+  final int id;
+  final int setId;
+  final int songId;
+  final int position;
+  final String? notes;
+  const SongSetItem({
+    required this.id,
+    required this.setId,
+    required this.songId,
+    required this.position,
+    this.notes,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['set_id'] = Variable<int>(setId);
+    map['song_id'] = Variable<int>(songId);
+    map['position'] = Variable<int>(position);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    return map;
+  }
+
+  SongSetItemsCompanion toCompanion(bool nullToAbsent) {
+    return SongSetItemsCompanion(
+      id: Value(id),
+      setId: Value(setId),
+      songId: Value(songId),
+      position: Value(position),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+    );
+  }
+
+  factory SongSetItem.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SongSetItem(
+      id: serializer.fromJson<int>(json['id']),
+      setId: serializer.fromJson<int>(json['setId']),
+      songId: serializer.fromJson<int>(json['songId']),
+      position: serializer.fromJson<int>(json['position']),
+      notes: serializer.fromJson<String?>(json['notes']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'setId': serializer.toJson<int>(setId),
+      'songId': serializer.toJson<int>(songId),
+      'position': serializer.toJson<int>(position),
+      'notes': serializer.toJson<String?>(notes),
+    };
+  }
+
+  SongSetItem copyWith({
+    int? id,
+    int? setId,
+    int? songId,
+    int? position,
+    Value<String?> notes = const Value.absent(),
+  }) => SongSetItem(
+    id: id ?? this.id,
+    setId: setId ?? this.setId,
+    songId: songId ?? this.songId,
+    position: position ?? this.position,
+    notes: notes.present ? notes.value : this.notes,
+  );
+  SongSetItem copyWithCompanion(SongSetItemsCompanion data) {
+    return SongSetItem(
+      id: data.id.present ? data.id.value : this.id,
+      setId: data.setId.present ? data.setId.value : this.setId,
+      songId: data.songId.present ? data.songId.value : this.songId,
+      position: data.position.present ? data.position.value : this.position,
+      notes: data.notes.present ? data.notes.value : this.notes,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SongSetItem(')
+          ..write('id: $id, ')
+          ..write('setId: $setId, ')
+          ..write('songId: $songId, ')
+          ..write('position: $position, ')
+          ..write('notes: $notes')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, setId, songId, position, notes);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SongSetItem &&
+          other.id == this.id &&
+          other.setId == this.setId &&
+          other.songId == this.songId &&
+          other.position == this.position &&
+          other.notes == this.notes);
+}
+
+class SongSetItemsCompanion extends UpdateCompanion<SongSetItem> {
+  final Value<int> id;
+  final Value<int> setId;
+  final Value<int> songId;
+  final Value<int> position;
+  final Value<String?> notes;
+  const SongSetItemsCompanion({
+    this.id = const Value.absent(),
+    this.setId = const Value.absent(),
+    this.songId = const Value.absent(),
+    this.position = const Value.absent(),
+    this.notes = const Value.absent(),
+  });
+  SongSetItemsCompanion.insert({
+    this.id = const Value.absent(),
+    required int setId,
+    required int songId,
+    required int position,
+    this.notes = const Value.absent(),
+  }) : setId = Value(setId),
+       songId = Value(songId),
+       position = Value(position);
+  static Insertable<SongSetItem> custom({
+    Expression<int>? id,
+    Expression<int>? setId,
+    Expression<int>? songId,
+    Expression<int>? position,
+    Expression<String>? notes,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (setId != null) 'set_id': setId,
+      if (songId != null) 'song_id': songId,
+      if (position != null) 'position': position,
+      if (notes != null) 'notes': notes,
+    });
+  }
+
+  SongSetItemsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? setId,
+    Value<int>? songId,
+    Value<int>? position,
+    Value<String?>? notes,
+  }) {
+    return SongSetItemsCompanion(
+      id: id ?? this.id,
+      setId: setId ?? this.setId,
+      songId: songId ?? this.songId,
+      position: position ?? this.position,
+      notes: notes ?? this.notes,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (setId.present) {
+      map['set_id'] = Variable<int>(setId.value);
+    }
+    if (songId.present) {
+      map['song_id'] = Variable<int>(songId.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SongSetItemsCompanion(')
+          ..write('id: $id, ')
+          ..write('setId: $setId, ')
+          ..write('songId: $songId, ')
+          ..write('position: $position, ')
+          ..write('notes: $notes')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SetHistoryTable extends SetHistory
+    with TableInfo<$SetHistoryTable, SetHistoryData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SetHistoryTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _setIdMeta = const VerificationMeta('setId');
+  @override
+  late final GeneratedColumn<int> setId = GeneratedColumn<int>(
+    'set_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES song_sets (id)',
+    ),
+  );
+  static const VerificationMeta _setNameMeta = const VerificationMeta(
+    'setName',
+  );
+  @override
+  late final GeneratedColumn<String> setName = GeneratedColumn<String>(
+    'set_name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 200),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _accessedAtMeta = const VerificationMeta(
+    'accessedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> accessedAt = GeneratedColumn<DateTime>(
+    'accessed_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, setId, setName, accessedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'set_history';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SetHistoryData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('set_id')) {
+      context.handle(
+        _setIdMeta,
+        setId.isAcceptableOrUnknown(data['set_id']!, _setIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_setIdMeta);
+    }
+    if (data.containsKey('set_name')) {
+      context.handle(
+        _setNameMeta,
+        setName.isAcceptableOrUnknown(data['set_name']!, _setNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_setNameMeta);
+    }
+    if (data.containsKey('accessed_at')) {
+      context.handle(
+        _accessedAtMeta,
+        accessedAt.isAcceptableOrUnknown(data['accessed_at']!, _accessedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_accessedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SetHistoryData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SetHistoryData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      setId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}set_id'],
+      )!,
+      setName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}set_name'],
+      )!,
+      accessedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}accessed_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SetHistoryTable createAlias(String alias) {
+    return $SetHistoryTable(attachedDatabase, alias);
+  }
+}
+
+class SetHistoryData extends DataClass implements Insertable<SetHistoryData> {
+  final int id;
+  final int setId;
+  final String setName;
+  final DateTime accessedAt;
+  const SetHistoryData({
+    required this.id,
+    required this.setId,
+    required this.setName,
+    required this.accessedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['set_id'] = Variable<int>(setId);
+    map['set_name'] = Variable<String>(setName);
+    map['accessed_at'] = Variable<DateTime>(accessedAt);
+    return map;
+  }
+
+  SetHistoryCompanion toCompanion(bool nullToAbsent) {
+    return SetHistoryCompanion(
+      id: Value(id),
+      setId: Value(setId),
+      setName: Value(setName),
+      accessedAt: Value(accessedAt),
+    );
+  }
+
+  factory SetHistoryData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SetHistoryData(
+      id: serializer.fromJson<int>(json['id']),
+      setId: serializer.fromJson<int>(json['setId']),
+      setName: serializer.fromJson<String>(json['setName']),
+      accessedAt: serializer.fromJson<DateTime>(json['accessedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'setId': serializer.toJson<int>(setId),
+      'setName': serializer.toJson<String>(setName),
+      'accessedAt': serializer.toJson<DateTime>(accessedAt),
+    };
+  }
+
+  SetHistoryData copyWith({
+    int? id,
+    int? setId,
+    String? setName,
+    DateTime? accessedAt,
+  }) => SetHistoryData(
+    id: id ?? this.id,
+    setId: setId ?? this.setId,
+    setName: setName ?? this.setName,
+    accessedAt: accessedAt ?? this.accessedAt,
+  );
+  SetHistoryData copyWithCompanion(SetHistoryCompanion data) {
+    return SetHistoryData(
+      id: data.id.present ? data.id.value : this.id,
+      setId: data.setId.present ? data.setId.value : this.setId,
+      setName: data.setName.present ? data.setName.value : this.setName,
+      accessedAt: data.accessedAt.present
+          ? data.accessedAt.value
+          : this.accessedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SetHistoryData(')
+          ..write('id: $id, ')
+          ..write('setId: $setId, ')
+          ..write('setName: $setName, ')
+          ..write('accessedAt: $accessedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, setId, setName, accessedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SetHistoryData &&
+          other.id == this.id &&
+          other.setId == this.setId &&
+          other.setName == this.setName &&
+          other.accessedAt == this.accessedAt);
+}
+
+class SetHistoryCompanion extends UpdateCompanion<SetHistoryData> {
+  final Value<int> id;
+  final Value<int> setId;
+  final Value<String> setName;
+  final Value<DateTime> accessedAt;
+  const SetHistoryCompanion({
+    this.id = const Value.absent(),
+    this.setId = const Value.absent(),
+    this.setName = const Value.absent(),
+    this.accessedAt = const Value.absent(),
+  });
+  SetHistoryCompanion.insert({
+    this.id = const Value.absent(),
+    required int setId,
+    required String setName,
+    required DateTime accessedAt,
+  }) : setId = Value(setId),
+       setName = Value(setName),
+       accessedAt = Value(accessedAt);
+  static Insertable<SetHistoryData> custom({
+    Expression<int>? id,
+    Expression<int>? setId,
+    Expression<String>? setName,
+    Expression<DateTime>? accessedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (setId != null) 'set_id': setId,
+      if (setName != null) 'set_name': setName,
+      if (accessedAt != null) 'accessed_at': accessedAt,
+    });
+  }
+
+  SetHistoryCompanion copyWith({
+    Value<int>? id,
+    Value<int>? setId,
+    Value<String>? setName,
+    Value<DateTime>? accessedAt,
+  }) {
+    return SetHistoryCompanion(
+      id: id ?? this.id,
+      setId: setId ?? this.setId,
+      setName: setName ?? this.setName,
+      accessedAt: accessedAt ?? this.accessedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (setId.present) {
+      map['set_id'] = Variable<int>(setId.value);
+    }
+    if (setName.present) {
+      map['set_name'] = Variable<String>(setName.value);
+    }
+    if (accessedAt.present) {
+      map['accessed_at'] = Variable<DateTime>(accessedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SetHistoryCompanion(')
+          ..write('id: $id, ')
+          ..write('setId: $setId, ')
+          ..write('setName: $setName, ')
+          ..write('accessedAt: $accessedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $BibleHistoryTable extends BibleHistory
+    with TableInfo<$BibleHistoryTable, BibleHistoryData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BibleHistoryTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _referenceMeta = const VerificationMeta(
+    'reference',
+  );
+  @override
+  late final GeneratedColumn<String> reference = GeneratedColumn<String>(
+    'reference',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 100),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _passageMeta = const VerificationMeta(
+    'passage',
+  );
+  @override
+  late final GeneratedColumn<String> passage = GeneratedColumn<String>(
+    'passage',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _accessedAtMeta = const VerificationMeta(
+    'accessedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> accessedAt = GeneratedColumn<DateTime>(
+    'accessed_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, reference, passage, accessedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'bible_history';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<BibleHistoryData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('reference')) {
+      context.handle(
+        _referenceMeta,
+        reference.isAcceptableOrUnknown(data['reference']!, _referenceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_referenceMeta);
+    }
+    if (data.containsKey('passage')) {
+      context.handle(
+        _passageMeta,
+        passage.isAcceptableOrUnknown(data['passage']!, _passageMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_passageMeta);
+    }
+    if (data.containsKey('accessed_at')) {
+      context.handle(
+        _accessedAtMeta,
+        accessedAt.isAcceptableOrUnknown(data['accessed_at']!, _accessedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_accessedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  BibleHistoryData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return BibleHistoryData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      reference: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reference'],
+      )!,
+      passage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}passage'],
+      )!,
+      accessedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}accessed_at'],
+      )!,
+    );
+  }
+
+  @override
+  $BibleHistoryTable createAlias(String alias) {
+    return $BibleHistoryTable(attachedDatabase, alias);
+  }
+}
+
+class BibleHistoryData extends DataClass
+    implements Insertable<BibleHistoryData> {
+  final int id;
+  final String reference;
+  final String passage;
+  final DateTime accessedAt;
+  const BibleHistoryData({
+    required this.id,
+    required this.reference,
+    required this.passage,
+    required this.accessedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['reference'] = Variable<String>(reference);
+    map['passage'] = Variable<String>(passage);
+    map['accessed_at'] = Variable<DateTime>(accessedAt);
+    return map;
+  }
+
+  BibleHistoryCompanion toCompanion(bool nullToAbsent) {
+    return BibleHistoryCompanion(
+      id: Value(id),
+      reference: Value(reference),
+      passage: Value(passage),
+      accessedAt: Value(accessedAt),
+    );
+  }
+
+  factory BibleHistoryData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return BibleHistoryData(
+      id: serializer.fromJson<int>(json['id']),
+      reference: serializer.fromJson<String>(json['reference']),
+      passage: serializer.fromJson<String>(json['passage']),
+      accessedAt: serializer.fromJson<DateTime>(json['accessedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'reference': serializer.toJson<String>(reference),
+      'passage': serializer.toJson<String>(passage),
+      'accessedAt': serializer.toJson<DateTime>(accessedAt),
+    };
+  }
+
+  BibleHistoryData copyWith({
+    int? id,
+    String? reference,
+    String? passage,
+    DateTime? accessedAt,
+  }) => BibleHistoryData(
+    id: id ?? this.id,
+    reference: reference ?? this.reference,
+    passage: passage ?? this.passage,
+    accessedAt: accessedAt ?? this.accessedAt,
+  );
+  BibleHistoryData copyWithCompanion(BibleHistoryCompanion data) {
+    return BibleHistoryData(
+      id: data.id.present ? data.id.value : this.id,
+      reference: data.reference.present ? data.reference.value : this.reference,
+      passage: data.passage.present ? data.passage.value : this.passage,
+      accessedAt: data.accessedAt.present
+          ? data.accessedAt.value
+          : this.accessedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BibleHistoryData(')
+          ..write('id: $id, ')
+          ..write('reference: $reference, ')
+          ..write('passage: $passage, ')
+          ..write('accessedAt: $accessedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, reference, passage, accessedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BibleHistoryData &&
+          other.id == this.id &&
+          other.reference == this.reference &&
+          other.passage == this.passage &&
+          other.accessedAt == this.accessedAt);
+}
+
+class BibleHistoryCompanion extends UpdateCompanion<BibleHistoryData> {
+  final Value<int> id;
+  final Value<String> reference;
+  final Value<String> passage;
+  final Value<DateTime> accessedAt;
+  const BibleHistoryCompanion({
+    this.id = const Value.absent(),
+    this.reference = const Value.absent(),
+    this.passage = const Value.absent(),
+    this.accessedAt = const Value.absent(),
+  });
+  BibleHistoryCompanion.insert({
+    this.id = const Value.absent(),
+    required String reference,
+    required String passage,
+    required DateTime accessedAt,
+  }) : reference = Value(reference),
+       passage = Value(passage),
+       accessedAt = Value(accessedAt);
+  static Insertable<BibleHistoryData> custom({
+    Expression<int>? id,
+    Expression<String>? reference,
+    Expression<String>? passage,
+    Expression<DateTime>? accessedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (reference != null) 'reference': reference,
+      if (passage != null) 'passage': passage,
+      if (accessedAt != null) 'accessed_at': accessedAt,
+    });
+  }
+
+  BibleHistoryCompanion copyWith({
+    Value<int>? id,
+    Value<String>? reference,
+    Value<String>? passage,
+    Value<DateTime>? accessedAt,
+  }) {
+    return BibleHistoryCompanion(
+      id: id ?? this.id,
+      reference: reference ?? this.reference,
+      passage: passage ?? this.passage,
+      accessedAt: accessedAt ?? this.accessedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (reference.present) {
+      map['reference'] = Variable<String>(reference.value);
+    }
+    if (passage.present) {
+      map['passage'] = Variable<String>(passage.value);
+    }
+    if (accessedAt.present) {
+      map['accessed_at'] = Variable<DateTime>(accessedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BibleHistoryCompanion(')
+          ..write('id: $id, ')
+          ..write('reference: $reference, ')
+          ..write('passage: $passage, ')
+          ..write('accessedAt: $accessedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $BibleBookmarksTable extends BibleBookmarks
+    with TableInfo<$BibleBookmarksTable, BibleBookmark> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BibleBookmarksTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
+  @override
+  late final GeneratedColumn<int> bookId = GeneratedColumn<int>(
+    'book_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _chapterMeta = const VerificationMeta(
+    'chapter',
+  );
+  @override
+  late final GeneratedColumn<int> chapter = GeneratedColumn<int>(
+    'chapter',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _verseNumMeta = const VerificationMeta(
+    'verseNum',
+  );
+  @override
+  late final GeneratedColumn<int> verseNum = GeneratedColumn<int>(
+    'verse_num',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _referenceMeta = const VerificationMeta(
+    'reference',
+  );
+  @override
+  late final GeneratedColumn<String> reference = GeneratedColumn<String>(
+    'reference',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _verseTextMeta = const VerificationMeta(
+    'verseText',
+  );
+  @override
+  late final GeneratedColumn<String> verseText = GeneratedColumn<String>(
+    'verse_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bookNameMeta = const VerificationMeta(
+    'bookName',
+  );
+  @override
+  late final GeneratedColumn<String> bookName = GeneratedColumn<String>(
+    'book_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    bookId,
+    chapter,
+    verseNum,
+    reference,
+    verseText,
+    bookName,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'bible_bookmarks';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<BibleBookmark> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('book_id')) {
+      context.handle(
+        _bookIdMeta,
+        bookId.isAcceptableOrUnknown(data['book_id']!, _bookIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bookIdMeta);
+    }
+    if (data.containsKey('chapter')) {
+      context.handle(
+        _chapterMeta,
+        chapter.isAcceptableOrUnknown(data['chapter']!, _chapterMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_chapterMeta);
+    }
+    if (data.containsKey('verse_num')) {
+      context.handle(
+        _verseNumMeta,
+        verseNum.isAcceptableOrUnknown(data['verse_num']!, _verseNumMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_verseNumMeta);
+    }
+    if (data.containsKey('reference')) {
+      context.handle(
+        _referenceMeta,
+        reference.isAcceptableOrUnknown(data['reference']!, _referenceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_referenceMeta);
+    }
+    if (data.containsKey('verse_text')) {
+      context.handle(
+        _verseTextMeta,
+        verseText.isAcceptableOrUnknown(data['verse_text']!, _verseTextMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_verseTextMeta);
+    }
+    if (data.containsKey('book_name')) {
+      context.handle(
+        _bookNameMeta,
+        bookName.isAcceptableOrUnknown(data['book_name']!, _bookNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bookNameMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  BibleBookmark map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return BibleBookmark(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      bookId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}book_id'],
+      )!,
+      chapter: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}chapter'],
+      )!,
+      verseNum: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}verse_num'],
+      )!,
+      reference: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reference'],
+      )!,
+      verseText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}verse_text'],
+      )!,
+      bookName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}book_name'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $BibleBookmarksTable createAlias(String alias) {
+    return $BibleBookmarksTable(attachedDatabase, alias);
+  }
+}
+
+class BibleBookmark extends DataClass implements Insertable<BibleBookmark> {
+  final int id;
+  final int bookId;
+  final int chapter;
+  final int verseNum;
+  final String reference;
+  final String verseText;
+  final String bookName;
+  final DateTime createdAt;
+  const BibleBookmark({
+    required this.id,
+    required this.bookId,
+    required this.chapter,
+    required this.verseNum,
+    required this.reference,
+    required this.verseText,
+    required this.bookName,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['book_id'] = Variable<int>(bookId);
+    map['chapter'] = Variable<int>(chapter);
+    map['verse_num'] = Variable<int>(verseNum);
+    map['reference'] = Variable<String>(reference);
+    map['verse_text'] = Variable<String>(verseText);
+    map['book_name'] = Variable<String>(bookName);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  BibleBookmarksCompanion toCompanion(bool nullToAbsent) {
+    return BibleBookmarksCompanion(
+      id: Value(id),
+      bookId: Value(bookId),
+      chapter: Value(chapter),
+      verseNum: Value(verseNum),
+      reference: Value(reference),
+      verseText: Value(verseText),
+      bookName: Value(bookName),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory BibleBookmark.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return BibleBookmark(
+      id: serializer.fromJson<int>(json['id']),
+      bookId: serializer.fromJson<int>(json['bookId']),
+      chapter: serializer.fromJson<int>(json['chapter']),
+      verseNum: serializer.fromJson<int>(json['verseNum']),
+      reference: serializer.fromJson<String>(json['reference']),
+      verseText: serializer.fromJson<String>(json['verseText']),
+      bookName: serializer.fromJson<String>(json['bookName']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'bookId': serializer.toJson<int>(bookId),
+      'chapter': serializer.toJson<int>(chapter),
+      'verseNum': serializer.toJson<int>(verseNum),
+      'reference': serializer.toJson<String>(reference),
+      'verseText': serializer.toJson<String>(verseText),
+      'bookName': serializer.toJson<String>(bookName),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  BibleBookmark copyWith({
+    int? id,
+    int? bookId,
+    int? chapter,
+    int? verseNum,
+    String? reference,
+    String? verseText,
+    String? bookName,
+    DateTime? createdAt,
+  }) => BibleBookmark(
+    id: id ?? this.id,
+    bookId: bookId ?? this.bookId,
+    chapter: chapter ?? this.chapter,
+    verseNum: verseNum ?? this.verseNum,
+    reference: reference ?? this.reference,
+    verseText: verseText ?? this.verseText,
+    bookName: bookName ?? this.bookName,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  BibleBookmark copyWithCompanion(BibleBookmarksCompanion data) {
+    return BibleBookmark(
+      id: data.id.present ? data.id.value : this.id,
+      bookId: data.bookId.present ? data.bookId.value : this.bookId,
+      chapter: data.chapter.present ? data.chapter.value : this.chapter,
+      verseNum: data.verseNum.present ? data.verseNum.value : this.verseNum,
+      reference: data.reference.present ? data.reference.value : this.reference,
+      verseText: data.verseText.present ? data.verseText.value : this.verseText,
+      bookName: data.bookName.present ? data.bookName.value : this.bookName,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BibleBookmark(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('chapter: $chapter, ')
+          ..write('verseNum: $verseNum, ')
+          ..write('reference: $reference, ')
+          ..write('verseText: $verseText, ')
+          ..write('bookName: $bookName, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    bookId,
+    chapter,
+    verseNum,
+    reference,
+    verseText,
+    bookName,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BibleBookmark &&
+          other.id == this.id &&
+          other.bookId == this.bookId &&
+          other.chapter == this.chapter &&
+          other.verseNum == this.verseNum &&
+          other.reference == this.reference &&
+          other.verseText == this.verseText &&
+          other.bookName == this.bookName &&
+          other.createdAt == this.createdAt);
+}
+
+class BibleBookmarksCompanion extends UpdateCompanion<BibleBookmark> {
+  final Value<int> id;
+  final Value<int> bookId;
+  final Value<int> chapter;
+  final Value<int> verseNum;
+  final Value<String> reference;
+  final Value<String> verseText;
+  final Value<String> bookName;
+  final Value<DateTime> createdAt;
+  const BibleBookmarksCompanion({
+    this.id = const Value.absent(),
+    this.bookId = const Value.absent(),
+    this.chapter = const Value.absent(),
+    this.verseNum = const Value.absent(),
+    this.reference = const Value.absent(),
+    this.verseText = const Value.absent(),
+    this.bookName = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  BibleBookmarksCompanion.insert({
+    this.id = const Value.absent(),
+    required int bookId,
+    required int chapter,
+    required int verseNum,
+    required String reference,
+    required String verseText,
+    required String bookName,
+    required DateTime createdAt,
+  }) : bookId = Value(bookId),
+       chapter = Value(chapter),
+       verseNum = Value(verseNum),
+       reference = Value(reference),
+       verseText = Value(verseText),
+       bookName = Value(bookName),
+       createdAt = Value(createdAt);
+  static Insertable<BibleBookmark> custom({
+    Expression<int>? id,
+    Expression<int>? bookId,
+    Expression<int>? chapter,
+    Expression<int>? verseNum,
+    Expression<String>? reference,
+    Expression<String>? verseText,
+    Expression<String>? bookName,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (bookId != null) 'book_id': bookId,
+      if (chapter != null) 'chapter': chapter,
+      if (verseNum != null) 'verse_num': verseNum,
+      if (reference != null) 'reference': reference,
+      if (verseText != null) 'verse_text': verseText,
+      if (bookName != null) 'book_name': bookName,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  BibleBookmarksCompanion copyWith({
+    Value<int>? id,
+    Value<int>? bookId,
+    Value<int>? chapter,
+    Value<int>? verseNum,
+    Value<String>? reference,
+    Value<String>? verseText,
+    Value<String>? bookName,
+    Value<DateTime>? createdAt,
+  }) {
+    return BibleBookmarksCompanion(
+      id: id ?? this.id,
+      bookId: bookId ?? this.bookId,
+      chapter: chapter ?? this.chapter,
+      verseNum: verseNum ?? this.verseNum,
+      reference: reference ?? this.reference,
+      verseText: verseText ?? this.verseText,
+      bookName: bookName ?? this.bookName,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (bookId.present) {
+      map['book_id'] = Variable<int>(bookId.value);
+    }
+    if (chapter.present) {
+      map['chapter'] = Variable<int>(chapter.value);
+    }
+    if (verseNum.present) {
+      map['verse_num'] = Variable<int>(verseNum.value);
+    }
+    if (reference.present) {
+      map['reference'] = Variable<String>(reference.value);
+    }
+    if (verseText.present) {
+      map['verse_text'] = Variable<String>(verseText.value);
+    }
+    if (bookName.present) {
+      map['book_name'] = Variable<String>(bookName.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BibleBookmarksCompanion(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('chapter: $chapter, ')
+          ..write('verseNum: $verseNum, ')
+          ..write('reference: $reference, ')
+          ..write('verseText: $verseText, ')
+          ..write('bookName: $bookName, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1520,6 +3319,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SongsTable songs = $SongsTable(this);
   late final $SongBooksTable songBooks = $SongBooksTable(this);
   late final $HistoryTable history = $HistoryTable(this);
+  late final $SongSetsTable songSets = $SongSetsTable(this);
+  late final $SongSetItemsTable songSetItems = $SongSetItemsTable(this);
+  late final $SetHistoryTable setHistory = $SetHistoryTable(this);
+  late final $BibleHistoryTable bibleHistory = $BibleHistoryTable(this);
+  late final $BibleBookmarksTable bibleBookmarks = $BibleBookmarksTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1529,6 +3333,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     songs,
     songBooks,
     history,
+    songSets,
+    songSetItems,
+    setHistory,
+    bibleHistory,
+    bibleBookmarks,
   ];
 }
 
@@ -1820,6 +3629,24 @@ final class $$SongsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$SongSetItemsTable, List<SongSetItem>>
+  _songSetItemsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.songSetItems,
+    aliasName: $_aliasNameGenerator(db.songs.id, db.songSetItems.songId),
+  );
+
+  $$SongSetItemsTableProcessedTableManager get songSetItemsRefs {
+    final manager = $$SongSetItemsTableTableManager(
+      $_db,
+      $_db.songSetItems,
+    ).filter((f) => f.songId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_songSetItemsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$SongsTableFilterComposer extends Composer<_$AppDatabase, $SongsTable> {
@@ -1929,6 +3756,31 @@ class $$SongsTableFilterComposer extends Composer<_$AppDatabase, $SongsTable> {
           }) => $$HistoryTableFilterComposer(
             $db: $db,
             $table: $db.history,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> songSetItemsRefs(
+    Expression<bool> Function($$SongSetItemsTableFilterComposer f) f,
+  ) {
+    final $$SongSetItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.songSetItems,
+      getReferencedColumn: (t) => t.songId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SongSetItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.songSetItems,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -2130,6 +3982,31 @@ class $$SongsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> songSetItemsRefs<T extends Object>(
+    Expression<T> Function($$SongSetItemsTableAnnotationComposer a) f,
+  ) {
+    final $$SongSetItemsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.songSetItems,
+      getReferencedColumn: (t) => t.songId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SongSetItemsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.songSetItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$SongsTableTableManager
@@ -2145,7 +4022,11 @@ class $$SongsTableTableManager
           $$SongsTableUpdateCompanionBuilder,
           (Song, $$SongsTableReferences),
           Song,
-          PrefetchHooks Function({bool categoryId, bool historyRefs})
+          PrefetchHooks Function({
+            bool categoryId,
+            bool historyRefs,
+            bool songSetItemsRefs,
+          })
         > {
   $$SongsTableTableManager(_$AppDatabase db, $SongsTable table)
     : super(
@@ -2224,60 +4105,94 @@ class $$SongsTableTableManager
                     (e.readTable(table), $$SongsTableReferences(db, table, e)),
               )
               .toList(),
-          prefetchHooksCallback: ({categoryId = false, historyRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (historyRefs) db.history],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (categoryId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.categoryId,
-                                referencedTable: $$SongsTableReferences
-                                    ._categoryIdTable(db),
-                                referencedColumn: $$SongsTableReferences
-                                    ._categoryIdTable(db)
-                                    .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({
+                categoryId = false,
+                historyRefs = false,
+                songSetItemsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (historyRefs) db.history,
+                    if (songSetItemsRefs) db.songSetItems,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (categoryId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.categoryId,
+                                    referencedTable: $$SongsTableReferences
+                                        ._categoryIdTable(db),
+                                    referencedColumn: $$SongsTableReferences
+                                        ._categoryIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (historyRefs)
+                        await $_getPrefetchedData<
+                          Song,
+                          $SongsTable,
+                          HistoryData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SongsTableReferences
+                              ._historyRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SongsTableReferences(db, table, p0).historyRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.songId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (songSetItemsRefs)
+                        await $_getPrefetchedData<
+                          Song,
+                          $SongsTable,
+                          SongSetItem
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SongsTableReferences
+                              ._songSetItemsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SongsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).songSetItemsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.songId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (historyRefs)
-                    await $_getPrefetchedData<Song, $SongsTable, HistoryData>(
-                      currentTable: table,
-                      referencedTable: $$SongsTableReferences._historyRefsTable(
-                        db,
-                      ),
-                      managerFromTypedResult: (p0) =>
-                          $$SongsTableReferences(db, table, p0).historyRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.songId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -2294,7 +4209,11 @@ typedef $$SongsTableProcessedTableManager =
       $$SongsTableUpdateCompanionBuilder,
       (Song, $$SongsTableReferences),
       Song,
-      PrefetchHooks Function({bool categoryId, bool historyRefs})
+      PrefetchHooks Function({
+        bool categoryId,
+        bool historyRefs,
+        bool songSetItemsRefs,
+      })
     >;
 typedef $$SongBooksTableCreateCompanionBuilder =
     SongBooksCompanion Function({
@@ -2745,6 +4664,1518 @@ typedef $$HistoryTableProcessedTableManager =
       HistoryData,
       PrefetchHooks Function({bool songId})
     >;
+typedef $$SongSetsTableCreateCompanionBuilder =
+    SongSetsCompanion Function({
+      Value<int> id,
+      required String name,
+      Value<String?> notes,
+      Value<String?> occasion,
+      required DateTime createdAt,
+    });
+typedef $$SongSetsTableUpdateCompanionBuilder =
+    SongSetsCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<String?> notes,
+      Value<String?> occasion,
+      Value<DateTime> createdAt,
+    });
+
+final class $$SongSetsTableReferences
+    extends BaseReferences<_$AppDatabase, $SongSetsTable, SongSet> {
+  $$SongSetsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$SongSetItemsTable, List<SongSetItem>>
+  _songSetItemsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.songSetItems,
+    aliasName: $_aliasNameGenerator(db.songSets.id, db.songSetItems.setId),
+  );
+
+  $$SongSetItemsTableProcessedTableManager get songSetItemsRefs {
+    final manager = $$SongSetItemsTableTableManager(
+      $_db,
+      $_db.songSetItems,
+    ).filter((f) => f.setId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_songSetItemsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$SetHistoryTable, List<SetHistoryData>>
+  _setHistoryRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.setHistory,
+    aliasName: $_aliasNameGenerator(db.songSets.id, db.setHistory.setId),
+  );
+
+  $$SetHistoryTableProcessedTableManager get setHistoryRefs {
+    final manager = $$SetHistoryTableTableManager(
+      $_db,
+      $_db.setHistory,
+    ).filter((f) => f.setId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_setHistoryRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$SongSetsTableFilterComposer
+    extends Composer<_$AppDatabase, $SongSetsTable> {
+  $$SongSetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get occasion => $composableBuilder(
+    column: $table.occasion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> songSetItemsRefs(
+    Expression<bool> Function($$SongSetItemsTableFilterComposer f) f,
+  ) {
+    final $$SongSetItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.songSetItems,
+      getReferencedColumn: (t) => t.setId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SongSetItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.songSetItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> setHistoryRefs(
+    Expression<bool> Function($$SetHistoryTableFilterComposer f) f,
+  ) {
+    final $$SetHistoryTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.setHistory,
+      getReferencedColumn: (t) => t.setId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SetHistoryTableFilterComposer(
+            $db: $db,
+            $table: $db.setHistory,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$SongSetsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SongSetsTable> {
+  $$SongSetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get occasion => $composableBuilder(
+    column: $table.occasion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SongSetsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SongSetsTable> {
+  $$SongSetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get occasion =>
+      $composableBuilder(column: $table.occasion, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  Expression<T> songSetItemsRefs<T extends Object>(
+    Expression<T> Function($$SongSetItemsTableAnnotationComposer a) f,
+  ) {
+    final $$SongSetItemsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.songSetItems,
+      getReferencedColumn: (t) => t.setId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SongSetItemsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.songSetItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> setHistoryRefs<T extends Object>(
+    Expression<T> Function($$SetHistoryTableAnnotationComposer a) f,
+  ) {
+    final $$SetHistoryTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.setHistory,
+      getReferencedColumn: (t) => t.setId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SetHistoryTableAnnotationComposer(
+            $db: $db,
+            $table: $db.setHistory,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$SongSetsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SongSetsTable,
+          SongSet,
+          $$SongSetsTableFilterComposer,
+          $$SongSetsTableOrderingComposer,
+          $$SongSetsTableAnnotationComposer,
+          $$SongSetsTableCreateCompanionBuilder,
+          $$SongSetsTableUpdateCompanionBuilder,
+          (SongSet, $$SongSetsTableReferences),
+          SongSet,
+          PrefetchHooks Function({bool songSetItemsRefs, bool setHistoryRefs})
+        > {
+  $$SongSetsTableTableManager(_$AppDatabase db, $SongSetsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SongSetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SongSetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SongSetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<String?> occasion = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => SongSetsCompanion(
+                id: id,
+                name: name,
+                notes: notes,
+                occasion: occasion,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                Value<String?> notes = const Value.absent(),
+                Value<String?> occasion = const Value.absent(),
+                required DateTime createdAt,
+              }) => SongSetsCompanion.insert(
+                id: id,
+                name: name,
+                notes: notes,
+                occasion: occasion,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$SongSetsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({songSetItemsRefs = false, setHistoryRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (songSetItemsRefs) db.songSetItems,
+                    if (setHistoryRefs) db.setHistory,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (songSetItemsRefs)
+                        await $_getPrefetchedData<
+                          SongSet,
+                          $SongSetsTable,
+                          SongSetItem
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SongSetsTableReferences
+                              ._songSetItemsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SongSetsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).songSetItemsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.setId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (setHistoryRefs)
+                        await $_getPrefetchedData<
+                          SongSet,
+                          $SongSetsTable,
+                          SetHistoryData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SongSetsTableReferences
+                              ._setHistoryRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SongSetsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).setHistoryRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.setId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$SongSetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SongSetsTable,
+      SongSet,
+      $$SongSetsTableFilterComposer,
+      $$SongSetsTableOrderingComposer,
+      $$SongSetsTableAnnotationComposer,
+      $$SongSetsTableCreateCompanionBuilder,
+      $$SongSetsTableUpdateCompanionBuilder,
+      (SongSet, $$SongSetsTableReferences),
+      SongSet,
+      PrefetchHooks Function({bool songSetItemsRefs, bool setHistoryRefs})
+    >;
+typedef $$SongSetItemsTableCreateCompanionBuilder =
+    SongSetItemsCompanion Function({
+      Value<int> id,
+      required int setId,
+      required int songId,
+      required int position,
+      Value<String?> notes,
+    });
+typedef $$SongSetItemsTableUpdateCompanionBuilder =
+    SongSetItemsCompanion Function({
+      Value<int> id,
+      Value<int> setId,
+      Value<int> songId,
+      Value<int> position,
+      Value<String?> notes,
+    });
+
+final class $$SongSetItemsTableReferences
+    extends BaseReferences<_$AppDatabase, $SongSetItemsTable, SongSetItem> {
+  $$SongSetItemsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $SongSetsTable _setIdTable(_$AppDatabase db) => db.songSets
+      .createAlias($_aliasNameGenerator(db.songSetItems.setId, db.songSets.id));
+
+  $$SongSetsTableProcessedTableManager get setId {
+    final $_column = $_itemColumn<int>('set_id')!;
+
+    final manager = $$SongSetsTableTableManager(
+      $_db,
+      $_db.songSets,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_setIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $SongsTable _songIdTable(_$AppDatabase db) => db.songs.createAlias(
+    $_aliasNameGenerator(db.songSetItems.songId, db.songs.id),
+  );
+
+  $$SongsTableProcessedTableManager get songId {
+    final $_column = $_itemColumn<int>('song_id')!;
+
+    final manager = $$SongsTableTableManager(
+      $_db,
+      $_db.songs,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_songIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$SongSetItemsTableFilterComposer
+    extends Composer<_$AppDatabase, $SongSetItemsTable> {
+  $$SongSetItemsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SongSetsTableFilterComposer get setId {
+    final $$SongSetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.setId,
+      referencedTable: $db.songSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SongSetsTableFilterComposer(
+            $db: $db,
+            $table: $db.songSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$SongsTableFilterComposer get songId {
+    final $$SongsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.songId,
+      referencedTable: $db.songs,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SongsTableFilterComposer(
+            $db: $db,
+            $table: $db.songs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SongSetItemsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SongSetItemsTable> {
+  $$SongSetItemsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SongSetsTableOrderingComposer get setId {
+    final $$SongSetsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.setId,
+      referencedTable: $db.songSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SongSetsTableOrderingComposer(
+            $db: $db,
+            $table: $db.songSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$SongsTableOrderingComposer get songId {
+    final $$SongsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.songId,
+      referencedTable: $db.songs,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SongsTableOrderingComposer(
+            $db: $db,
+            $table: $db.songs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SongSetItemsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SongSetItemsTable> {
+  $$SongSetItemsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  $$SongSetsTableAnnotationComposer get setId {
+    final $$SongSetsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.setId,
+      referencedTable: $db.songSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SongSetsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.songSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$SongsTableAnnotationComposer get songId {
+    final $$SongsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.songId,
+      referencedTable: $db.songs,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SongsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.songs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SongSetItemsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SongSetItemsTable,
+          SongSetItem,
+          $$SongSetItemsTableFilterComposer,
+          $$SongSetItemsTableOrderingComposer,
+          $$SongSetItemsTableAnnotationComposer,
+          $$SongSetItemsTableCreateCompanionBuilder,
+          $$SongSetItemsTableUpdateCompanionBuilder,
+          (SongSetItem, $$SongSetItemsTableReferences),
+          SongSetItem,
+          PrefetchHooks Function({bool setId, bool songId})
+        > {
+  $$SongSetItemsTableTableManager(_$AppDatabase db, $SongSetItemsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SongSetItemsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SongSetItemsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SongSetItemsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> setId = const Value.absent(),
+                Value<int> songId = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+              }) => SongSetItemsCompanion(
+                id: id,
+                setId: setId,
+                songId: songId,
+                position: position,
+                notes: notes,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int setId,
+                required int songId,
+                required int position,
+                Value<String?> notes = const Value.absent(),
+              }) => SongSetItemsCompanion.insert(
+                id: id,
+                setId: setId,
+                songId: songId,
+                position: position,
+                notes: notes,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$SongSetItemsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({setId = false, songId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (setId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.setId,
+                                referencedTable: $$SongSetItemsTableReferences
+                                    ._setIdTable(db),
+                                referencedColumn: $$SongSetItemsTableReferences
+                                    ._setIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+                    if (songId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.songId,
+                                referencedTable: $$SongSetItemsTableReferences
+                                    ._songIdTable(db),
+                                referencedColumn: $$SongSetItemsTableReferences
+                                    ._songIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SongSetItemsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SongSetItemsTable,
+      SongSetItem,
+      $$SongSetItemsTableFilterComposer,
+      $$SongSetItemsTableOrderingComposer,
+      $$SongSetItemsTableAnnotationComposer,
+      $$SongSetItemsTableCreateCompanionBuilder,
+      $$SongSetItemsTableUpdateCompanionBuilder,
+      (SongSetItem, $$SongSetItemsTableReferences),
+      SongSetItem,
+      PrefetchHooks Function({bool setId, bool songId})
+    >;
+typedef $$SetHistoryTableCreateCompanionBuilder =
+    SetHistoryCompanion Function({
+      Value<int> id,
+      required int setId,
+      required String setName,
+      required DateTime accessedAt,
+    });
+typedef $$SetHistoryTableUpdateCompanionBuilder =
+    SetHistoryCompanion Function({
+      Value<int> id,
+      Value<int> setId,
+      Value<String> setName,
+      Value<DateTime> accessedAt,
+    });
+
+final class $$SetHistoryTableReferences
+    extends BaseReferences<_$AppDatabase, $SetHistoryTable, SetHistoryData> {
+  $$SetHistoryTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $SongSetsTable _setIdTable(_$AppDatabase db) => db.songSets
+      .createAlias($_aliasNameGenerator(db.setHistory.setId, db.songSets.id));
+
+  $$SongSetsTableProcessedTableManager get setId {
+    final $_column = $_itemColumn<int>('set_id')!;
+
+    final manager = $$SongSetsTableTableManager(
+      $_db,
+      $_db.songSets,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_setIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$SetHistoryTableFilterComposer
+    extends Composer<_$AppDatabase, $SetHistoryTable> {
+  $$SetHistoryTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get setName => $composableBuilder(
+    column: $table.setName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get accessedAt => $composableBuilder(
+    column: $table.accessedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SongSetsTableFilterComposer get setId {
+    final $$SongSetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.setId,
+      referencedTable: $db.songSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SongSetsTableFilterComposer(
+            $db: $db,
+            $table: $db.songSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SetHistoryTableOrderingComposer
+    extends Composer<_$AppDatabase, $SetHistoryTable> {
+  $$SetHistoryTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get setName => $composableBuilder(
+    column: $table.setName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get accessedAt => $composableBuilder(
+    column: $table.accessedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SongSetsTableOrderingComposer get setId {
+    final $$SongSetsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.setId,
+      referencedTable: $db.songSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SongSetsTableOrderingComposer(
+            $db: $db,
+            $table: $db.songSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SetHistoryTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SetHistoryTable> {
+  $$SetHistoryTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get setName =>
+      $composableBuilder(column: $table.setName, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get accessedAt => $composableBuilder(
+    column: $table.accessedAt,
+    builder: (column) => column,
+  );
+
+  $$SongSetsTableAnnotationComposer get setId {
+    final $$SongSetsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.setId,
+      referencedTable: $db.songSets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SongSetsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.songSets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SetHistoryTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SetHistoryTable,
+          SetHistoryData,
+          $$SetHistoryTableFilterComposer,
+          $$SetHistoryTableOrderingComposer,
+          $$SetHistoryTableAnnotationComposer,
+          $$SetHistoryTableCreateCompanionBuilder,
+          $$SetHistoryTableUpdateCompanionBuilder,
+          (SetHistoryData, $$SetHistoryTableReferences),
+          SetHistoryData,
+          PrefetchHooks Function({bool setId})
+        > {
+  $$SetHistoryTableTableManager(_$AppDatabase db, $SetHistoryTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SetHistoryTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SetHistoryTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SetHistoryTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> setId = const Value.absent(),
+                Value<String> setName = const Value.absent(),
+                Value<DateTime> accessedAt = const Value.absent(),
+              }) => SetHistoryCompanion(
+                id: id,
+                setId: setId,
+                setName: setName,
+                accessedAt: accessedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int setId,
+                required String setName,
+                required DateTime accessedAt,
+              }) => SetHistoryCompanion.insert(
+                id: id,
+                setId: setId,
+                setName: setName,
+                accessedAt: accessedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$SetHistoryTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({setId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (setId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.setId,
+                                referencedTable: $$SetHistoryTableReferences
+                                    ._setIdTable(db),
+                                referencedColumn: $$SetHistoryTableReferences
+                                    ._setIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SetHistoryTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SetHistoryTable,
+      SetHistoryData,
+      $$SetHistoryTableFilterComposer,
+      $$SetHistoryTableOrderingComposer,
+      $$SetHistoryTableAnnotationComposer,
+      $$SetHistoryTableCreateCompanionBuilder,
+      $$SetHistoryTableUpdateCompanionBuilder,
+      (SetHistoryData, $$SetHistoryTableReferences),
+      SetHistoryData,
+      PrefetchHooks Function({bool setId})
+    >;
+typedef $$BibleHistoryTableCreateCompanionBuilder =
+    BibleHistoryCompanion Function({
+      Value<int> id,
+      required String reference,
+      required String passage,
+      required DateTime accessedAt,
+    });
+typedef $$BibleHistoryTableUpdateCompanionBuilder =
+    BibleHistoryCompanion Function({
+      Value<int> id,
+      Value<String> reference,
+      Value<String> passage,
+      Value<DateTime> accessedAt,
+    });
+
+class $$BibleHistoryTableFilterComposer
+    extends Composer<_$AppDatabase, $BibleHistoryTable> {
+  $$BibleHistoryTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reference => $composableBuilder(
+    column: $table.reference,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get passage => $composableBuilder(
+    column: $table.passage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get accessedAt => $composableBuilder(
+    column: $table.accessedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$BibleHistoryTableOrderingComposer
+    extends Composer<_$AppDatabase, $BibleHistoryTable> {
+  $$BibleHistoryTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reference => $composableBuilder(
+    column: $table.reference,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get passage => $composableBuilder(
+    column: $table.passage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get accessedAt => $composableBuilder(
+    column: $table.accessedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BibleHistoryTableAnnotationComposer
+    extends Composer<_$AppDatabase, $BibleHistoryTable> {
+  $$BibleHistoryTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get reference =>
+      $composableBuilder(column: $table.reference, builder: (column) => column);
+
+  GeneratedColumn<String> get passage =>
+      $composableBuilder(column: $table.passage, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get accessedAt => $composableBuilder(
+    column: $table.accessedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$BibleHistoryTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $BibleHistoryTable,
+          BibleHistoryData,
+          $$BibleHistoryTableFilterComposer,
+          $$BibleHistoryTableOrderingComposer,
+          $$BibleHistoryTableAnnotationComposer,
+          $$BibleHistoryTableCreateCompanionBuilder,
+          $$BibleHistoryTableUpdateCompanionBuilder,
+          (
+            BibleHistoryData,
+            BaseReferences<_$AppDatabase, $BibleHistoryTable, BibleHistoryData>,
+          ),
+          BibleHistoryData,
+          PrefetchHooks Function()
+        > {
+  $$BibleHistoryTableTableManager(_$AppDatabase db, $BibleHistoryTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BibleHistoryTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BibleHistoryTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BibleHistoryTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> reference = const Value.absent(),
+                Value<String> passage = const Value.absent(),
+                Value<DateTime> accessedAt = const Value.absent(),
+              }) => BibleHistoryCompanion(
+                id: id,
+                reference: reference,
+                passage: passage,
+                accessedAt: accessedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String reference,
+                required String passage,
+                required DateTime accessedAt,
+              }) => BibleHistoryCompanion.insert(
+                id: id,
+                reference: reference,
+                passage: passage,
+                accessedAt: accessedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BibleHistoryTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $BibleHistoryTable,
+      BibleHistoryData,
+      $$BibleHistoryTableFilterComposer,
+      $$BibleHistoryTableOrderingComposer,
+      $$BibleHistoryTableAnnotationComposer,
+      $$BibleHistoryTableCreateCompanionBuilder,
+      $$BibleHistoryTableUpdateCompanionBuilder,
+      (
+        BibleHistoryData,
+        BaseReferences<_$AppDatabase, $BibleHistoryTable, BibleHistoryData>,
+      ),
+      BibleHistoryData,
+      PrefetchHooks Function()
+    >;
+typedef $$BibleBookmarksTableCreateCompanionBuilder =
+    BibleBookmarksCompanion Function({
+      Value<int> id,
+      required int bookId,
+      required int chapter,
+      required int verseNum,
+      required String reference,
+      required String verseText,
+      required String bookName,
+      required DateTime createdAt,
+    });
+typedef $$BibleBookmarksTableUpdateCompanionBuilder =
+    BibleBookmarksCompanion Function({
+      Value<int> id,
+      Value<int> bookId,
+      Value<int> chapter,
+      Value<int> verseNum,
+      Value<String> reference,
+      Value<String> verseText,
+      Value<String> bookName,
+      Value<DateTime> createdAt,
+    });
+
+class $$BibleBookmarksTableFilterComposer
+    extends Composer<_$AppDatabase, $BibleBookmarksTable> {
+  $$BibleBookmarksTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get bookId => $composableBuilder(
+    column: $table.bookId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get chapter => $composableBuilder(
+    column: $table.chapter,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get verseNum => $composableBuilder(
+    column: $table.verseNum,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reference => $composableBuilder(
+    column: $table.reference,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get verseText => $composableBuilder(
+    column: $table.verseText,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bookName => $composableBuilder(
+    column: $table.bookName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$BibleBookmarksTableOrderingComposer
+    extends Composer<_$AppDatabase, $BibleBookmarksTable> {
+  $$BibleBookmarksTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get bookId => $composableBuilder(
+    column: $table.bookId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get chapter => $composableBuilder(
+    column: $table.chapter,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get verseNum => $composableBuilder(
+    column: $table.verseNum,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reference => $composableBuilder(
+    column: $table.reference,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get verseText => $composableBuilder(
+    column: $table.verseText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bookName => $composableBuilder(
+    column: $table.bookName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BibleBookmarksTableAnnotationComposer
+    extends Composer<_$AppDatabase, $BibleBookmarksTable> {
+  $$BibleBookmarksTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get bookId =>
+      $composableBuilder(column: $table.bookId, builder: (column) => column);
+
+  GeneratedColumn<int> get chapter =>
+      $composableBuilder(column: $table.chapter, builder: (column) => column);
+
+  GeneratedColumn<int> get verseNum =>
+      $composableBuilder(column: $table.verseNum, builder: (column) => column);
+
+  GeneratedColumn<String> get reference =>
+      $composableBuilder(column: $table.reference, builder: (column) => column);
+
+  GeneratedColumn<String> get verseText =>
+      $composableBuilder(column: $table.verseText, builder: (column) => column);
+
+  GeneratedColumn<String> get bookName =>
+      $composableBuilder(column: $table.bookName, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$BibleBookmarksTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $BibleBookmarksTable,
+          BibleBookmark,
+          $$BibleBookmarksTableFilterComposer,
+          $$BibleBookmarksTableOrderingComposer,
+          $$BibleBookmarksTableAnnotationComposer,
+          $$BibleBookmarksTableCreateCompanionBuilder,
+          $$BibleBookmarksTableUpdateCompanionBuilder,
+          (
+            BibleBookmark,
+            BaseReferences<_$AppDatabase, $BibleBookmarksTable, BibleBookmark>,
+          ),
+          BibleBookmark,
+          PrefetchHooks Function()
+        > {
+  $$BibleBookmarksTableTableManager(
+    _$AppDatabase db,
+    $BibleBookmarksTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BibleBookmarksTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BibleBookmarksTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BibleBookmarksTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> bookId = const Value.absent(),
+                Value<int> chapter = const Value.absent(),
+                Value<int> verseNum = const Value.absent(),
+                Value<String> reference = const Value.absent(),
+                Value<String> verseText = const Value.absent(),
+                Value<String> bookName = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => BibleBookmarksCompanion(
+                id: id,
+                bookId: bookId,
+                chapter: chapter,
+                verseNum: verseNum,
+                reference: reference,
+                verseText: verseText,
+                bookName: bookName,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int bookId,
+                required int chapter,
+                required int verseNum,
+                required String reference,
+                required String verseText,
+                required String bookName,
+                required DateTime createdAt,
+              }) => BibleBookmarksCompanion.insert(
+                id: id,
+                bookId: bookId,
+                chapter: chapter,
+                verseNum: verseNum,
+                reference: reference,
+                verseText: verseText,
+                bookName: bookName,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BibleBookmarksTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $BibleBookmarksTable,
+      BibleBookmark,
+      $$BibleBookmarksTableFilterComposer,
+      $$BibleBookmarksTableOrderingComposer,
+      $$BibleBookmarksTableAnnotationComposer,
+      $$BibleBookmarksTableCreateCompanionBuilder,
+      $$BibleBookmarksTableUpdateCompanionBuilder,
+      (
+        BibleBookmark,
+        BaseReferences<_$AppDatabase, $BibleBookmarksTable, BibleBookmark>,
+      ),
+      BibleBookmark,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2757,4 +6188,14 @@ class $AppDatabaseManager {
       $$SongBooksTableTableManager(_db, _db.songBooks);
   $$HistoryTableTableManager get history =>
       $$HistoryTableTableManager(_db, _db.history);
+  $$SongSetsTableTableManager get songSets =>
+      $$SongSetsTableTableManager(_db, _db.songSets);
+  $$SongSetItemsTableTableManager get songSetItems =>
+      $$SongSetItemsTableTableManager(_db, _db.songSetItems);
+  $$SetHistoryTableTableManager get setHistory =>
+      $$SetHistoryTableTableManager(_db, _db.setHistory);
+  $$BibleHistoryTableTableManager get bibleHistory =>
+      $$BibleHistoryTableTableManager(_db, _db.bibleHistory);
+  $$BibleBookmarksTableTableManager get bibleBookmarks =>
+      $$BibleBookmarksTableTableManager(_db, _db.bibleBookmarks);
 }

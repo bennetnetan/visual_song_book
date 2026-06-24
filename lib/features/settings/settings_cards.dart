@@ -28,7 +28,8 @@ class SectionHeader extends StatelessWidget {
           width: 4,
           height: 32,
           decoration: BoxDecoration(
-            color: (accentColor ?? iconColor ?? theme.colorScheme.primary).withValues(alpha: 0.3),
+            color: (accentColor ?? iconColor ?? theme.colorScheme.primary)
+                .withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(4),
           ),
         ),
@@ -36,7 +37,11 @@ class SectionHeader extends StatelessWidget {
         NeoPressedContainer(
           padding: const EdgeInsets.all(8),
           borderRadius: 999,
-          child: Icon(icon, color: iconColor ?? theme.colorScheme.primary, size: 24),
+          child: Icon(
+            icon,
+            color: iconColor ?? theme.colorScheme.primary,
+            size: 24,
+          ),
         ),
         const SizedBox(width: 12),
         Text(
@@ -89,11 +94,17 @@ class ProjectionPreferencesCard extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.auto_awesome, size: 20, color: theme.colorScheme.tertiary),
+                  Icon(
+                    Icons.auto_awesome,
+                    size: 20,
+                    color: theme.colorScheme.tertiary,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'Presentation Skills',
-                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w500),
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
@@ -231,7 +242,9 @@ class ImportExportCard extends StatelessWidget {
                 const SizedBox(width: 12),
                 Text(
                   importStatus ?? 'Processing...',
-                  style: GoogleFonts.plusJakartaSans(color: theme.colorScheme.primary),
+                  style: GoogleFonts.plusJakartaSans(
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
               ],
             ),
@@ -362,7 +375,9 @@ class _Divider extends StatelessWidget {
         height: 1,
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          color: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(999),
         ),
       ),
@@ -461,28 +476,33 @@ class _ChangelogEntry extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        ...changes.map((change) => Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 4),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('• ', style: GoogleFonts.plusJakartaSans(
-                color: theme.colorScheme.onSurfaceVariant,
-                fontSize: 13,
-              )),
-              Expanded(
-                child: Text(
-                  change,
+        ...changes.map(
+          (change) => Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '• ',
                   style: GoogleFonts.plusJakartaSans(
                     color: theme.colorScheme.onSurfaceVariant,
                     fontSize: 13,
-                    height: 1.4,
                   ),
                 ),
-              ),
-            ],
+                Expanded(
+                  child: Text(
+                    change,
+                    style: GoogleFonts.plusJakartaSans(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        )),
+        ),
       ],
     );
   }
@@ -527,7 +547,11 @@ class AboutCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.auto_stories, color: Colors.white, size: 32),
+                  child: const Icon(
+                    Icons.auto_stories,
+                    color: Colors.white,
+                    size: 32,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -539,7 +563,10 @@ class AboutCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(999),
@@ -574,7 +601,9 @@ class AboutCard extends StatelessWidget {
             child: Text(
               'Built with Flutter & Riverpod',
               style: GoogleFonts.plusJakartaSans(
-                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                color: theme.colorScheme.onSurfaceVariant.withValues(
+                  alpha: 0.6,
+                ),
                 fontSize: 11,
               ),
             ),

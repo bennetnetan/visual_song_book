@@ -22,9 +22,10 @@ class Songs extends Table {
   TextColumn get search => text().nullable()(); // Normalized search text
   TextColumn get copyright => text().nullable().withLength(max: 200)();
   TextColumn get author => text().nullable().withLength(max: 200)();
-  
+
   // References Categories(id)
-  IntColumn get categoryId => integer().nullable().references(Categories, #id)();
+  IntColumn get categoryId =>
+      integer().nullable().references(Categories, #id)();
 
   // Provenance / Round-trip tracking
   IntColumn get sourceSongId => integer().nullable()();
@@ -48,7 +49,60 @@ class History extends Table {
   DateTimeColumn get accessedAt => dateTime()();
 }
 
-@DriftDatabase(tables: [Categories, Songs, SongBooks, History])
+class SongSets extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text().withLength(max: 200)();
+  TextColumn get notes => text().nullable()();
+  TextColumn get occasion => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+}
+
+class SongSetItems extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get setId => integer().references(SongSets, #id)();
+  IntColumn get songId => integer().references(Songs, #id)();
+  IntColumn get position => integer()();
+  TextColumn get notes => text().nullable()();
+}
+
+class SetHistory extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get setId => integer().references(SongSets, #id)();
+  TextColumn get setName => text().withLength(max: 200)();
+  DateTimeColumn get accessedAt => dateTime()();
+}
+
+class BibleHistory extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get reference => text().withLength(max: 100)();
+  TextColumn get passage => text()();
+  DateTimeColumn get accessedAt => dateTime()();
+}
+
+class BibleBookmarks extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get bookId => integer()();
+  IntColumn get chapter => integer()();
+  IntColumn get verseNum => integer()();
+  TextColumn get reference => text()();
+  TextColumn get verseText => text()();
+  TextColumn get bookName => text()();
+  DateTimeColumn get createdAt => dateTime()();
+}
+
+@DriftDatabase(
+  tables: [
+    Categories,
+    Songs,
+    SongBooks,
+    History,
+    SongSets,
+    SongSetItems,
+    SetHistory,
+    BibleHistory,
+    BibleBookmarks,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
@@ -58,7 +112,23 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.createTable(songSets);
+        await m.createTable(songSetItems);
+        await m.createTable(setHistory);
+        await m.createTable(bibleHistory);
+      }
+      if (from < 3) {
+        await m.createTable(bibleBookmarks);
+      }
+    },
+  );
 }
 
 QueryExecutor _openConnection() {

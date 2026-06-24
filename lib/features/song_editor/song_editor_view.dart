@@ -67,9 +67,9 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading data: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading data: $e')));
       }
     } finally {
       if (mounted) {
@@ -137,18 +137,22 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(widget.songId != null ? 'Song updated!' : 'Song added!'),
+            content: Text(
+              widget.songId != null ? 'Song updated!' : 'Song added!',
+            ),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
         context.pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save: $e')));
       }
     } finally {
       if (mounted) {
@@ -157,23 +161,33 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
     }
   }
 
-  InputDecoration _fieldDecoration(String label, {String? hint, Widget? prefix}) {
+  InputDecoration _fieldDecoration(
+    String label, {
+    String? hint,
+    Widget? prefix,
+  }) {
     return InputDecoration(
       labelText: label,
       hintText: hint,
       prefixIcon: prefix,
       filled: true,
-      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
+      fillColor: Theme.of(
+        context,
+      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(
-          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+          color: Theme.of(
+            context,
+          ).colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(
-          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+          color: Theme.of(
+            context,
+          ).colorScheme.outlineVariant.withValues(alpha: 0.4),
         ),
       ),
       focusedBorder: OutlineInputBorder(
@@ -185,11 +199,17 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: Theme.of(context).colorScheme.error, width: 1.5),
+        borderSide: BorderSide(
+          color: Theme.of(context).colorScheme.error,
+          width: 1.5,
+        ),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: Theme.of(context).colorScheme.error, width: 2),
+        borderSide: BorderSide(
+          color: Theme.of(context).colorScheme.error,
+          width: 2,
+        ),
       ),
     );
   }
@@ -200,16 +220,17 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
     final lyricsCharCount = _bodyController.text.length;
 
     if (_isLoading && _categories.isEmpty && _originalSong == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
           isEditing ? 'Edit Song' : 'New Song',
-          style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            fontFamily: 'Outfit',
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           if (_isLoading)
@@ -231,7 +252,9 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
                 icon: const Icon(Icons.check, size: 18),
                 label: const Text('Save'),
                 style: FilledButton.styleFrom(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
@@ -276,7 +299,8 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
                   label: const Text('Save Song'),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 18.0),
-                    textStyle: const TextStyle(fontFamily: 'Outfit',
+                    textStyle: const TextStyle(
+                      fontFamily: 'Outfit',
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
                     ),

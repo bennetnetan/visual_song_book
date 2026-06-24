@@ -32,13 +32,19 @@ class SongsTab extends ConsumerWidget {
       ),
       selected: selected,
       selectedColor: Theme.of(context).colorScheme.primary,
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+      backgroundColor: Theme.of(
+        context,
+      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
       showCheckmark: false,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: selected ? Colors.transparent : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+          color: selected
+              ? Colors.transparent
+              : Theme.of(
+                  context,
+                ).colorScheme.outlineVariant.withValues(alpha: 0.3),
         ),
       ),
       onSelected: (_) => onSelected(),
@@ -59,7 +65,9 @@ class SongsTab extends ConsumerWidget {
       floatingActionButton: (!isLargeScreen && selectedSong != null)
           ? FloatingActionButton.extended(
               onPressed: () {
-                ref.read(projectionControllerProvider.notifier).setSong(selectedSong);
+                ref
+                    .read(projectionControllerProvider.notifier)
+                    .setSong(selectedSong);
                 ref.read(activeDashboardTabProvider.notifier).state = 4;
               },
               icon: const Icon(Icons.tv),
@@ -84,9 +92,15 @@ class SongsTab extends ConsumerWidget {
                           decoration: InputDecoration(
                             hintText: 'Search title, number, or lyrics...',
                             hintStyle: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant
+                                  .withValues(alpha: 0.6),
                             ),
-                            prefixIcon: Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                             suffixIcon: listState.query.isNotEmpty
                                 ? IconButton(
                                     icon: const Icon(Icons.clear),
@@ -94,8 +108,14 @@ class SongsTab extends ConsumerWidget {
                                   )
                                 : null,
                             filled: true,
-                            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                            fillColor: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withValues(alpha: 0.3),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 14,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(28),
                               borderSide: BorderSide.none,
@@ -103,7 +123,10 @@ class SongsTab extends ConsumerWidget {
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(28),
                               borderSide: BorderSide(
-                                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outlineVariant
+                                    .withValues(alpha: 0.4),
                                 width: 1,
                               ),
                             ),
@@ -160,7 +183,10 @@ class SongsTab extends ConsumerWidget {
                 ),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
                   child: Row(
                     children: [
                       _buildCategoryChip(
@@ -169,24 +195,31 @@ class SongsTab extends ConsumerWidget {
                         selected: listState.selectedCategoryId == -2,
                         onSelected: () => listNotifier.selectCategory(-2),
                       ),
-                      ...listState.categories.expand((cat) => [
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onLongPress: () => _confirmDeleteCategory(context, ref, cat),
-                          child: _buildCategoryChip(
-                            context,
-                            label: cat.name,
-                            selected: listState.selectedCategoryId == cat.id,
-                            onSelected: () => listNotifier.selectCategory(cat.id),
+                      ...listState.categories.expand(
+                        (cat) => [
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onLongPress: () =>
+                                _confirmDeleteCategory(context, ref, cat),
+                            child: _buildCategoryChip(
+                              context,
+                              label: cat.name,
+                              selected: listState.selectedCategoryId == cat.id,
+                              onSelected: () =>
+                                  listNotifier.selectCategory(cat.id),
+                            ),
                           ),
-                        ),
-                      ]),
+                        ],
+                      ),
                       const SizedBox(width: 8),
                       _buildCategoryChip(
                         context,
                         label: 'Uncategorized',
                         selected: listState.showUncategorizedOnly,
-                        onSelected: () => listNotifier.selectCategory(null, uncategorizedOnly: true),
+                        onSelected: () => listNotifier.selectCategory(
+                          null,
+                          uncategorizedOnly: true,
+                        ),
                       ),
                     ],
                   ),
@@ -196,48 +229,71 @@ class SongsTab extends ConsumerWidget {
                   child: listState.isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : listState.songs.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.library_books_outlined,
-                                      size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'No songs found.',
-                                    style: TextStyle(
-                                        fontSize: 18, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  ElevatedButton.icon(
-                                    onPressed: () => context.push('/song-editor'),
-                                    icon: const Icon(Icons.add),
-                                    label: const Text('Add Song Manually'),
-                                  ),
-                                ],
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.library_books_outlined,
+                                size: 64,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant
+                                    .withValues(alpha: 0.5),
                               ),
-                            )
-                          : ListView.builder(
-                              padding: EdgeInsets.only(
-                                bottom: !isLargeScreen && selectedSongId != null ? 88 : 24,
+                              const SizedBox(height: 16),
+                              Text(
+                                'No songs found.',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant
+                                      .withValues(alpha: 0.7),
+                                ),
                               ),
-                              itemCount: listState.songs.length,
-                              itemBuilder: (context, index) {
-                                final song = listState.songs[index];
-                                final isSelected = song.id == selectedSongId;
-                                return SongListItem(
-                                  song: song,
-                                  isSelected: isSelected,
-                                  onTap: () {
-                                    ref.read(selectedSongIdProvider.notifier).state = song.id;
-                                  },
-                                  onDoubleTap: () {
-                                    ref.read(projectionControllerProvider.notifier).setSong(song);
-                                    ref.read(activeDashboardTabProvider.notifier).state = 4;
-                                  },
-                                );
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: () => context.push('/song-editor'),
+                                icon: const Icon(Icons.add),
+                                label: const Text('Add Song Manually'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: EdgeInsets.only(
+                            bottom: !isLargeScreen && selectedSongId != null
+                                ? 88
+                                : 24,
+                          ),
+                          itemCount: listState.songs.length,
+                          itemBuilder: (context, index) {
+                            final song = listState.songs[index];
+                            final isSelected = song.id == selectedSongId;
+                            return SongListItem(
+                              song: song,
+                              isSelected: isSelected,
+                              onTap: () {
+                                ref
+                                        .read(selectedSongIdProvider.notifier)
+                                        .state =
+                                    song.id;
                               },
-                            ),
+                              onDoubleTap: () {
+                                ref
+                                    .read(projectionControllerProvider.notifier)
+                                    .setSong(song);
+                                ref
+                                        .read(
+                                          activeDashboardTabProvider.notifier,
+                                        )
+                                        .state =
+                                    4;
+                              },
+                            );
+                          },
+                        ),
                 ),
               ],
             ),
@@ -255,14 +311,20 @@ class SongsTab extends ConsumerWidget {
                           Icon(
                             Icons.library_music_outlined,
                             size: 72,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant
+                                .withValues(alpha: 0.4),
                           ),
                           const SizedBox(height: 16),
                           Text(
                             'Select a song to preview',
                             style: TextStyle(
                               fontSize: 16,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant
+                                  .withValues(alpha: 0.7),
                             ),
                           ),
                         ],
@@ -275,8 +337,14 @@ class SongsTab extends ConsumerWidget {
     );
   }
 
-  void _confirmDeleteCategory(BuildContext context, WidgetRef ref, Category cat) async {
-    final songCount = await ref.read(songRepositoryProvider).getSongCountByCategory(cat.id);
+  void _confirmDeleteCategory(
+    BuildContext context,
+    WidgetRef ref,
+    Category cat,
+  ) async {
+    final songCount = await ref
+        .read(songRepositoryProvider)
+        .getSongCountByCategory(cat.id);
     if (!context.mounted) return;
     showDialog(
       context: context,
@@ -293,7 +361,9 @@ class SongsTab extends ConsumerWidget {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              await ref.read(songListControllerProvider.notifier).deleteCategory(cat.id);
+              await ref
+                  .read(songListControllerProvider.notifier)
+                  .deleteCategory(cat.id);
               ref.read(selectedSongIdProvider.notifier).state = null;
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),

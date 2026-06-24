@@ -7,7 +7,8 @@ import 'package:visual_song_book/features/song_editor/widgets/section_card.dart'
 class IdentificationCard extends StatelessWidget {
   final TextEditingController numberController;
   final TextEditingController titleController;
-  final InputDecoration Function(String, {String? hint, Widget? prefix}) fieldDecoration;
+  final InputDecoration Function(String, {String? hint, Widget? prefix})
+  fieldDecoration;
 
   const IdentificationCard({
     super.key,
@@ -75,7 +76,8 @@ class MetadataCard extends StatelessWidget {
   final int? selectedCategoryId;
   final List<Category> categories;
   final ValueChanged<int?> onCategoryChanged;
-  final InputDecoration Function(String, {String? hint, Widget? prefix}) fieldDecoration;
+  final InputDecoration Function(String, {String? hint, Widget? prefix})
+  fieldDecoration;
 
   const MetadataCard({
     super.key,
@@ -117,10 +119,12 @@ class MetadataCard extends StatelessWidget {
                     value: null,
                     child: Text('Uncategorized'),
                   ),
-                  ...categories.map((c) => DropdownMenuItem<int?>(
-                        value: c.id,
-                        child: Text(c.name),
-                      ))
+                  ...categories.map(
+                    (c) => DropdownMenuItem<int?>(
+                      value: c.id,
+                      child: Text(c.name),
+                    ),
+                  ),
                 ],
                 onChanged: onCategoryChanged,
               ),
@@ -174,9 +178,9 @@ class LyricsCard extends StatelessWidget {
       trailing: Text(
         '$charCount chars',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.w600,
-            ),
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       children: [
         Container(
@@ -184,7 +188,9 @@ class LyricsCard extends StatelessWidget {
             color: Theme.of(context).colorScheme.surfaceContainerLowest,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.outlineVariant.withValues(alpha: 0.3),
             ),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -192,7 +198,8 @@ class LyricsCard extends StatelessWidget {
             controller: bodyController,
             maxLines: 20,
             keyboardType: TextInputType.multiline,
-            style: const TextStyle(fontFamily: 'RobotoMono',
+            style: const TextStyle(
+              fontFamily: 'RobotoMono',
               fontSize: 14,
               height: 1.6,
             ),
@@ -200,7 +207,9 @@ class LyricsCard extends StatelessWidget {
               hintText:
                   'VERSE 1\nAmazing grace, how sweet the sound...\n\nCHORUS\nPraise the Lord...\n\nVERSE 2\n...',
               hintStyle: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                 fontSize: 13,
               ),
               border: InputBorder.none,
@@ -218,24 +227,31 @@ class LyricsCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.3),
+            color: Theme.of(
+              context,
+            ).colorScheme.secondaryContainer.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.5),
+              color: Theme.of(
+                context,
+              ).colorScheme.secondaryContainer.withValues(alpha: 0.5),
             ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.tips_and_updates_outlined, size: 16,
-                  color: Theme.of(context).colorScheme.secondary),
+              Icon(
+                Icons.tips_and_updates_outlined,
+                size: 16,
+                color: Theme.of(context).colorScheme.secondary,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Separate verses with a blank line. Start a block with "CHORUS" or "VERSE N" to label it.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSecondaryContainer,
-                      ),
+                    color: Theme.of(context).colorScheme.onSecondaryContainer,
+                  ),
                 ),
               ),
             ],
@@ -264,7 +280,10 @@ class LivePreviewCard extends StatelessWidget {
           const Center(
             child: Padding(
               padding: EdgeInsets.all(24.0),
-              child: Text('Type some lyrics to see a preview.', style: TextStyle(color: Colors.grey)),
+              child: Text(
+                'Type some lyrics to see a preview.',
+                style: TextStyle(color: Colors.grey),
+              ),
             ),
           )
         else
@@ -282,7 +301,9 @@ class LivePreviewCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.black,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: Colors.grey.withValues(alpha: 0.3),
+                      ),
                     ),
                     padding: const EdgeInsets.all(16),
                     child: Center(
@@ -290,7 +311,10 @@ class LivePreviewCard extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white24,
                               borderRadius: BorderRadius.circular(4),
@@ -298,7 +322,10 @@ class LivePreviewCard extends StatelessWidget {
                             child: Text(
                               slide.label,
                               style: const TextStyle(
-                                  color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                                color: Colors.white70,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -307,7 +334,8 @@ class LivePreviewCard extends StatelessWidget {
                               child: Text(
                                 slide.text,
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(fontFamily: 'Outfit',
+                                style: const TextStyle(
+                                  fontFamily: 'Outfit',
                                   color: Colors.white,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,

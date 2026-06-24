@@ -19,6 +19,8 @@ class ProjectionOutputView extends ConsumerStatefulWidget {
 class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     with SingleTickerProviderStateMixin, WindowListener {
   String _ipcText = '';
+  String _ipcLabel = '';
+  bool _ipcIsBible = false;
   bool _isSecondaryWindow = false;
   late AnimationController _fadeController;
   bool _isClosing = false;
@@ -52,14 +54,16 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     final controller = await WindowController.fromCurrentEngine();
     controller.setWindowMethodHandler((call) async {
       debugPrint('Received IPC method call: ${call.method}');
-      
+
       if (call.method == 'update_slide') {
         if (!mounted) return null;
         setState(() {
           _isSecondaryWindow = true;
           _ipcText = call.arguments['text'] ?? '';
+          _ipcLabel = call.arguments['label'] ?? '';
+          _ipcIsBible = call.arguments['isBible'] ?? false;
         });
-        debugPrint('Updated secondary window text: "$_ipcText"');
+        debugPrint('Updated secondary window text: "$_ipcText" label: "$_ipcLabel"');
       }
       return 'OK';
     });
@@ -125,8 +129,15 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     final state = ref.watch(projectionControllerProvider);
     final notifier = ref.read(projectionControllerProvider.notifier);
 
-    final String activeText =
-        _isSecondaryWindow ? _ipcText : (state.currentSlide?.text ?? '');
+    final String activeText = _isSecondaryWindow
+        ? _ipcText
+        : (state.currentSlide?.text ?? '');
+    final String activeLabel = _isSecondaryWindow
+        ? _ipcLabel
+        : (state.currentSlide?.label ?? '');
+    final bool activeIsBible = _isSecondaryWindow
+        ? _ipcIsBible
+        : state.isBibleMode;
     // Font size is fixed at 40pt for consistent projection output
     const double activeFontSize = 40.0;
     final String slideKey = _isSecondaryWindow
@@ -181,60 +192,97 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                 ),
               ),
 
-              // Main slide text with animated transitions
+              // Main slide text with animated transitions + reference below
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 64.0, vertical: 48.0),
+                    horizontal: 64.0,
+                    vertical: 48.0,
+                  ),
                   child: Center(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 350),
-                      switchInCurve: Curves.easeInOut,
-                      switchOutCurve: Curves.easeInOut,
-                      transitionBuilder: (child, animation) {
-                        return FadeTransition(
-                          opacity: animation,
-                          child: SlideTransition(
-                            position: Tween<Offset>(
-                              begin: const Offset(0, 0.04),
-                              end: Offset.zero,
-                            ).animate(CurvedAnimation(
-                              parent: animation,
-                              curve: Curves.easeOut,
-                            )),
-                            child: child,
-                          ),
-                        );
-                      },
-                      child: activeText.isNotEmpty
-                          ? Text(
-                              activeText,
-                              key: ValueKey(slideKey),
-                              textAlign: TextAlign.center,
-                              style: TextStyle(fontFamily: 'Outfit',
-                                color: Colors.white,
-                                fontSize: activeFontSize,
-                                fontWeight: FontWeight.w600,
-                                height: 1.35,
-                                letterSpacing: 0.3,
-                                shadows: [
-                                  Shadow(
-                                    offset: const Offset(0, 2),
-                                    blurRadius: 12,
-                                    color: Colors.black.withValues(alpha: 0.8),
-                                  ),
-                                  Shadow(
-                                    offset: const Offset(0, 0),
-                                    blurRadius: 30,
-                                    color: const Color(0xFF00E5CC)
-                                        .withValues(alpha: 0.12),
-                                  ),
-                                ],
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 350),
+                          switchInCurve: Curves.easeInOut,
+                          switchOutCurve: Curves.easeInOut,
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position:
+                                    Tween<Offset>(
+                                      begin: const Offset(0, 0.04),
+                                      end: Offset.zero,
+                                    ).animate(
+                                      CurvedAnimation(
+                                        parent: animation,
+                                        curve: Curves.easeOut,
+                                      ),
+                                    ),
+                                child: child,
                               ),
-                            )
-                          : const SizedBox.shrink(
-                              key: ValueKey('blank_slide'),
+                            );
+                          },
+                          child: activeText.isNotEmpty
+                              ? Text(
+                                  activeText,
+                                  key: ValueKey(slideKey),
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: 'Outfit',
+                                    color: Colors.white,
+                                    fontSize: activeFontSize,
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.35,
+                                    letterSpacing: 0.3,
+                                    shadows: [
+                                      Shadow(
+                                        offset: const Offset(0, 2),
+                                        blurRadius: 12,
+                                        color: Colors.black.withValues(alpha: 0.8),
+                                      ),
+                                      Shadow(
+                                        offset: const Offset(0, 0),
+                                        blurRadius: 30,
+                                        color: const Color(
+                                          0xFF00E5CC,
+                                        ).withValues(alpha: 0.12),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : const SizedBox.shrink(key: ValueKey('blank_slide')),
+                        ),
+                        // Bible reference below verse text
+                        if (activeIsBible && activeLabel.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 24),
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              child: Text(
+                                activeLabel,
+                                key: ValueKey('ref_$activeLabel'),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF00E5CC).withValues(alpha: 0.85),
+                                  letterSpacing: 0.5,
+                                  shadows: [
+                                    Shadow(
+                                      offset: const Offset(0, 1),
+                                      blurRadius: 8,
+                                      color: Colors.black.withValues(alpha: 0.6),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
@@ -250,16 +298,22 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_circle_left,
-                            size: 48, color: Colors.white54),
+                        icon: const Icon(
+                          Icons.arrow_circle_left,
+                          size: 48,
+                          color: Colors.white54,
+                        ),
                         onPressed: () => _sendNavigateToMain('prev'),
                         splashRadius: 28,
                         hoverColor: Colors.white.withValues(alpha: 0.1),
                       ),
                       const SizedBox(width: 48),
                       IconButton(
-                        icon: const Icon(Icons.arrow_circle_right,
-                            size: 48, color: Colors.white54),
+                        icon: const Icon(
+                          Icons.arrow_circle_right,
+                          size: 48,
+                          color: Colors.white54,
+                        ),
                         onPressed: () => _sendNavigateToMain('next'),
                         splashRadius: 28,
                         hoverColor: Colors.white.withValues(alpha: 0.1),

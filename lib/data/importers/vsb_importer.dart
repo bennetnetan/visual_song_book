@@ -8,12 +8,12 @@ class ImportSource {
   final Uint8List? bytes;
 
   ImportSource.fromFile(this.filePath)
-      : type = ImportSourceType.file,
-        bytes = null;
+    : type = ImportSourceType.file,
+      bytes = null;
 
   ImportSource.fromBytes(this.bytes)
-      : type = ImportSourceType.bytes,
-        filePath = null;
+    : type = ImportSourceType.bytes,
+      filePath = null;
 }
 
 class ImportResult {
@@ -53,10 +53,7 @@ class ImportResult {
   }
 
   factory ImportResult.failure(String error) {
-    return ImportResult(
-      success: false,
-      errorMessage: error,
-    );
+    return ImportResult(success: false, errorMessage: error);
   }
 }
 

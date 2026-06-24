@@ -26,7 +26,10 @@ class MdbToolsImporter implements SongbookImporter {
   }
 
   @override
-  Future<ImportResult> import(ImportSource source, {String? overrideCategoryName}) async {
+  Future<ImportResult> import(
+    ImportSource source, {
+    String? overrideCategoryName,
+  }) async {
     if (source.filePath == null) {
       return ImportResult.failure('No file path provided.');
     }
@@ -38,18 +41,22 @@ class MdbToolsImporter implements SongbookImporter {
 
     try {
       // 1. Export Categories CSV
-      final categoriesResult = await Process.run('mdb-export', [file.path, 'Categories']);
+      final categoriesResult = await Process.run('mdb-export', [
+        file.path,
+        'Categories',
+      ]);
       // We don't fail immediately if Categories table fails, as we might use overrideCategoryName
-      
+
       // 2. Export Songs CSV
       final songsResult = await Process.run('mdb-export', [file.path, 'Songs']);
       if (songsResult.exitCode != 0) {
         return ImportResult.failure(
-            'Failed to export Songs table: ${songsResult.stderr}');
+          'Failed to export Songs table: ${songsResult.stderr}',
+        );
       }
 
       // 3. Parse CSVs
-      final rawCategories = categoriesResult.exitCode == 0 
+      final rawCategories = categoriesResult.exitCode == 0
           ? _normalizeMdbCsv(categoriesResult.stdout as String)
           : null;
       final rawSongs = _normalizeMdbCsv(songsResult.stdout as String);
@@ -59,7 +66,9 @@ class MdbToolsImporter implements SongbookImporter {
         shouldParseNumbers: false,
       );
 
-      final categoriesRows = rawCategories != null ? csvConverter.convert(rawCategories) : [];
+      final categoriesRows = rawCategories != null
+          ? csvConverter.convert(rawCategories)
+          : [];
       final songsRows = csvConverter.convert(rawSongs);
 
       if (songsRows.isEmpty) {
@@ -69,9 +78,10 @@ class MdbToolsImporter implements SongbookImporter {
       // 4. Map Categories
       final existingCategories = await db.select(db.categories).get();
       final existingCategoryMap = {
-        for (final cat in existingCategories) cat.name.toLowerCase().trim(): cat.id
+        for (final cat in existingCategories)
+          cat.name.toLowerCase().trim(): cat.id,
       };
-      
+
       int maxCategoryId = 0;
       for (final cat in existingCategories) {
         if (cat.id > maxCategoryId) {
@@ -92,15 +102,19 @@ class MdbToolsImporter implements SongbookImporter {
           maxCategoryId++;
           forcedCategoryId = maxCategoryId;
           existingCategoryMap[nameLower] = forcedCategoryId;
-          categoriesToInsert.add(CategoriesCompanion.insert(
-            id: Value(forcedCategoryId),
-            name: overrideCategoryName,
-          ));
+          categoriesToInsert.add(
+            CategoriesCompanion.insert(
+              id: Value(forcedCategoryId),
+              name: overrideCategoryName,
+            ),
+          );
         }
       }
 
       if (categoriesRows.isNotEmpty) {
-        final categoriesHeader = categoriesRows.first.map((e) => e.toString().toUpperCase()).toList();
+        final categoriesHeader = categoriesRows.first
+            .map((e) => e.toString().toUpperCase())
+            .toList();
         final idIndex = categoriesHeader.indexOf('ID');
         final nameIndex = categoriesHeader.indexOf('NAME');
 
@@ -121,10 +135,9 @@ class MdbToolsImporter implements SongbookImporter {
                 final newId = maxCategoryId;
                 categoryIdMap[rawId] = newId;
                 existingCategoryMap[nameLower] = newId;
-                categoriesToInsert.add(CategoriesCompanion.insert(
-                  id: Value(newId),
-                  name: name,
-                ));
+                categoriesToInsert.add(
+                  CategoriesCompanion.insert(id: Value(newId), name: name),
+                );
               }
             }
           }
@@ -133,7 +146,9 @@ class MdbToolsImporter implements SongbookImporter {
 
       // 5. Map and Insert Songs
       // MDB Schema: SongID, SongNum, Title, Key, Body, Modified, Search, Copyright, Author, CategoryId
-      final songsHeader = songsRows.first.map((e) => e.toString().toUpperCase()).toList();
+      final songsHeader = songsRows.first
+          .map((e) => e.toString().toUpperCase())
+          .toList();
       final songIdIndex = songsHeader.indexOf('SONGID');
       final songNumIndex = songsHeader.indexOf('SONGNUM');
       final titleIndex = songsHeader.indexOf('TITLE');
@@ -146,13 +161,17 @@ class MdbToolsImporter implements SongbookImporter {
       final categoryIdIndex = songsHeader.indexOf('CATEGORYID');
 
       if (songNumIndex == -1 || titleIndex == -1 || bodyIndex == -1) {
-        return ImportResult.failure('Invalid Songs table header. Missing required fields.');
+        return ImportResult.failure(
+          'Invalid Songs table header. Missing required fields.',
+        );
       }
 
       final List<SongsCompanion> songCompanions = [];
       for (int i = 1; i < songsRows.length; i++) {
         final row = songsRows[i];
-        if (row.length <= songNumIndex || row.length <= titleIndex || row.length <= bodyIndex) {
+        if (row.length <= songNumIndex ||
+            row.length <= titleIndex ||
+            row.length <= bodyIndex) {
           continue;
         }
 
@@ -162,18 +181,32 @@ class MdbToolsImporter implements SongbookImporter {
 
         if (title.isEmpty || body.isEmpty) continue;
 
-        final rawSongId = songIdIndex != -1 ? int.tryParse(row[songIdIndex].toString()) : null;
+        final rawSongId = songIdIndex != -1
+            ? int.tryParse(row[songIdIndex].toString())
+            : null;
         final key = keyIndex != -1 ? row[keyIndex]?.toString().trim() : null;
-        final modifiedStr = modifiedIndex != -1 ? row[modifiedIndex]?.toString().trim() : null;
-        final search = searchIndex != -1 ? row[searchIndex]?.toString().trim() : null;
-        final copyright = copyrightIndex != -1 ? row[copyrightIndex]?.toString().trim() : null;
-        final author = authorIndex != -1 ? row[authorIndex]?.toString().trim() : null;
-        final rawCategoryId = categoryIdIndex != -1 ? int.tryParse(row[categoryIdIndex].toString()) : null;
+        final modifiedStr = modifiedIndex != -1
+            ? row[modifiedIndex]?.toString().trim()
+            : null;
+        final search = searchIndex != -1
+            ? row[searchIndex]?.toString().trim()
+            : null;
+        final copyright = copyrightIndex != -1
+            ? row[copyrightIndex]?.toString().trim()
+            : null;
+        final author = authorIndex != -1
+            ? row[authorIndex]?.toString().trim()
+            : null;
+        final rawCategoryId = categoryIdIndex != -1
+            ? int.tryParse(row[categoryIdIndex].toString())
+            : null;
 
         // Clean values
         final parsedModified = _parseMdbDateTime(modifiedStr);
         final cleanedKey = key == 'null' || key == '' ? null : key;
-        final cleanedCopyright = copyright == 'null' || copyright == '' ? null : copyright;
+        final cleanedCopyright = copyright == 'null' || copyright == ''
+            ? null
+            : copyright;
         final cleanedAuthor = author == 'null' || author == '' ? null : author;
         final cleanedSearch = search == 'null' || search == '' ? null : search;
 
@@ -185,26 +218,28 @@ class MdbToolsImporter implements SongbookImporter {
           mappedCategoryId = categoryIdMap[rawCategoryId];
         }
 
-        songCompanions.add(SongsCompanion.insert(
-          songNum: songNum,
-          title: title,
-          body: body,
-          key: Value(cleanedKey),
-          modified: Value(parsedModified),
-          search: Value(cleanedSearch),
-          copyright: Value(cleanedCopyright),
-          author: Value(cleanedAuthor),
-          categoryId: Value(mappedCategoryId),
-          sourceSongId: Value(rawSongId),
-          sourcePath: Value(file.path),
-          sourceFormat: const Value('vsb'),
-        ));
+        songCompanions.add(
+          SongsCompanion.insert(
+            songNum: songNum,
+            title: title,
+            body: body,
+            key: Value(cleanedKey),
+            modified: Value(parsedModified),
+            search: Value(cleanedSearch),
+            copyright: Value(cleanedCopyright),
+            author: Value(cleanedAuthor),
+            categoryId: Value(mappedCategoryId),
+            sourceSongId: Value(rawSongId),
+            sourcePath: Value(file.path),
+            sourceFormat: const Value('vsb'),
+          ),
+        );
       }
 
       // Snapshot existing songs before clearing, for comparison
-      final preExisting = await (db.select(db.songs)
-            ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
-          .get();
+      final preExisting = await (db.select(
+        db.songs,
+      )..orderBy([(t) => OrderingTerm.asc(t.songNum)])).get();
       final preExistingKeys = preExisting
           .map((s) => '${s.songNum}|${s.title.toLowerCase().trim()}')
           .toSet();
@@ -212,13 +247,18 @@ class MdbToolsImporter implements SongbookImporter {
       // Execute in a transaction for maximum speed and integrity
       await db.transaction(() async {
         // Delete only history and songs that were previously imported from this exact file path
-        final songsToDelete = db.select(db.songs)..where((t) => t.sourcePath.equals(file.path));
+        final songsToDelete = db.select(db.songs)
+          ..where((t) => t.sourcePath.equals(file.path));
         final songsToDeleteList = await songsToDelete.get();
         final songIdsToDelete = songsToDeleteList.map((s) => s.id).toList();
-        
+
         if (songIdsToDelete.isNotEmpty) {
-          await (db.delete(db.history)..where((t) => t.songId.isIn(songIdsToDelete))).go();
-          await (db.delete(db.songs)..where((t) => t.id.isIn(songIdsToDelete))).go();
+          await (db.delete(
+            db.history,
+          )..where((t) => t.songId.isIn(songIdsToDelete))).go();
+          await (db.delete(
+            db.songs,
+          )..where((t) => t.id.isIn(songIdsToDelete))).go();
         }
 
         // Insert new categories
@@ -244,7 +284,8 @@ class MdbToolsImporter implements SongbookImporter {
       final newSongTitles = <String>[];
       int alreadyExisted = 0;
       for (final companion in songCompanions) {
-        final key = '${companion.songNum.value}|${companion.title.value.toLowerCase().trim()}';
+        final key =
+            '${companion.songNum.value}|${companion.title.value.toLowerCase().trim()}';
         if (preExistingKeys.contains(key)) {
           alreadyExisted++;
         } else {
@@ -273,8 +314,8 @@ class MdbToolsImporter implements SongbookImporter {
   String _normalizeMdbCsv(String raw) {
     return raw
         .replaceAll('\r\r\n', '\n') // double-CR within quoted lyrics
-        .replaceAll('\r\n', '\n')   // standard CRLF record separator
-        .replaceAll('\r', '\n');    // any stray lone CR
+        .replaceAll('\r\n', '\n') // standard CRLF record separator
+        .replaceAll('\r', '\n'); // any stray lone CR
   }
 
   /// Parses date format "10/24/12 17:46:23" into DateTime

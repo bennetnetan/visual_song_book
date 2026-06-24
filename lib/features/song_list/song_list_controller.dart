@@ -9,15 +9,12 @@ import 'package:visual_song_book/data/importers/mdb_tools_importer.dart';
 import 'package:visual_song_book/data/importers/vsb_importer.dart';
 import 'package:visual_song_book/data/repositories/song_repository.dart';
 
-enum SongSortMode {
-  byNumber,
-  byTitle,
-  byKey,
-}
+enum SongSortMode { byNumber, byTitle, byKey }
 
 class SongListState {
   final String query;
-  final int? selectedCategoryId; // null means "All" or "Uncategorized" depending on boolean, let's use -1 for uncategorized
+  final int?
+  selectedCategoryId; // null means "All" or "Uncategorized" depending on boolean, let's use -1 for uncategorized
   final bool showUncategorizedOnly;
   final List<Song> songs;
   final List<Category> categories;
@@ -49,7 +46,8 @@ class SongListState {
     return SongListState(
       query: query ?? this.query,
       selectedCategoryId: selectedCategoryId ?? this.selectedCategoryId,
-      showUncategorizedOnly: showUncategorizedOnly ?? this.showUncategorizedOnly,
+      showUncategorizedOnly:
+          showUncategorizedOnly ?? this.showUncategorizedOnly,
       songs: songs ?? this.songs,
       categories: categories ?? this.categories,
       isLoading: isLoading ?? this.isLoading,
@@ -128,8 +126,13 @@ class SongListController extends StateNotifier<SongListState> {
           if (importer.canImport(source)) {
             // Extract book name from asset path to use as category name
             // e.g. "assets/songbooks/Injili Song Book.vsb" -> "Injili Song Book"
-            final bookName = fileName.replaceAll('.vsb', '').replaceAll('.mdb', '');
-            final result = await importer.import(source, overrideCategoryName: bookName);
+            final bookName = fileName
+                .replaceAll('.vsb', '')
+                .replaceAll('.mdb', '');
+            final result = await importer.import(
+              source,
+              overrideCategoryName: bookName,
+            );
             if (result.success) totalImported += result.songsImported;
           }
 
@@ -149,12 +152,15 @@ class SongListController extends StateNotifier<SongListState> {
 
   void _init() {
     // Watch categories to keep them up to date in the UI
-    _categoriesSub = _repository.watchCategories().listen((categoriesList) {
-      state = state.copyWith(categories: categoriesList);
-      fetchSongs();
-    }, onError: (err) {
-      state = state.copyWith(error: err.toString());
-    });
+    _categoriesSub = _repository.watchCategories().listen(
+      (categoriesList) {
+        state = state.copyWith(categories: categoriesList);
+        fetchSongs();
+      },
+      onError: (err) {
+        state = state.copyWith(error: err.toString());
+      },
+    );
   }
 
   /// Sets the search query with a short debounce to avoid querying SQLite on every keystroke
@@ -170,7 +176,9 @@ class SongListController extends StateNotifier<SongListState> {
 
   /// Sets the selected category
   void selectCategory(int? categoryId, {bool uncategorizedOnly = false}) {
-    if (state.selectedCategoryId == categoryId && state.showUncategorizedOnly == uncategorizedOnly) return;
+    if (state.selectedCategoryId == categoryId &&
+        state.showUncategorizedOnly == uncategorizedOnly)
+      return;
     state = state.copyWith(
       selectedCategoryId: categoryId,
       showUncategorizedOnly: uncategorizedOnly,
@@ -201,13 +209,16 @@ class SongListController extends StateNotifier<SongListState> {
       // If there's a search query, search across all songs (ignoring category tab briefly, or filtering it)
       if (state.query.isNotEmpty) {
         final results = await _repository.searchSongs(state.query);
-        
+
         // Filter search results locally based on selected category if necessary
         List<Song> filtered = results;
         if (state.showUncategorizedOnly) {
           filtered = results.where((s) => s.categoryId == null).toList();
-        } else if (state.selectedCategoryId != null && state.selectedCategoryId != -2) {
-          filtered = results.where((s) => s.categoryId == state.selectedCategoryId).toList();
+        } else if (state.selectedCategoryId != null &&
+            state.selectedCategoryId != -2) {
+          filtered = results
+              .where((s) => s.categoryId == state.selectedCategoryId)
+              .toList();
         }
 
         // Apply manual sorting to search results
@@ -217,11 +228,12 @@ class SongListController extends StateNotifier<SongListState> {
       } else {
         // No search query: listen to direct streams for real-time updates when editing/adding songs
         state = state.copyWith(isLoading: false);
-        
+
         Stream<List<Song>> stream;
         if (state.showUncategorizedOnly) {
           stream = _repository.watchSongsByCategory(null);
-        } else if (state.selectedCategoryId != null && state.selectedCategoryId != -2) {
+        } else if (state.selectedCategoryId != null &&
+            state.selectedCategoryId != -2) {
           stream = _repository.watchSongsByCategory(state.selectedCategoryId);
         } else {
           stream = _repository.watchSongs();
@@ -244,11 +256,14 @@ class SongListController extends StateNotifier<SongListState> {
         list.sort((a, b) => a.songNum.compareTo(b.songNum));
         break;
       case SongSortMode.byTitle:
-        list.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+        list.sort(
+          (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+        );
         break;
       case SongSortMode.byKey:
         list.sort((a, b) {
-          if (a.key == null && b.key == null) return a.songNum.compareTo(b.songNum);
+          if (a.key == null && b.key == null)
+            return a.songNum.compareTo(b.songNum);
           if (a.key == null) return 1;
           if (b.key == null) return -1;
           return a.key!.compareTo(b.key!);
@@ -266,7 +281,8 @@ class SongListController extends StateNotifier<SongListState> {
   }
 }
 
-final songListControllerProvider = StateNotifierProvider<SongListController, SongListState>((ref) {
-  final repo = ref.watch(songRepositoryProvider);
-  return SongListController(repo);
-});
+final songListControllerProvider =
+    StateNotifierProvider<SongListController, SongListState>((ref) {
+      final repo = ref.watch(songRepositoryProvider);
+      return SongListController(repo);
+    });

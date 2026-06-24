@@ -10,12 +10,16 @@ class SongRepository {
 
   /// Fetches all songs, ordered by song number
   Future<List<Song>> getSongs() {
-    return (db.select(db.songs)..orderBy([(t) => OrderingTerm.asc(t.songNum)])).get();
+    return (db.select(
+      db.songs,
+    )..orderBy([(t) => OrderingTerm.asc(t.songNum)])).get();
   }
 
   /// Watches all songs, ordered by song number
   Stream<List<Song>> watchSongs() {
-    return (db.select(db.songs)..orderBy([(t) => OrderingTerm.asc(t.songNum)])).watch();
+    return (db.select(
+      db.songs,
+    )..orderBy([(t) => OrderingTerm.asc(t.songNum)])).watch();
   }
 
   /// Searches songs by title, body, author, or song number
@@ -30,7 +34,8 @@ class SongRepository {
 
     final statement = db.select(db.songs)
       ..where((t) {
-        Expression<bool> expr = t.title.lower().like(matchQuery) |
+        Expression<bool> expr =
+            t.title.lower().like(matchQuery) |
             t.body.lower().like(matchQuery) |
             t.author.lower().like(matchQuery) |
             t.search.lower().like(matchQuery);
@@ -60,7 +65,9 @@ class SongRepository {
   }
 
   Future<Song?> getSongById(int id) {
-    return (db.select(db.songs)..where((t) => t.id.equals(id))).getSingleOrNull();
+    return (db.select(
+      db.songs,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<int> addSong(SongsCompanion companion) {
@@ -78,11 +85,15 @@ class SongRepository {
   // === Categories ===
 
   Future<List<Category>> getCategories() {
-    return (db.select(db.categories)..orderBy([(t) => OrderingTerm.asc(t.name)])).get();
+    return (db.select(
+      db.categories,
+    )..orderBy([(t) => OrderingTerm.asc(t.name)])).get();
   }
 
   Stream<List<Category>> watchCategories() {
-    return (db.select(db.categories)..orderBy([(t) => OrderingTerm.asc(t.name)])).watch();
+    return (db.select(
+      db.categories,
+    )..orderBy([(t) => OrderingTerm.asc(t.name)])).watch();
   }
 
   Future<int> addCategory(CategoriesCompanion companion) {
@@ -98,8 +109,12 @@ class SongRepository {
 
   Future<void> deleteCategory(int categoryId) async {
     await db.transaction(() async {
-      await (db.delete(db.songs)..where((t) => t.categoryId.equals(categoryId))).go();
-      await (db.delete(db.categories)..where((t) => t.id.equals(categoryId))).go();
+      await (db.delete(
+        db.songs,
+      )..where((t) => t.categoryId.equals(categoryId))).go();
+      await (db.delete(
+        db.categories,
+      )..where((t) => t.id.equals(categoryId))).go();
     });
   }
 
@@ -107,7 +122,8 @@ class SongRepository {
 
   /// Fetches distinct source paths from the songs table
   Future<List<String>> getDistinctSourcePaths() async {
-    final query = db.selectOnly(db.songs, distinct: true)..addColumns([db.songs.sourcePath]);
+    final query = db.selectOnly(db.songs, distinct: true)
+      ..addColumns([db.songs.sourcePath]);
     final result = await query.get();
     return result
         .map((row) => row.read(db.songs.sourcePath))
@@ -118,7 +134,9 @@ class SongRepository {
 
   /// Deletes all songs associated with a specific source path
   Future<int> deleteSongsBySource(String sourcePath) {
-    return (db.delete(db.songs)..where((t) => t.sourcePath.equals(sourcePath))).go();
+    return (db.delete(
+      db.songs,
+    )..where((t) => t.sourcePath.equals(sourcePath))).go();
   }
 
   // === History ===
@@ -126,18 +144,16 @@ class SongRepository {
   /// Adds a song to the history. Keeps only the last 50 accessed items.
   Future<void> addToHistory(int songId) async {
     final now = DateTime.now();
-    await db.into(db.history).insert(
-          HistoryCompanion.insert(
-            songId: songId,
-            accessedAt: now,
-          ),
-        );
+    await db
+        .into(db.history)
+        .insert(HistoryCompanion.insert(songId: songId, accessedAt: now));
 
     // Prune history to keep only the latest 50 entries
-    final oldEntries = await (db.select(db.history)
-          ..orderBy([(t) => OrderingTerm.desc(t.accessedAt)])
-          ..limit(100, offset: 50))
-        .get();
+    final oldEntries =
+        await (db.select(db.history)
+              ..orderBy([(t) => OrderingTerm.desc(t.accessedAt)])
+              ..limit(100, offset: 50))
+            .get();
 
     if (oldEntries.isNotEmpty) {
       final oldIds = oldEntries.map((e) => e.id).toList();
@@ -151,7 +167,7 @@ class SongRepository {
       innerJoin(db.songs, db.songs.id.equalsExp(db.history.songId)),
     ]);
     query.orderBy([OrderingTerm.desc(db.history.accessedAt)]);
-    
+
     // Group by songId to show each song only once in the history list
     return query.watch().map((rows) {
       final seenSongIds = <int>{};
@@ -170,4 +186,7 @@ class SongRepository {
   Future<void> clearHistory() {
     return db.delete(db.history).go();
   }
+
+  /// Watches all songs (alias for watchSongs used by Sets controller)
+  Stream<List<Song>> watchAllSongs() => watchSongs();
 }

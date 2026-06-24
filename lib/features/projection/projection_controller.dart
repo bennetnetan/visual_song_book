@@ -8,6 +8,7 @@ import 'package:visual_song_book/core/utils/verse_parser.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/models/verse.dart';
 import 'package:visual_song_book/data/repositories/song_repository.dart';
+import 'package:visual_song_book/features/bible/bible_repository.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 class ProjectionState {
@@ -18,6 +19,14 @@ class ProjectionState {
   final double fontSize;
   final bool autoInsertChorus;
   final bool isSecondaryWindowOpen;
+  /// True when the current content is a Bible passage (not a song).
+  final bool isBibleMode;
+  /// Title shown on the projection tab header (book+chapter or song title).
+  final String? contentTitle;
+  /// Bible passage metadata for chapter-aware navigation.
+  final int? bibleBookId;
+  final int? bibleChapter;
+  final String? bibleBookName;
 
   ProjectionState({
     this.currentSong,
@@ -27,6 +36,11 @@ class ProjectionState {
     required this.fontSize,
     required this.autoInsertChorus,
     required this.isSecondaryWindowOpen,
+    required this.isBibleMode,
+    this.contentTitle,
+    this.bibleBookId,
+    this.bibleChapter,
+    this.bibleBookName,
   });
 
   ProjectionState copyWith({
@@ -37,6 +51,11 @@ class ProjectionState {
     double? fontSize,
     bool? autoInsertChorus,
     bool? isSecondaryWindowOpen,
+    bool? isBibleMode,
+    String? Function()? contentTitle,
+    int? Function()? bibleBookId,
+    int? Function()? bibleChapter,
+    String? Function()? bibleBookName,
   }) {
     return ProjectionState(
       currentSong: currentSong != null ? currentSong() : this.currentSong,
@@ -45,7 +64,13 @@ class ProjectionState {
       keepAwake: keepAwake ?? this.keepAwake,
       fontSize: fontSize ?? this.fontSize,
       autoInsertChorus: autoInsertChorus ?? this.autoInsertChorus,
-      isSecondaryWindowOpen: isSecondaryWindowOpen ?? this.isSecondaryWindowOpen,
+      isSecondaryWindowOpen:
+          isSecondaryWindowOpen ?? this.isSecondaryWindowOpen,
+      isBibleMode: isBibleMode ?? this.isBibleMode,
+      contentTitle: contentTitle != null ? contentTitle() : this.contentTitle,
+      bibleBookId: bibleBookId != null ? bibleBookId() : this.bibleBookId,
+      bibleChapter: bibleChapter != null ? bibleChapter() : this.bibleChapter,
+      bibleBookName: bibleBookName != null ? bibleBookName() : this.bibleBookName,
     );
   }
 
@@ -58,22 +83,34 @@ class ProjectionState {
       fontSize: 40.0,
       autoInsertChorus: true,
       isSecondaryWindowOpen: false,
+      isBibleMode: false,
+      contentTitle: null,
+      bibleBookId: null,
+      bibleChapter: null,
+      bibleBookName: null,
     );
   }
 
   Verse? get currentSlide {
-    if (slides.isEmpty || currentSlideIndex < 0 || currentSlideIndex >= slides.length) {
+    if (slides.isEmpty ||
+        currentSlideIndex < 0 ||
+        currentSlideIndex >= slides.length) {
       return null;
     }
     return slides[currentSlideIndex];
   }
+
+  bool get hasContent => slides.isNotEmpty;
 }
 
 class ProjectionController extends StateNotifier<ProjectionState> {
   final SongRepository _songRepository;
+  final BibleRepository _bibleRepo;
   SharedPreferences? _prefs;
+  bool _isLoadingChapter = false;
 
-  ProjectionController(this._songRepository) : super(ProjectionState.initial()) {
+  ProjectionController(this._songRepository, this._bibleRepo)
+    : super(ProjectionState.initial()) {
     _loadSettings();
   }
 
@@ -93,8 +130,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       if (state.keepAwake) {
         WakelockPlus.enable();
       }
-    } catch (_) {
-    }
+    } catch (_) {}
   }
 
   void setSong(Song song) {
@@ -108,6 +144,8 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       currentSong: () => song,
       slides: sequence,
       currentSlideIndex: 0,
+      isBibleMode: false,
+      contentTitle: () => song.title,
     );
 
     _songRepository.addToHistory(song.id);
@@ -119,6 +157,11 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       currentSong: () => null,
       slides: [],
       currentSlideIndex: 0,
+      isBibleMode: false,
+      contentTitle: () => null,
+      bibleBookId: () => null,
+      bibleChapter: () => null,
+      bibleBookName: () => null,
     );
     _syncSecondaryWindow();
   }
@@ -128,6 +171,8 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     if (state.currentSlideIndex < state.slides.length - 1) {
       state = state.copyWith(currentSlideIndex: state.currentSlideIndex + 1);
       _syncSecondaryWindow();
+    } else if (state.isBibleMode && !_isLoadingChapter) {
+      _advanceChapter(1);
     }
   }
 
@@ -136,6 +181,8 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     if (state.currentSlideIndex > 0) {
       state = state.copyWith(currentSlideIndex: state.currentSlideIndex - 1);
       _syncSecondaryWindow();
+    } else if (state.isBibleMode && !_isLoadingChapter) {
+      _advanceChapter(-1);
     }
   }
 
@@ -172,6 +219,104 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     }
   }
 
+  /// Project a list of Bible verses. [title] is the passage heading shown in
+  /// the control tab (e.g. "John 3" or "Romans 8:28").
+  /// Pass [bookId], [chapter], and [bookName] to enable chapter-aware
+  /// navigation (auto-advance to next/prev chapter at verse boundaries).
+  void setBiblePassage(List<Verse> slides, {String? title, int? bookId, int? chapter, String? bookName}) {
+    final heading = title ?? (slides.isNotEmpty ? slides.first.label : 'Bible');
+    state = state.copyWith(
+      currentSong: () => null,
+      slides: slides,
+      currentSlideIndex: 0,
+      isBibleMode: true,
+      contentTitle: () => heading,
+      bibleBookId: () => bookId,
+      bibleChapter: () => chapter,
+      bibleBookName: () => bookName,
+    );
+    _syncSecondaryWindow();
+  }
+
+  Future<void> _loadChapter(int bookId, int chapter) async {
+    _isLoadingChapter = true;
+    try {
+      final verses = await _bibleRepo.getVerses(bookId, chapter);
+      final bookName = verses.isNotEmpty ? verses.first.bookName ?? '' : '';
+      final slides = verses.map((v) => Verse(
+        label: '$bookName $chapter:${v.verse}',
+        text: v.text,
+        order: v.verse,
+      )).toList();
+      if (mounted) {
+        state = state.copyWith(
+          slides: slides,
+          currentSlideIndex: 0,
+          contentTitle: () => '$bookName $chapter',
+          bibleBookId: () => bookId,
+          bibleChapter: () => chapter,
+          bibleBookName: () => bookName,
+        );
+        _syncSecondaryWindow();
+      }
+    } finally {
+      _isLoadingChapter = false;
+    }
+  }
+
+  Future<void> _advanceChapter(int direction) async {
+    final bookId = state.bibleBookId;
+    final chapter = state.bibleChapter;
+    if (bookId == null || chapter == null) return;
+
+    final nextChapter = chapter + direction;
+    final chapters = await _bibleRepo.getChapters(bookId);
+    if (chapters.contains(nextChapter)) {
+      await _loadChapter(bookId, nextChapter);
+    } else {
+      final books = await _bibleRepo.getBooks();
+      final currentIdx = books.indexWhere((b) => b.id == bookId);
+      final nextIdx = currentIdx + direction;
+      if (nextIdx < 0 || nextIdx >= books.length) return;
+      final nextBook = books[nextIdx];
+      final nextChapters = await _bibleRepo.getChapters(nextBook.id);
+      if (nextChapters.isEmpty) return;
+      final targetChapter = direction > 0 ? nextChapters.first : nextChapters.last;
+      await _loadChapter(nextBook.id, targetChapter);
+    }
+  }
+
+  void goToNextChapter() => _advanceChapter(1);
+  void goToPrevChapter() => _advanceChapter(-1);
+
+  Future<void> projectSongSet(int setId, List<SongSetItem> items) async {
+    if (items.isEmpty) return;
+
+    final slides = <Verse>[];
+    for (var i = 0; i < items.length; i++) {
+      final item = items[i];
+      final song = await _songRepository.getSongById(item.songId);
+      if (song != null) {
+        final parsedVerses = VerseParser.parse(song.body);
+        final sequence = VerseParser.buildSlideSequence(
+          parsedVerses,
+          autoInsertChorus: state.autoInsertChorus,
+        );
+        if (sequence.isNotEmpty) {
+          slides.addAll(sequence);
+        }
+      }
+    }
+
+    if (slides.isEmpty) return;
+    state = state.copyWith(
+      currentSong: () => null,
+      slides: slides,
+      currentSlideIndex: 0,
+    );
+    _syncSecondaryWindow();
+  }
+
   void setSecondaryWindowOpen(bool isOpen) {
     state = state.copyWith(isSecondaryWindowOpen: isOpen);
   }
@@ -186,9 +331,11 @@ class ProjectionController extends StateNotifier<ProjectionState> {
 
     final slide = state.currentSlide;
     final text = slide?.text ?? '';
+    final label = slide?.label ?? '';
     final fontSize = state.fontSize;
+    final isBible = state.isBibleMode;
 
-    debugPrint('Broadcasting slide update: "$text" (Size: $fontSize)');
+    debugPrint('Broadcasting slide update: "$text" label="$label" (Size: $fontSize, bible=$isBible)');
 
     try {
       final controllers = await WindowController.getAll();
@@ -198,14 +345,21 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         if (controller.windowId == currentWindow.windowId) continue;
 
         debugPrint('Sending update to window ID: ${controller.windowId}');
-        await controller.invokeMethod('update_slide', {
-          'text': text,
-          'fontSize': fontSize,
-        }).then((result) {
-          debugPrint('Update successful for window ${controller.windowId}: $result');
-        }).catchError((e) {
-          debugPrint('Update failed for window ${controller.windowId}: $e');
-        });
+        await controller
+            .invokeMethod('update_slide', {
+              'text': text,
+              'label': label,
+              'fontSize': fontSize,
+              'isBible': isBible,
+            })
+            .then((result) {
+              debugPrint(
+                'Update successful for window ${controller.windowId}: $result',
+              );
+            })
+            .catchError((e) {
+              debugPrint('Update failed for window ${controller.windowId}: $e');
+            });
       }
     } catch (e) {
       debugPrint('Error during secondary window sync: $e');
@@ -215,6 +369,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
 
 final projectionControllerProvider =
     StateNotifierProvider<ProjectionController, ProjectionState>((ref) {
-  final repo = ref.watch(songRepositoryProvider);
-  return ProjectionController(repo);
-});
+      final songRepo = ref.watch(songRepositoryProvider);
+      final bibleRepo = ref.watch(bibleRepositoryProvider);
+      return ProjectionController(songRepo, bibleRepo);
+    });

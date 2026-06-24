@@ -24,32 +24,27 @@ class SongPreviewPanel extends ConsumerWidget {
               Expanded(
                 child: Text(
                   '${song.songNum}. ${song.title}',
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineMedium
-                      ?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
               ),
               IconButton.filledTonal(
                 icon: const Icon(Icons.edit_outlined),
                 tooltip: 'Edit Song',
-                onPressed: () => context
-                    .push('/song-editor?id=${song.id}'),
+                onPressed: () => context.push('/song-editor?id=${song.id}'),
               ),
               const SizedBox(width: 8),
               IconButton.filledTonal(
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
                 tooltip: 'Delete Song',
-                onPressed: () => _confirmDelete(
-                    context, ref, song.id, song.title),
+                onPressed: () =>
+                    _confirmDelete(context, ref, song.id, song.title),
               ),
             ],
           ),
-          if (song.author != null ||
-              song.key != null) ...[
+          if (song.author != null || song.key != null) ...[
             const SizedBox(height: 12),
             Wrap(
               spacing: 12,
@@ -58,13 +53,17 @@ class SongPreviewPanel extends ConsumerWidget {
                   Chip(
                     avatar: const Icon(Icons.person, size: 16),
                     label: Text(song.author!),
-                    backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainer,
                   ),
                 if (song.key != null)
                   Chip(
                     avatar: const Icon(Icons.music_note, size: 16),
                     label: Text('Key: ${song.key!}'),
-                    backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainer,
                   ),
               ],
             ),
@@ -72,19 +71,15 @@ class SongPreviewPanel extends ConsumerWidget {
           const SizedBox(height: 20),
           ElevatedButton.icon(
             onPressed: () {
-              ref
-                  .read(projectionControllerProvider.notifier)
-                  .setSong(song);
-              ref.read(activeDashboardTabProvider.notifier).state =
-                  4;
+              ref.read(projectionControllerProvider.notifier).setSong(song);
+              ref.read(activeDashboardTabProvider.notifier).state = 4;
             },
             icon: const Icon(Icons.tv),
             label: const Text('Send to Projector'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 28, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -98,20 +93,24 @@ class SongPreviewPanel extends ConsumerWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(
-                  color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outlineVariant.withValues(alpha: 0.3),
                 ),
               ),
-              color: Theme.of(context)
-                  .colorScheme
-                  .surfaceContainer
-                  .withValues(alpha: 0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.surfaceContainer.withValues(alpha: 0.3),
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
                   gradient: LinearGradient(
                     colors: [
-                      Theme.of(context).colorScheme.surfaceContainer.withValues(alpha: 0.3),
-                      Theme.of(context).colorScheme.surfaceContainerLowest.withValues(alpha: 0.2),
+                      Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainer.withValues(alpha: 0.3),
+                      Theme.of(context).colorScheme.surfaceContainerLowest
+                          .withValues(alpha: 0.2),
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -121,18 +120,26 @@ class SongPreviewPanel extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0,
+                        vertical: 16.0,
+                      ),
                       child: Row(
                         children: [
-                          Icon(Icons.menu_book, size: 20, color: Theme.of(context).colorScheme.primary),
+                          Icon(
+                            Icons.menu_book,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'LYRICS PREVIEW',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                              letterSpacing: 1.2,
-                            ),
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  letterSpacing: 1.2,
+                                ),
                           ),
                         ],
                       ),
@@ -143,10 +150,13 @@ class SongPreviewPanel extends ConsumerWidget {
                         padding: const EdgeInsets.all(24.0),
                         child: Text(
                           song.body,
-                          style: TextStyle(fontFamily: 'Lora',
+                          style: TextStyle(
+                            fontFamily: 'Lora',
                             fontSize: 17,
                             height: 1.6,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.95),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.95),
                           ),
                         ),
                       ),
@@ -162,7 +172,11 @@ class SongPreviewPanel extends ConsumerWidget {
   }
 
   void _confirmDelete(
-      BuildContext context, WidgetRef ref, int songId, String title) {
+    BuildContext context,
+    WidgetRef ref,
+    int songId,
+    String title,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

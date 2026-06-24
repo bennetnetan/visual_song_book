@@ -21,10 +21,14 @@ class SectionCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
-          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.35),
+          color: Theme.of(
+            context,
+          ).colorScheme.outlineVariant.withValues(alpha: 0.35),
         ),
       ),
-      color: Theme.of(context).colorScheme.surfaceContainer.withValues(alpha: 0.25),
+      color: Theme.of(
+        context,
+      ).colorScheme.surfaceContainer.withValues(alpha: 0.25),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -32,15 +36,19 @@ class SectionCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+                Icon(
+                  icon,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   title.toUpperCase(),
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
                 const Spacer(),
                 if (trailing != null) trailing!,

@@ -1,10 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:visual_song_book/data/db/bible_db.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/importers/vsb_importer.dart';
 import 'package:visual_song_book/data/importers/mdb_tools_importer.dart';
 import 'package:visual_song_book/data/importers/vsbook_importer.dart';
 import 'package:visual_song_book/data/repositories/backup_repository.dart';
+import 'package:visual_song_book/data/repositories/set_repository.dart';
 import 'package:visual_song_book/data/repositories/song_repository.dart';
+import 'package:visual_song_book/features/bible/bible_repository.dart';
 
 // Database Provider (hot-swappable when restoring backups)
 final databaseProvider = Provider<AppDatabase>((ref) {
@@ -19,16 +22,35 @@ final songRepositoryProvider = Provider<SongRepository>((ref) {
   return SongRepository(db);
 });
 
+// Set Repository Provider
+final setRepositoryProvider = Provider<SetRepository>((ref) {
+  final db = ref.watch(databaseProvider);
+  return SetRepository(db);
+});
+
+// Bible Database Provider (singleton, read-only)
+final bibleDatabaseProvider = Provider<BibleDatabase>((ref) {
+  final db = BibleDatabase();
+  ref.onDispose(() => db.close());
+  return db;
+});
+
+// Bible Repository Provider
+final bibleRepositoryProvider = Provider<BibleRepository>((ref) {
+  final db = ref.watch(bibleDatabaseProvider);
+  return BibleRepository(db);
+});
+
 // Backup Repository Provider
 final backupRepositoryProvider = Provider<BackupRepository>((ref) {
   return BackupRepository();
 });
 
+// Active dashboard tab provider
+final activeDashboardTabProvider = StateProvider<int>((ref) => 0);
+
 // List of available importers
 final importersProvider = Provider<List<SongbookImporter>>((ref) {
   final db = ref.watch(databaseProvider);
-  return [
-    MdbToolsImporter(db),
-    VsBookImporter(db),
-  ];
+  return [MdbToolsImporter(db), VsBookImporter(db)];
 });

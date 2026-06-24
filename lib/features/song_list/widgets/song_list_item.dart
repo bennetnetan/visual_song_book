@@ -21,7 +21,9 @@ class SongListItem extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
       child: Material(
         color: isSelected
-            ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.35)
+            ? Theme.of(
+                context,
+              ).colorScheme.primaryContainer.withValues(alpha: 0.35)
             : Colors.transparent,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
@@ -39,7 +41,10 @@ class SongListItem extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 4.0,
+            ),
             leading: Container(
               width: 40,
               height: 40,
@@ -88,8 +93,10 @@ class SongListItem extends StatelessWidget {
                     song.author ?? 'Unknown Author',
                     style: TextStyle(
                       color: isSelected
-                          ? Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.7)
-                          : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                          ? Theme.of(context).colorScheme.onPrimaryContainer
+                                .withValues(alpha: 0.7)
+                          : Theme.of(context).colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.8),
                       fontSize: 13,
                     ),
                   ),
@@ -100,8 +107,10 @@ class SongListItem extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: isSelected
-                          ? Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.5)
-                          : Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                          ? Theme.of(context).colorScheme.onPrimaryContainer
+                                .withValues(alpha: 0.5)
+                          : Theme.of(context).colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.5),
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
                     ),
@@ -111,15 +120,22 @@ class SongListItem extends StatelessWidget {
             ),
             trailing: song.key != null
                 ? Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
+                          ? Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.2)
                           : Theme.of(context).colorScheme.secondaryContainer,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: isSelected
-                            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.primary.withValues(alpha: 0.4)
                             : Colors.transparent,
                         width: 1,
                       ),
@@ -131,7 +147,9 @@ class SongListItem extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         color: isSelected
                             ? Theme.of(context).colorScheme.onPrimaryContainer
-                            : Theme.of(context).colorScheme.onSecondaryContainer,
+                            : Theme.of(
+                                context,
+                              ).colorScheme.onSecondaryContainer,
                       ),
                     ),
                   )

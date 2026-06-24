@@ -5,12 +5,13 @@ import 'package:go_router/go_router.dart';
 
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
+import 'package:visual_song_book/features/bible/bible_tab.dart';
 import 'package:visual_song_book/features/history/history_tab.dart';
 import 'package:visual_song_book/features/projection/projection_tab.dart';
+import 'package:visual_song_book/features/sets/sets_tab.dart';
 import 'package:visual_song_book/features/settings/settings_tab.dart';
 import 'package:visual_song_book/features/song_list/songs_tab.dart';
 
-final activeDashboardTabProvider = StateProvider<int>((ref) => 0);
 final selectedSongIdProvider = StateProvider<int?>((ref) => null);
 final isSidebarExpandedProvider = StateProvider<bool>((ref) => true);
 
@@ -23,7 +24,14 @@ class MainDashboardPage extends ConsumerWidget {
     final isExpanded = ref.watch(isSidebarExpandedProvider);
     final isLargeScreen = MediaQuery.of(context).size.width >= 900;
 
-    final tabTitles = ['Song Book', 'Sets', 'Bible', 'History', 'Projection', 'Settings'];
+    final tabTitles = [
+      'Song Book',
+      'Sets',
+      'Bible',
+      'History',
+      'Projection',
+      'Settings',
+    ];
     final currentTitle = tabTitles[activeTab];
 
     return Scaffold(
@@ -66,7 +74,9 @@ class MainDashboardPage extends ConsumerWidget {
                   ),
                 ],
               ),
-              actions: activeTab == 0 ? const [_AddMenuButton(), SizedBox(width: 8)] : null,
+              actions: activeTab == 0
+                  ? const [_AddMenuButton(), SizedBox(width: 8)]
+                  : null,
             )
           : null,
       body: Row(
@@ -75,7 +85,9 @@ class MainDashboardPage extends ConsumerWidget {
             NavigationRail(
               extended: isExpanded,
               selectedIndex: activeTab,
-              labelType: isExpanded ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+              labelType: isExpanded
+                  ? NavigationRailLabelType.none
+                  : NavigationRailLabelType.all,
               leading: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24.0),
                 child: Column(
@@ -87,14 +99,16 @@ class MainDashboardPage extends ConsumerWidget {
                         IconButton(
                           icon: Icon(isExpanded ? Icons.menu_open : Icons.menu),
                           onPressed: () {
-                            ref.read(isSidebarExpandedProvider.notifier).state = !isExpanded;
+                            ref.read(isSidebarExpandedProvider.notifier).state =
+                                !isExpanded;
                           },
                         ),
                         if (isExpanded) ...[
                           const SizedBox(width: 8),
                           Text(
                             'Visual Book',
-                            style: TextStyle(fontFamily: 'Outfit',
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                               color: Theme.of(context).colorScheme.primary,
@@ -146,19 +160,18 @@ class MainDashboardPage extends ConsumerWidget {
             ),
             const VerticalDivider(thickness: 1, width: 1),
           ],
-          Expanded(
-            child: _buildTabContent(activeTab, isLargeScreen),
-          ),
+          Expanded(child: _buildTabContent(activeTab, isLargeScreen)),
         ],
       ),
       bottomNavigationBar: !isLargeScreen
           ? NavigationBar(
-              selectedIndex: [0, 3, 4, 5].contains(activeTab) 
-                  ? [0, 3, 4, 5].indexOf(activeTab) 
+              selectedIndex: [0, 3, 4, 5].contains(activeTab)
+                  ? [0, 3, 4, 5].indexOf(activeTab)
                   : 0,
               onDestinationSelected: (index) {
                 final mappedIndices = [0, 3, 4, 5];
-                ref.read(activeDashboardTabProvider.notifier).state = mappedIndices[index];
+                ref.read(activeDashboardTabProvider.notifier).state =
+                    mappedIndices[index];
               },
               destinations: const [
                 NavigationDestination(
@@ -192,9 +205,9 @@ class MainDashboardPage extends ConsumerWidget {
       case 0:
         return SongsTab(isLargeScreen: isLargeScreen);
       case 1:
-        return _buildPlaceholderTab('Sets & Service Planning');
+        return SetsTab(isLargeScreen: isLargeScreen);
       case 2:
-        return _buildPlaceholderTab('Bible & Scriptures');
+        return BibleTab(isLargeScreen: isLargeScreen);
       case 3:
         return const HistoryTab();
       case 4:
@@ -204,27 +217,6 @@ class MainDashboardPage extends ConsumerWidget {
       default:
         return const Center(child: Text('Unknown Tab'));
     }
-  }
-
-  Widget _buildPlaceholderTab(String title) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.construction, size: 64, color: Colors.grey),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'This feature is coming soon in a future update!',
-            style: TextStyle(color: Colors.grey),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -290,17 +282,24 @@ class _AddMenuButton extends ConsumerWidget {
           autofocus: true,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () async {
               final name = controller.text.trim();
               if (name.isNotEmpty) {
                 Navigator.pop(context);
                 final repo = ref.read(songRepositoryProvider);
-                await repo.addCategory(CategoriesCompanion.insert(
-                  id: drift.Value(DateTime.now().millisecondsSinceEpoch ~/ 1000),
-                  name: name,
-                ));
+                await repo.addCategory(
+                  CategoriesCompanion.insert(
+                    id: drift.Value(
+                      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+                    ),
+                    name: name,
+                  ),
+                );
               }
             },
             child: const Text('Create'),

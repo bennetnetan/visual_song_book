@@ -6,10 +6,7 @@ import 'package:visual_song_book/features/song_list/main_dashboard_page.dart';
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
   routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const MainDashboardPage(),
-    ),
+    GoRoute(path: '/', builder: (context, state) => const MainDashboardPage()),
     GoRoute(
       path: '/projection',
       builder: (context, state) => const ProjectionOutputView(),
