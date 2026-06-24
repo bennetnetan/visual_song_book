@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
@@ -143,7 +143,7 @@ class SongPreviewPanel extends ConsumerWidget {
                         padding: const EdgeInsets.all(24.0),
                         child: Text(
                           song.body,
-                          style: GoogleFonts.lora(
+                          style: TextStyle(fontFamily: 'Lora',
                             fontSize: 17,
                             height: 1.6,
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.95),

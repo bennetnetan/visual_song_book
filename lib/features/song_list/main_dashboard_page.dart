@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/features/history/history_tab.dart';
@@ -52,7 +52,7 @@ class MainDashboardPage extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Text(
                     'Song Book',
-                    style: GoogleFonts.outfit(
+                    style: TextStyle(fontFamily: 'Outfit',
                       fontWeight: FontWeight.bold,
                       fontSize: 20,
                       letterSpacing: 0.5,
@@ -91,7 +91,7 @@ class MainDashboardPage extends ConsumerWidget {
                           const SizedBox(width: 8),
                           Text(
                             'Visual Book',
-                            style: GoogleFonts.outfit(
+                            style: TextStyle(fontFamily: 'Outfit',
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                               color: Theme.of(context).colorScheme.primary,

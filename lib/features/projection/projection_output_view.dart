@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:window_manager/window_manager.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 
@@ -202,7 +202,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                               activeText,
                               key: ValueKey(slideKey),
                               textAlign: TextAlign.center,
-                              style: GoogleFonts.outfit(
+                              style: TextStyle(fontFamily: 'Outfit',
                                 color: Colors.white,
                                 fontSize: activeFontSize,
                                 fontWeight: FontWeight.w600,

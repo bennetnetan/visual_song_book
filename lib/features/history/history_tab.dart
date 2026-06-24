@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:visual_song_book/features/history/history_controller.dart';
 import 'package:visual_song_book/features/song_list/main_dashboard_page.dart';
 import 'package:visual_song_book/features/song_list/widgets/song_list_item.dart';
@@ -17,7 +17,7 @@ class HistoryTab extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           'Recent Activity',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
         ),
         actions: [
           if (state.history.isNotEmpty)

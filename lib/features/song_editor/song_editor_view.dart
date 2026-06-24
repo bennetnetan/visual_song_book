@@ -2,7 +2,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/features/song_editor/widgets/editor_cards.dart';
@@ -209,7 +209,7 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
       appBar: AppBar(
         title: Text(
           isEditing ? 'Edit Song' : 'New Song',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
         ),
         actions: [
           if (_isLoading)
@@ -276,7 +276,7 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
                   label: const Text('Save Song'),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 18.0),
-                    textStyle: GoogleFonts.outfit(
+                    textStyle: TextStyle(fontFamily: 'Outfit',
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
                     ),

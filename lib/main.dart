@@ -3,7 +3,6 @@ import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/routing/app_router.dart';
 import 'package:window_manager/window_manager.dart';
@@ -61,7 +60,7 @@ class MyApp extends ConsumerWidget {
       theme: FlexThemeData.light(
         scheme: FlexScheme.tealM3,
         useMaterial3: true,
-        fontFamily: GoogleFonts.inter().fontFamily,
+        fontFamily: 'Inter',
         subThemesData: const FlexSubThemesData(
           inputDecoratorBorderType: FlexInputBorderType.outline,
           inputDecoratorRadius: 16.0,
@@ -73,7 +72,7 @@ class MyApp extends ConsumerWidget {
       darkTheme: FlexThemeData.dark(
         scheme: FlexScheme.tealM3,
         useMaterial3: true,
-        fontFamily: GoogleFonts.inter().fontFamily,
+        fontFamily: 'Inter',
         subThemesData: const FlexSubThemesData(
           inputDecoratorBorderType: FlexInputBorderType.outline,
           inputDecoratorRadius: 16.0,

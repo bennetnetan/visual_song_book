@@ -44,7 +44,7 @@ dependencies:
   flex_color_scheme: ^8.0.0
   shared_preferences: ^2.2.3
   window_manager: ^0.3.8
-  wakelock_plus: ^1.2.8
+  wakelock_plus: ^1.5.2
   path: ^1.9.0
   csv: ^6.0.0
   archive: ^3.6.1
@@ -73,6 +73,38 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/logo.png
+    - assets/songbooks/
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+
+    - family: Outfit
+      fonts:
+        - asset: assets/fonts/Outfit-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Outfit-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Outfit-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Outfit-Bold.ttf
+          weight: 700
+
+    - family: Lora
+      fonts:
+        - asset: assets/fonts/Lora-Regular.ttf
+          weight: 400
+
+    - family: RobotoMono
+      fonts:
+        - asset: assets/fonts/RobotoMono-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/RobotoMono-Bold.ttf
+          weight: 700
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

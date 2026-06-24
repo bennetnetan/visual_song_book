@@ -2,23 +2,71 @@ import 'dart:io';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/song_list/main_dashboard_page.dart';
 
-class ProjectionTab extends ConsumerWidget {
+class ProjectionTab extends ConsumerStatefulWidget {
   final bool isLargeScreen;
 
   const ProjectionTab({super.key, required this.isLargeScreen});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProjectionTab> createState() => _ProjectionTabState();
+}
+
+class _ProjectionTabState extends ConsumerState<ProjectionTab> {
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode(debugLabel: 'ProjectionTabFocus');
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final notifier = ref.read(projectionControllerProvider.notifier);
+    switch (event.logicalKey) {
+      case LogicalKeyboardKey.arrowRight:
+      case LogicalKeyboardKey.pageDown:
+      case LogicalKeyboardKey.space:
+        notifier.nextSlide();
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.arrowLeft:
+      case LogicalKeyboardKey.pageUp:
+        notifier.prevSlide();
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.escape:
+        notifier.clearSong();
+        return KeyEventResult.handled;
+      default:
+        return KeyEventResult.ignored;
+    }
+  }
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(projectionControllerProvider);
     final notifier = ref.read(projectionControllerProvider.notifier);
 
-    return Scaffold(
+    return Focus(
+      focusNode: _focusNode,
+      autofocus: true,
+      onKeyEvent: _handleKeyEvent,
+      child: GestureDetector(
+        onTap: () => _focusNode.requestFocus(),
+        child: Scaffold(
       appBar: AppBar(
         title: const Text('Projection Controls'),
         actions: [
@@ -208,12 +256,13 @@ class ProjectionTab extends ConsumerWidget {
                                             child: Text(
                                               state.currentSlide?.text ?? '',
                                               textAlign: TextAlign.center,
-                                              style: GoogleFonts.outfit(
+                                              style: const TextStyle(
+                                                fontFamily: 'Outfit',
                                                 color: Colors.white,
                                                 fontSize: 18,
                                                 fontWeight: FontWeight.w600,
                                                 height: 1.3,
-                                                shadows: const [
+                                                shadows: [
                                                   Shadow(
                                                     offset: Offset(1.0, 1.0),
                                                     blurRadius: 3.0,
@@ -310,6 +359,8 @@ class ProjectionTab extends ConsumerWidget {
                 ],
               ),
             ),
+        ),
+      ),
     );
   }
 }

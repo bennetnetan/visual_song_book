@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:visual_song_book/core/utils/verse_parser.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/features/song_editor/widgets/section_card.dart';
@@ -192,7 +192,7 @@ class LyricsCard extends StatelessWidget {
             controller: bodyController,
             maxLines: 20,
             keyboardType: TextInputType.multiline,
-            style: GoogleFonts.robotoMono(
+            style: TextStyle(fontFamily: 'RobotoMono',
               fontSize: 14,
               height: 1.6,
             ),
@@ -307,7 +307,7 @@ class LivePreviewCard extends StatelessWidget {
                               child: Text(
                                 slide.text,
                                 textAlign: TextAlign.center,
-                                style: GoogleFonts.outfit(
+                                style: TextStyle(fontFamily: 'Outfit',
                                   color: Colors.white,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,

@@ -52,6 +52,8 @@ class History extends Table {
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
+  AppDatabase.withExecutor(QueryExecutor executor) : super(executor);
+
   /// In-memory database for use in unit/widget tests.
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
