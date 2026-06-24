@@ -302,9 +302,9 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
               ),
               const SizedBox(height: 8),
               _SidebarItem(
-                title: 'Library & Safety',
-                isSelected: selectedCategory == 'Library & Safety',
-                onTap: () => ref.read(selectedSettingsCategoryProvider.notifier).state = 'Library & Safety',
+                title: 'Library',
+                isSelected: selectedCategory == 'Library',
+                onTap: () => ref.read(selectedSettingsCategoryProvider.notifier).state = 'Library',
               ),
               const SizedBox(height: 8),
               _SidebarItem(
@@ -348,7 +348,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                     const SizedBox(height: 32),
                     const ProjectionPreferencesCard(),
                   ],
-                  if (selectedCategory == 'Library & Safety') ...[
+                  if (selectedCategory == 'Library') ...[
                     const _DataSourcesCard(isDesktop: true),
                   ],
                   if (selectedCategory == 'Advanced') ...[
