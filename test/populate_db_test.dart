@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,7 +9,7 @@ import 'package:visual_song_book/data/importers/vsb_importer.dart';
 
 void main() {
   test('populate database with default songbooks', () async {
-    final dbPath = '/home/benjanetan/Documents/songs_db.sqlite';
+    const dbPath = '/home/benjanetan/Documents/songs_db.sqlite';
     print('Opening database at: $dbPath');
 
     final dbFile = File(dbPath);
@@ -53,7 +55,7 @@ void main() {
 
     // Verify songs are in DB
     final allSongs = await database.select(database.songs).get();
-    print('Total songs now in database: ${allSongs.length}');
+    print('Total songs now in database: ${allSongs.length} (Imported this session: $totalSongs)');
 
     await database.close();
     print('Database populated and closed successfully!');

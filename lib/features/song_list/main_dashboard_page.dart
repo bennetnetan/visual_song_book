@@ -23,36 +23,42 @@ class MainDashboardPage extends ConsumerWidget {
     final isExpanded = ref.watch(isSidebarExpandedProvider);
     final isLargeScreen = MediaQuery.of(context).size.width >= 900;
 
+    final tabTitles = ['Song Book', 'Sets', 'Bible', 'History', 'Projection', 'Settings'];
+    final currentTitle = tabTitles[activeTab];
+
     return Scaffold(
       appBar: !isLargeScreen
           ? AppBar(
               title: Row(
                 children: [
-                  Hero(
-                    tag: 'app_logo',
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Color(0xFF00BFA5), // Teal primary
-                            Color(0xFF00796B), // Teal secondary
-                          ],
+                  if (activeTab == 0) ...[
+                    Hero(
+                      tag: 'app_logo',
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFF00BFA5), // Teal primary
+                              Color(0xFF00796B), // Teal secondary
+                            ],
+                          ),
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
                         ),
-                        borderRadius: BorderRadius.all(Radius.circular(10)),
-                      ),
-                      child: Image.asset(
-                        'assets/images/logo.png',
-                        width: 24,
-                        height: 24,
-                        color: Colors.white,
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 24,
+                          height: 24,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
+                    const SizedBox(width: 12),
+                  ],
                   Text(
-                    'Song Book',
-                    style: TextStyle(fontFamily: 'Outfit',
+                    currentTitle,
+                    style: const TextStyle(
+                      fontFamily: 'Outfit',
                       fontWeight: FontWeight.bold,
                       fontSize: 20,
                       letterSpacing: 0.5,
@@ -60,10 +66,7 @@ class MainDashboardPage extends ConsumerWidget {
                   ),
                 ],
               ),
-              actions: const [
-                _AddMenuButton(),
-                SizedBox(width: 8),
-              ],
+              actions: activeTab == 0 ? const [_AddMenuButton(), SizedBox(width: 8)] : null,
             )
           : null,
       body: Row(

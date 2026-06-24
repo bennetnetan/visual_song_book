@@ -25,6 +25,7 @@ class MdbToolsImporter implements SongbookImporter {
     return false;
   }
 
+  @override
   Future<ImportResult> import(ImportSource source, {String? overrideCategoryName}) async {
     if (source.filePath == null) {
       return ImportResult.failure('No file path provided.');

@@ -192,7 +192,7 @@ class LyricsCard extends StatelessWidget {
             controller: bodyController,
             maxLines: 20,
             keyboardType: TextInputType.multiline,
-            style: TextStyle(fontFamily: 'RobotoMono',
+            style: const TextStyle(fontFamily: 'RobotoMono',
               fontSize: 14,
               height: 1.6,
             ),
@@ -307,7 +307,7 @@ class LivePreviewCard extends StatelessWidget {
                               child: Text(
                                 slide.text,
                                 textAlign: TextAlign.center,
-                                style: TextStyle(fontFamily: 'Outfit',
+                                style: const TextStyle(fontFamily: 'Outfit',
                                   color: Colors.white,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,

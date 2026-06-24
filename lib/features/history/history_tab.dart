@@ -15,7 +15,7 @@ class HistoryTab extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'Recent Activity',
           style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
         ),

@@ -209,7 +209,7 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
       appBar: AppBar(
         title: Text(
           isEditing ? 'Edit Song' : 'New Song',
-          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
+          style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
         ),
         actions: [
           if (_isLoading)
@@ -276,7 +276,7 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
                   label: const Text('Save Song'),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 18.0),
-                    textStyle: TextStyle(fontFamily: 'Outfit',
+                    textStyle: const TextStyle(fontFamily: 'Outfit',
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
                     ),

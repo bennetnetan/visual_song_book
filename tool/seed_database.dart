@@ -268,8 +268,11 @@ DateTime? _parseMdbDate(String? s) {
     final month = int.parse(dateParts[0]);
     final day   = int.parse(dateParts[1]);
     int year    = int.parse(dateParts[2]);
-    if (year < 70) year += 2000;
-    else if (year < 100) year += 1900;
+    if (year < 70) {
+      year += 2000;
+    } else if (year < 100) {
+      year += 1900;
+    }
     int h = 0, m = 0, sec = 0;
     if (parts.length > 1) {
       final t = parts[1].split(':');
