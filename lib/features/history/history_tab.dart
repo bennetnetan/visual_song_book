@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:visual_song_book/core/providers/app_providers.dart';
+import 'package:visual_song_book/features/bible/bible_tab.dart';
 import 'package:visual_song_book/features/history/history_controller.dart';
+import 'package:visual_song_book/features/sets/sets_tab.dart';
 import 'package:visual_song_book/features/song_list/main_dashboard_page.dart';
 import 'package:visual_song_book/features/song_list/widgets/song_list_item.dart';
 
@@ -60,6 +63,7 @@ class HistoryTab extends ConsumerWidget {
                     isSelected: song.id == selectedSongId,
                     onTap: () {
                       ref.read(selectedSongIdProvider.notifier).state = song.id;
+                      ref.read(activeDashboardTabProvider.notifier).state = 0;
                     },
                   );
                 },
@@ -76,6 +80,10 @@ class HistoryTab extends ConsumerWidget {
                     leading: const Icon(Icons.queue_music_outlined),
                     title: Text(item.setName),
                     subtitle: Text(_formatDate(item.accessedAt)),
+                    onTap: () {
+                      ref.read(setsControllerProvider.notifier).selectSet(item.setId);
+                      ref.read(activeDashboardTabProvider.notifier).state = 1;
+                    },
                   );
                 },
               );
@@ -91,6 +99,36 @@ class HistoryTab extends ConsumerWidget {
                     leading: const Icon(Icons.menu_book_outlined),
                     title: Text(item.reference),
                     subtitle: Text(_formatDate(item.accessedAt)),
+                    onTap: () async {
+                      final repo = ref.read(bibleRepositoryProvider);
+                      final notifier = ref.read(bibleControllerProvider.notifier);
+                      final colonIdx = item.reference.lastIndexOf(':');
+                      String bookChapter;
+                      int? verseNum;
+                      if (colonIdx > 0) {
+                        bookChapter = item.reference.substring(0, colonIdx);
+                        verseNum = int.tryParse(item.reference.substring(colonIdx + 1));
+                      } else {
+                        bookChapter = item.reference;
+                      }
+                      final spaceIdx = bookChapter.lastIndexOf(' ');
+                      if (spaceIdx > 0) {
+                        final bookName = bookChapter.substring(0, spaceIdx);
+                        final chapterNum = int.tryParse(bookChapter.substring(spaceIdx + 1));
+                        if (chapterNum != null) {
+                          final book = await repo.getBookByName(bookName);
+                          if (book != null) {
+                            if (verseNum != null) {
+                              await notifier.navigateToVerse(book.id, chapterNum, verseNum);
+                            } else {
+                              await notifier.selectBook(book.id);
+                              await notifier.selectChapter(chapterNum);
+                            }
+                            ref.read(activeDashboardTabProvider.notifier).state = 2;
+                          }
+                        }
+                      }
+                    },
                   );
                 },
               );

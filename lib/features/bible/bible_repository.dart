@@ -68,6 +68,15 @@ class BibleRepository {
         .toList();
   }
 
+  Future<BibleBook?> getBookByName(String name) async {
+    final rows = await _db.queryAsync(
+      'SELECT id, name FROM books WHERE name = ?',
+      [name],
+    );
+    if (rows.isEmpty) return null;
+    return BibleBook(id: rows.first['id'] as int, name: rows.first['name'] as String);
+  }
+
   Future<List<int>> getChapters(int bookId) async {
     final rows = await _db.queryAsync(
       'SELECT DISTINCT chapter FROM verses WHERE book_id = ? ORDER BY chapter',

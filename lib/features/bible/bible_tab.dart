@@ -70,19 +70,7 @@ class BibleTab extends ConsumerWidget {
                                   ref
                                       .read(setRepositoryProvider)
                                       .recordBibleProjection(v.reference, v.text);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Projecting ${v.reference}'),
-                                      duration: const Duration(seconds: 2),
-                                      behavior: SnackBarBehavior.floating,
-                                      action: SnackBarAction(
-                                        label: 'View',
-                                        onPressed: () {
-                                          ref.read(activeDashboardTabProvider.notifier).state = 3;
-                                        },
-                                      ),
-                                    ),
-                                  );
+                                  ref.read(activeDashboardTabProvider.notifier).state = 4;
                                 },
                               )
                             : state.selectedBookId == null
@@ -124,19 +112,7 @@ class BibleTab extends ConsumerWidget {
                                         '$bookName $chapter',
                                         '${verses.first.verse}-${verses.last.verse}',
                                       );
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Projecting $passageTitle'),
-                                      duration: const Duration(seconds: 2),
-                                      behavior: SnackBarBehavior.floating,
-                                      action: SnackBarAction(
-                                        label: 'View',
-                                        onPressed: () {
-                                          ref.read(activeDashboardTabProvider.notifier).state = 3;
-                                        },
-                                      ),
-                                    ),
-                                  );
+                                  ref.read(activeDashboardTabProvider.notifier).state = 4;
                                 },
                                 onToggleBookmark: (v) {
                                   final setRepo = ref.read(setRepositoryProvider);
@@ -482,6 +458,9 @@ class _ReadingView extends StatelessWidget {
                           : Colors.transparent,
                       child: InkWell(
                         onTap: () => onSelectVerse(v),
+                        onDoubleTap: () => onProjectPassage(v.chapter, [v]),
+                        onLongPress: () => _showVerseMenu(context, v, onProjectPassage, onToggleBookmark),
+                        onSecondaryTap: () => _showVerseMenu(context, v, onProjectPassage, onToggleBookmark),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                           child: Row(
@@ -542,6 +521,30 @@ class _ReadingView extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  static void _showVerseMenu(
+    BuildContext context,
+    BibleVerse verse,
+    void Function(int chapter, List<BibleVerse> verses) onProject,
+    void Function(BibleVerse) onBookmark,
+  ) {
+    final renderBox = context.findRenderObject() as RenderBox?;
+    final center = renderBox?.localToGlobal(renderBox.size.center(Offset.zero)) ?? Offset.zero;
+    showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(center.dx, center.dy, center.dx + 1, center.dy + 1),
+      items: [
+        const PopupMenuItem(value: 'project', child: ListTile(leading: Icon(Icons.tv, size: 18), title: Text('Project'), dense: true)),
+        const PopupMenuItem(value: 'bookmark', child: ListTile(leading: Icon(Icons.bookmark_border, size: 18), title: Text('Bookmark'), dense: true)),
+      ],
+    ).then((action) {
+      if (action == 'project') {
+        onProject(verse.chapter, [verse]);
+      } else if (action == 'bookmark') {
+        onBookmark(verse);
+      }
+    });
   }
 }
 

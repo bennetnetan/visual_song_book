@@ -401,6 +401,20 @@ class ChangelogCard extends StatelessWidget {
           ),
           SizedBox(height: 24),
           _ChangelogEntry(
+            version: 'v1.2.0',
+            date: '2026-06-24',
+            changes: [
+              'Full KJV Bible reader with cross-references and bookmarks',
+              'Song set management — create, edit, reorder sets',
+              'Chapter-aware Bible projection (auto-advance to next/prev chapter)',
+              'History tab with Songs/Sets/Bible sub-tabs',
+              'Mobile-optimized layout for all tabs',
+              'Right-click / double-click verse actions (Project, Bookmark)',
+              'Split-view Bible projection — full chapter on left, current verse on right',
+            ],
+          ),
+          SizedBox(height: 16),
+          _ChangelogEntry(
             version: 'v1.1.0',
             date: '2026-05-15',
             changes: [

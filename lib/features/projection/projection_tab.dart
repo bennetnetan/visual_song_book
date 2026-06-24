@@ -62,11 +62,13 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
     final notifier = ref.read(projectionControllerProvider.notifier);
     switch (event.logicalKey) {
       case LogicalKeyboardKey.arrowRight:
+      case LogicalKeyboardKey.arrowDown:
       case LogicalKeyboardKey.pageDown:
       case LogicalKeyboardKey.space:
         notifier.nextSlide();
         return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowLeft:
+      case LogicalKeyboardKey.arrowUp:
       case LogicalKeyboardKey.pageUp:
         notifier.prevSlide();
         return KeyEventResult.handled;
@@ -226,7 +228,7 @@ class _EmptyProjectionState extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Tip: Use ← → or Space to navigate slides.',
+              'Tip: Use ↑ ↓ ← → or Space to navigate slides.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
               ),
@@ -658,6 +660,68 @@ class _LivePreviewPanel extends StatelessWidget {
         ),
 
         const SizedBox(height: 16),
+
+        // Font size controls
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+            ),
+          ),
+          color: theme.colorScheme.surfaceContainer.withValues(alpha: 0.3),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                Icon(Icons.text_fields, size: 18,
+                    color: theme.colorScheme.onSurfaceVariant),
+                const SizedBox(width: 8),
+                Text(
+                  'Font Size',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.remove, size: 18),
+                  onPressed: state.fontSize > 16
+                      ? () => notifier.setFontSize(state.fontSize - 4)
+                      : null,
+                  tooltip: 'Decrease (${state.fontSize - 4})',
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.all(4),
+                ),
+                SizedBox(
+                  width: 48,
+                  child: Text(
+                    '${state.fontSize.toInt()}',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add, size: 18),
+                  onPressed: state.fontSize < 96
+                      ? () => notifier.setFontSize(state.fontSize + 4)
+                      : null,
+                  tooltip: 'Increase (${state.fontSize + 4})',
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.all(4),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
 
         // Song-only settings (chorus toggle doesn't apply to Bible)
         if (!state.isBibleMode)
