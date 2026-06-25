@@ -893,7 +893,7 @@ class _ResultCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              _HighlightedText(
+              HighlightedText(
                 text: verse.text,
                 query: query,
                 style: GoogleFonts.ebGaramond(
@@ -914,13 +914,14 @@ class _ResultCard extends StatelessWidget {
   }
 }
 
-class _HighlightedText extends StatelessWidget {
+class HighlightedText extends StatelessWidget {
   final String text;
   final String query;
   final TextStyle style;
   final TextStyle highlightStyle;
 
-  const _HighlightedText({
+  const HighlightedText({
+    super.key,
     required this.text,
     required this.query,
     required this.style,
