@@ -89,6 +89,15 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     }
   }
 
+  void _handleClose() {
+    ref.read(projectionControllerProvider.notifier).clearSong();
+    if (_isSecondaryWindow) {
+      _handleManualClose();
+    } else if (context.mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+  }
+
   Future<void> _handleManualClose() async {
     if (_isClosing) return;
     _isClosing = true;
@@ -177,10 +186,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
               notifier.prevSlide();
               return KeyEventResult.handled;
             } else if (event.logicalKey == LogicalKeyboardKey.escape) {
-              notifier.clearSong();
-              if (!_isSecondaryWindow && context.mounted) {
-                Navigator.of(context).pop();
-              }
+              _handleClose();
               return KeyEventResult.handled;
             }
           }
@@ -233,59 +239,24 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                   ),
                 ),
 
-              // Minimalist controls for primary window (mobile/web/desktop)
-              if (!_isSecondaryWindow) ...[
-                // Close button — top-left corner, very small
-                Positioned(
-                  top: 4,
-                  left: 4,
-                  child: SafeArea(
-                    child: IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white30, size: 16),
-                      onPressed: () {
-                        notifier.clearSong();
-                        if (context.mounted) Navigator.of(context).pop();
-                      },
-                      tooltip: 'Exit projection (Esc)',
-                      splashRadius: 14,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              // Close controls — visible for both primary and secondary windows
+              Positioned(
+                top: 4,
+                left: 4,
+                child: SafeArea(
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70, size: 20),
+                    onPressed: _handleClose,
+                    tooltip: 'Exit projection (Esc)',
+                    splashRadius: 18,
+                    padding: const EdgeInsets.all(6),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black26,
                     ),
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                   ),
                 ),
-                // Prev button — bottom-left corner
-                if (state.slides.length > 1)
-                  Positioned(
-                    bottom: 8,
-                    left: 4,
-                    child: SafeArea(
-                      child: IconButton(
-                        icon: const Icon(Icons.chevron_left, color: Colors.white30, size: 20),
-                        onPressed: notifier.prevSlide,
-                        tooltip: 'Previous slide',
-                        splashRadius: 18,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                      ),
-                    ),
-                  ),
-                // Next button — bottom-right corner
-                if (state.slides.length > 1)
-                  Positioned(
-                    bottom: 8,
-                    right: 4,
-                    child: SafeArea(
-                      child: IconButton(
-                        icon: const Icon(Icons.chevron_right, color: Colors.white30, size: 20),
-                        onPressed: notifier.nextSlide,
-                        tooltip: 'Next slide',
-                        splashRadius: 18,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-                      ),
-                    ),
-                  ),
-              ],
+              ),
 
               // Navigation arrows for secondary window (desktop projector)
               if (_isSecondaryWindow && state.slides.isNotEmpty)
@@ -349,7 +320,9 @@ class _SlideIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(count, (index) {
         final isActive = index == current;
@@ -366,6 +339,7 @@ class _SlideIndicator extends StatelessWidget {
           ),
         );
       }),
+    ),
     );
   }
 }

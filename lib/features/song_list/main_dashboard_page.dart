@@ -28,7 +28,7 @@ class MainDashboardPage extends ConsumerWidget {
     final tabTitles = [
       'Song Book',
       'Sets',
-      'Sacred Search',
+      'Bible',
       'History',
       'Projection',
       'Settings',
@@ -86,21 +86,7 @@ class MainDashboardPage extends ConsumerWidget {
               ),
               actions: [
                 if (activeTab == 0) ...[const _AddMenuButton(), const SizedBox(width: 8)],
-                if (activeTab == 2) ...[
-                  IconButton(
-                    icon: const Icon(Icons.filter_list),
-                    onPressed: () {}, // TODO
-                  ),
-                  const SizedBox(width: 8),
-                ],
               ],
-              leading: activeTab == 2
-                  ? IconButton(
-                      icon: const Icon(Icons.search),
-                      onPressed: () {},
-                      color: Theme.of(context).colorScheme.primary,
-                    )
-                  : null,
             )
           : null,
       body: Row(
@@ -114,36 +100,39 @@ class MainDashboardPage extends ConsumerWidget {
                   : NavigationRailLabelType.all,
               leading: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24.0),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (isExpanded) const SizedBox(width: 8),
-                        IconButton(
-                          icon: Icon(isExpanded ? Icons.menu_open : Icons.menu),
-                          onPressed: () {
-                            ref.read(isSidebarExpandedProvider.notifier).state =
-                                !isExpanded;
-                          },
-                        ),
-                        if (isExpanded) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            'Visual Book',
-                            style: TextStyle(
-                              fontFamily: 'Outfit',
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isExpanded) const SizedBox(width: 8),
+                          IconButton(
+                            icon: Icon(isExpanded ? Icons.menu_open : Icons.menu),
+                            onPressed: () {
+                              ref.read(isSidebarExpandedProvider.notifier).state =
+                                  !isExpanded;
+                            },
                           ),
+                          if (isExpanded) ...[
+                            const SizedBox(width: 8),
+                            Text(
+                              'Visual Book',
+                              style: TextStyle(
+                                fontFamily: 'Outfit',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    _AddMenuButton(isExpanded: isExpanded),
-                  ],
+                      ),
+                      const SizedBox(height: 20),
+                      _AddMenuButton(isExpanded: isExpanded),
+                    ],
+                  ),
                 ),
               ),
               onDestinationSelected: (index) {

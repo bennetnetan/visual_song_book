@@ -328,7 +328,7 @@ class SongsTab extends ConsumerWidget {
                 ref
                     .read(projectionControllerProvider.notifier)
                     .setSong(selectedSong);
-                ref.read(activeDashboardTabProvider.notifier).state = 4;
+                context.push('/projection');
               },
               onEdit: () => context.push('/song-editor?id=${selectedSong.id}'),
               onDelete: () => _confirmDeleteSong(context, ref, selectedSong.id),

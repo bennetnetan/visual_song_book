@@ -273,6 +273,11 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     return _loadChapter(bookId, chapter, targetVerse: verse);
   }
 
+  Future<int?> _lastVerse(int bookId, int chapter) async {
+    final verses = await _bibleRepo.getVerses(bookId, chapter);
+    return verses.isNotEmpty ? verses.last.verse : null;
+  }
+
   Future<void> _advanceChapter(int direction) async {
     final bookId = state.bibleBookId;
     final chapter = state.bibleChapter;
@@ -281,7 +286,8 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     final nextChapter = chapter + direction;
     final chapters = await _bibleRepo.getChapters(bookId);
     if (chapters.contains(nextChapter)) {
-      await _loadChapter(bookId, nextChapter);
+      final targetVerse = direction < 0 ? await _lastVerse(bookId, nextChapter) : null;
+      await _loadChapter(bookId, nextChapter, targetVerse: targetVerse);
     } else {
       final books = await _bibleRepo.getBooks();
       final currentIdx = books.indexWhere((b) => b.id == bookId);
@@ -291,7 +297,8 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       final nextChapters = await _bibleRepo.getChapters(nextBook.id);
       if (nextChapters.isEmpty) return;
       final targetChapter = direction > 0 ? nextChapters.first : nextChapters.last;
-      await _loadChapter(nextBook.id, targetChapter);
+      final targetVerse = direction < 0 ? await _lastVerse(nextBook.id, targetChapter) : null;
+      await _loadChapter(nextBook.id, targetChapter, targetVerse: targetVerse);
     }
   }
 

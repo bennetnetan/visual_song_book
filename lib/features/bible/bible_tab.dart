@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:visual_song_book/core/widgets/neomorphic_widgets.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
@@ -93,7 +94,11 @@ class BibleTab extends ConsumerWidget {
                                   ref
                                       .read(setRepositoryProvider)
                                       .recordBibleProjection(v.reference, v.text);
-                                  ref.read(activeDashboardTabProvider.notifier).state = 4;
+                                  if (isLargeScreen) {
+                                    ref.read(activeDashboardTabProvider.notifier).state = 4;
+                                  } else {
+                                    context.push('/projection');
+                                  }
                                 },
                                 onLoadMore: () => ref.read(bibleControllerProvider.notifier).loadMore(),
                               )
@@ -116,7 +121,11 @@ class BibleTab extends ConsumerWidget {
                                   ref
                                       .read(setRepositoryProvider)
                                       .recordBibleProjection(v.reference, v.text);
-                                  ref.read(activeDashboardTabProvider.notifier).state = 4;
+                                  if (isLargeScreen) {
+                                    ref.read(activeDashboardTabProvider.notifier).state = 4;
+                                  } else {
+                                    context.push('/projection');
+                                  }
                                 },
                                 onToggleBookmark: (v) {
                                   final setRepo = ref.read(setRepositoryProvider);
