@@ -401,6 +401,20 @@ class ChangelogCard extends StatelessWidget {
           ),
           SizedBox(height: 24),
           _ChangelogEntry(
+            version: 'v1.3.0',
+            date: '2026-06-25',
+            changes: [
+              'Unified Bible/Song search logic — shared utilities and Riverpod provider',
+              'Projection search now matches Bible tab: BEST MATCH cards, query highlighting, pagination',
+              'Inline projection search with loading states, error handling, and history recording',
+              'SearchAnchor overlay also shares state with inline search bar',
+              'First 10 Bible results shown with "Show more (N remaining)" pagination button',
+              'HighlightedText query highlighting reused in projection search results',
+              'Structured Bible reference parsing extracted to shared bible_search_utils.dart',
+            ],
+          ),
+          SizedBox(height: 16),
+          _ChangelogEntry(
             version: 'v1.2.0',
             date: '2026-06-24',
             changes: [
@@ -587,7 +601,7 @@ class AboutCard extends StatelessWidget {
                     boxShadow: NeoShadows.insetSmall(context),
                   ),
                   child: Text(
-                    'v1.1.0+2',
+                    'v1.3.0',
                     style: GoogleFonts.plusJakartaSans(
                       color: theme.colorScheme.onSurfaceVariant,
                       fontSize: 13,

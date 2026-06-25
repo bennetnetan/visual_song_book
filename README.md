@@ -28,7 +28,7 @@ The app uses **SQLite via Drift** as its main database and a bundled **KJV Bible
 - **Cross-references** (344,799 entries from openbible.info) — tap any verse to see related passages; tap a cross-ref to navigate directly
 - **Bookmarks** — save verses for quick access; tapping a bookmark navigates to the exact verse
 - Right sidebar combines cross-references and bookmarks in a scrollable panel
-- Search bar with clear button
+- Search bar with clear button, suggestion chips, and query highlighting
 
 ### 📂 Song Sets
 - Create, rename, reorder, and delete **song sets** for services or events
@@ -39,6 +39,7 @@ The app uses **SQLite via Drift** as its main database and a bundled **KJV Bible
 - **Desktop (Windows / Linux / macOS)**: Opens a dedicated secondary window on any connected screen using `desktop_multi_window`. Operator controls stay in the main window; lyrics appear full-screen in the projection window
 - **Mobile / Tablet**: Push to `/projection` route in immersive sticky fullscreen mode (`SystemUiMode.immersiveSticky`)
 - **Bible projection**: Project individual verses or full chapters with scripture reference displayed below the text
+- **Unified search**: Inline search bar and SearchAnchor overlay share state — search Bible or songs directly from the projection tab with structured reference parsing ("Jn 3:16"), BEST MATCH cards, query highlighting, and paginated results
 - **Chapter-aware navigation** in Bible mode: advancing past the last verse auto-loads the next chapter (handles book boundaries); chapter stepper buttons in the controls panel
 - Keyboard navigation: **Arrow keys** and **Space** to advance slides, **Escape** to clear
 - Swipe gestures on mobile: swipe left = next slide, swipe right = previous
@@ -77,9 +78,9 @@ lib/
 │   ├── models/            # Shared data models (Verse, etc.)
 │   └── repositories/      # SongRepository, SetRepository, BibleRepository
 ├── features/
-│   ├── bible/             # Bible reader tab (controller, repository, UI)
+│   ├── bible/             # Bible reader tab (controller, repository, utils, UI)
 │   ├── history/           # History tab with Songs/Sets/Bible sub-tabs
-│   ├── projection/        # ProjectionController + ProjectionOutputView + tab
+│   ├── projection/        # ProjectionController + ProjectionOutputView + tab + search provider
 │   ├── sets/              # Song sets tab (controller, UI)
 │   ├── settings/          # Settings tab
 │   ├── song_editor/       # SongEditorView (create / edit)
@@ -172,6 +173,13 @@ The projection window listens on `WindowMethodChannel` and renders whatever text
 ---
 
 ## Changelog
+
+### v1.3.0 (2026-06-25)
+- **Unified search infrastructure**: Extracted `bible_search_utils.dart` (book ID map, reference parser, query normalizer) shared between Bible reader and projection
+- **Projection search overhaul**: Replaced two duplicated search implementations with a single `ProjectionSearchController` (Riverpod `StateNotifier`) featuring 300ms debounce, structured Bible reference parsing ("Gen 1:1" → BEST MATCH), query highlighting via `HighlightedText`, paginated Bible results with "Show more", loading/error states, and projection history recording
+- **Feature parity**: Projection search now matches the Bible tab — BEST MATCH card, testament labels, result count display, and the same `HighlightedText` widget
+- **`projection_search_provider.dart`**: New unified Riverpod provider for all projection search state (Bible + Song modes)
+- **`HighlightedText` made public**: Reusable highlighted text widget previously private to `bible_tab.dart`
 
 ### v1.2.0 (2026-06-24)
 - **Bible Reader**: Full KJV with book nav, chapter chips, full-text search, cross-references (344k from openbible.info), verse bookmarks, right sidebar with combined cross-refs + bookmarks panel
