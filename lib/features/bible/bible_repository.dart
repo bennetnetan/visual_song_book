@@ -138,6 +138,44 @@ class BibleRepository {
         .toList();
   }
 
+  Future<int> countSearchResults(String query) async {
+    if (query.trim().isEmpty) return 0;
+    final like = '%${query.trim()}%';
+    final rows = await _db.queryAsync(
+      'SELECT COUNT(*) as cnt FROM verses v WHERE v.text LIKE ?',
+      [like],
+    );
+    return (rows.first['cnt'] as int?) ?? 0;
+  }
+
+  Future<List<BibleVerse>> searchVersesPaginated(String query, int limit, int offset) async {
+    if (query.trim().isEmpty) return [];
+    final like = '%${query.trim()}%';
+    final rows = await _db.queryAsync(
+      '''
+      SELECT v.id, v.book_id, v.chapter, v.verse, v.text, b.name as book_name
+      FROM verses v
+      JOIN books b ON b.id = v.book_id
+      WHERE v.text LIKE ?
+      ORDER BY v.book_id, v.chapter, v.verse
+      LIMIT $limit OFFSET $offset
+    ''',
+      [like],
+    );
+    return rows
+        .map(
+          (r) => BibleVerse(
+            id: r['id'] as int,
+            bookId: r['book_id'] as int,
+            chapter: r['chapter'] as int,
+            verse: r['verse'] as int,
+            text: r['text'] as String,
+            bookName: r['book_name'] as String,
+          ),
+        )
+        .toList();
+  }
+
   Future<BibleVerse?> getVerseByRef(int bookId, int chapter, int verse) async {
     final rows = await _db.queryAsync(
       '''

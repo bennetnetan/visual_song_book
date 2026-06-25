@@ -238,7 +238,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     _syncSecondaryWindow();
   }
 
-  Future<void> _loadChapter(int bookId, int chapter) async {
+  Future<void> _loadChapter(int bookId, int chapter, {int? targetVerse}) async {
     _isLoadingChapter = true;
     try {
       final verses = await _bibleRepo.getVerses(bookId, chapter);
@@ -248,10 +248,15 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         text: v.text,
         order: v.verse,
       )).toList();
+      final targetIndex = targetVerse != null
+          ? verses.indexWhere((v) => v.verse == targetVerse)
+          : 0;
       if (mounted) {
         state = state.copyWith(
+          currentSong: () => null,
           slides: slides,
-          currentSlideIndex: 0,
+          currentSlideIndex: targetIndex >= 0 ? targetIndex : 0,
+          isBibleMode: true,
           contentTitle: () => '$bookName $chapter',
           bibleBookId: () => bookId,
           bibleChapter: () => chapter,
@@ -262,6 +267,10 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     } finally {
       _isLoadingChapter = false;
     }
+  }
+
+  Future<void> projectVerse(int bookId, int chapter, int verse, String bookName) {
+    return _loadChapter(bookId, chapter, targetVerse: verse);
   }
 
   Future<void> _advanceChapter(int direction) async {

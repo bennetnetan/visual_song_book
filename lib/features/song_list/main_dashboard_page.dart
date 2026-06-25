@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
@@ -27,7 +28,7 @@ class MainDashboardPage extends ConsumerWidget {
     final tabTitles = [
       'Song Book',
       'Sets',
-      'Bible',
+      'Sacred Search',
       'History',
       'Projection',
       'Settings',
@@ -37,7 +38,9 @@ class MainDashboardPage extends ConsumerWidget {
     return Scaffold(
       appBar: !isLargeScreen
           ? AppBar(
+              centerTitle: activeTab == 2,
               title: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   if (activeTab == 0) ...[
                     Hero(
@@ -65,17 +68,38 @@ class MainDashboardPage extends ConsumerWidget {
                   ],
                   Text(
                     currentTitle,
-                    style: const TextStyle(
-                      fontFamily: 'Outfit',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      letterSpacing: 0.5,
-                    ),
+                    style: activeTab == 2
+                        ? GoogleFonts.ebGaramond(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                            letterSpacing: 0.5,
+                            color: Theme.of(context).colorScheme.primary,
+                          )
+                        : const TextStyle(
+                            fontFamily: 'Outfit',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                            letterSpacing: 0.5,
+                          ),
                   ),
                 ],
               ),
-              actions: activeTab == 0
-                  ? const [_AddMenuButton(), SizedBox(width: 8)]
+              actions: [
+                if (activeTab == 0) ...[const _AddMenuButton(), const SizedBox(width: 8)],
+                if (activeTab == 2) ...[
+                  IconButton(
+                    icon: const Icon(Icons.filter_list),
+                    onPressed: () {}, // TODO
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ],
+              leading: activeTab == 2
+                  ? IconButton(
+                      icon: const Icon(Icons.search),
+                      onPressed: () {},
+                      color: Theme.of(context).colorScheme.primary,
+                    )
                   : null,
             )
           : null,
