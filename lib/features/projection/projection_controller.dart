@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:screen_retriever/screen_retriever.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/verse_parser.dart';
@@ -333,6 +334,40 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     _syncSecondaryWindow();
   }
 
+  /// Opens a native projector window on a second display (if available).
+  /// Returns true if a secondary window was created; false if the caller
+  /// should open the projection fullscreen on the current screen instead.
+  Future<bool> openProjectorWindow() async {
+    if (kIsWeb) return false;
+    if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return false;
+
+    // Check if multiple displays are connected.
+    try {
+      final displays = await screenRetriever.getAllDisplays();
+      if (displays.length < 2) return false;
+    } catch (_) {
+      return false; // can't detect displays — fall back to fullscreen
+    }
+
+    try {
+      final window = await WindowController.create(
+        const WindowConfiguration(arguments: 'Projection Output'),
+      );
+      await window.show();
+      // Retry syncing up to 3 times with increasing delays to give the
+      // secondary window time to register its IPC handler.
+      for (var attempt = 0; attempt < 3; attempt++) {
+        await Future.delayed(Duration(milliseconds: 800 + attempt * 400));
+        if (await _syncSecondaryWindow()) break;
+      }
+      state = state.copyWith(isSecondaryWindowOpen: true);
+      return true;
+    } catch (e) {
+      debugPrint('Failed to open projector window: $e');
+      return false;
+    }
+  }
+
   void setSecondaryWindowOpen(bool isOpen) {
     state = state.copyWith(isSecondaryWindowOpen: isOpen);
   }
@@ -341,9 +376,11 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     _syncSecondaryWindow();
   }
 
-  void _syncSecondaryWindow() async {
-    if (kIsWeb) return;
-    if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return;
+  /// Sends the current slide to all secondary windows.
+  /// Returns true if at least one secondary window was updated successfully.
+  Future<bool> _syncSecondaryWindow() async {
+    if (kIsWeb) return false;
+    if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return false;
 
     final slide = state.currentSlide;
     final text = slide?.text ?? '';
@@ -356,29 +393,29 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     try {
       final controllers = await WindowController.getAll();
       final currentWindow = await WindowController.fromCurrentEngine();
+      var anySuccess = false;
 
       for (final controller in controllers) {
         if (controller.windowId == currentWindow.windowId) continue;
 
         debugPrint('Sending update to window ID: ${controller.windowId}');
-        await controller
-            .invokeMethod('update_slide', {
-              'text': text,
-              'label': label,
-              'fontSize': fontSize,
-              'isBible': isBible,
-            })
-            .then((result) {
-              debugPrint(
-                'Update successful for window ${controller.windowId}: $result',
-              );
-            })
-            .catchError((e) {
-              debugPrint('Update failed for window ${controller.windowId}: $e');
-            });
+        try {
+          final result = await controller.invokeMethod('update_slide', {
+            'text': text,
+            'label': label,
+            'fontSize': fontSize,
+            'isBible': isBible,
+          });
+          debugPrint('Update successful for window ${controller.windowId}: $result');
+          anySuccess = true;
+        } catch (e) {
+          debugPrint('Update failed for window ${controller.windowId}: $e');
+        }
       }
+      return anySuccess;
     } catch (e) {
       debugPrint('Error during secondary window sync: $e');
+      return false;
     }
   }
 }

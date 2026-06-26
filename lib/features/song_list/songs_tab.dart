@@ -268,13 +268,18 @@ class SongsTab extends ConsumerWidget {
                                           .read(selectedSongIdProvider.notifier)
                                           .state = song.id;
                                     },
-                                    onDoubleTap: () {
+                                    onDoubleTap: () async {
                                       ref
                                           .read(projectionControllerProvider.notifier)
                                           .setSong(song);
-                                      ref
-                                          .read(activeDashboardTabProvider.notifier)
-                                          .state = 4;
+                                      final opened = await ref
+                                          .read(projectionControllerProvider.notifier)
+                                          .openProjectorWindow();
+                                      if (opened) {
+                                        ref.read(activeDashboardTabProvider.notifier).state = 4;
+                                      } else if (context.mounted) {
+                                        context.push('/projection');
+                                      }
                                     },
                                   );
                                 },

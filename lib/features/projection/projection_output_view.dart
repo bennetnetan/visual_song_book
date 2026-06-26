@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 
+import 'package:go_router/go_router.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 
@@ -24,6 +25,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
   bool _isSecondaryWindow = false;
   late AnimationController _fadeController;
   bool _isClosing = false;
+  bool _isHovering = false;
 
   @override
   void initState() {
@@ -52,16 +54,28 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
 
   void _setupSecondaryWindowChannel() async {
     final controller = await WindowController.fromCurrentEngine();
+    if (!mounted) return;
+
+    setState(() {
+      _isSecondaryWindow = true;
+    });
+
+    // Request fullscreen once the window is ready.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await windowManager.setFullScreen(true);
+      } catch (_) {}
+    });
+
     controller.setWindowMethodHandler((call) async {
       debugPrint('Received IPC method call: ${call.method}');
 
       if (call.method == 'update_slide') {
         if (!mounted) return null;
         setState(() {
-          _isSecondaryWindow = true;
-          _ipcText = call.arguments['text'] ?? '';
-          _ipcLabel = call.arguments['label'] ?? '';
-          _ipcIsBible = call.arguments['isBible'] ?? false;
+          if (call.arguments['text'] != null) _ipcText = call.arguments['text'] as String;
+          if (call.arguments['label'] != null) _ipcLabel = call.arguments['label'] as String;
+          if (call.arguments['isBible'] != null) _ipcIsBible = call.arguments['isBible'] as bool;
         });
         debugPrint('Updated secondary window text: "$_ipcText" label: "$_ipcLabel"');
       }
@@ -93,8 +107,8 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     ref.read(projectionControllerProvider.notifier).clearSong();
     if (_isSecondaryWindow) {
       _handleManualClose();
-    } else if (context.mounted && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
+    } else if (context.mounted) {
+      context.go('/');
     }
   }
 
@@ -152,27 +166,35 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
         ? 'ipc_${_ipcText.hashCode}'
         : '${state.currentSong?.id}_${state.currentSlideIndex}';
 
-    return GestureDetector(
-      // Tap left half = prev, tap right half = next (for mobile presenters)
-      onTapUp: (details) {
-        if (!_isSecondaryWindow && state.slides.length > 1) {
-          if (details.localPosition.dx < context.size!.width / 2) {
-            notifier.prevSlide();
-          } else {
-            notifier.nextSlide();
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _handleClose();
+      },
+      child: MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      child: GestureDetector(
+        // Tap left half = prev, tap right half = next (for mobile presenters)
+        onTapUp: (details) {
+          if (!_isSecondaryWindow && state.slides.length > 1) {
+            if (details.localPosition.dx < context.size!.width / 2) {
+              notifier.prevSlide();
+            } else {
+              notifier.nextSlide();
+            }
           }
-        }
-      },
-      // Swipe left = next, swipe right = prev (for tablet/mobile presenters)
-      onHorizontalDragEnd: (details) {
-        if (details.primaryVelocity == null) return;
-        if (details.primaryVelocity! < -300) {
-          notifier.nextSlide();
-        } else if (details.primaryVelocity! > 300) {
-          notifier.prevSlide();
-        }
-      },
-      child: Focus(
+        },
+        // Swipe left = next, swipe right = prev (for tablet/mobile presenters)
+        onHorizontalDragEnd: (details) {
+          if (details.primaryVelocity == null) return;
+          if (details.primaryVelocity! < -300) {
+            notifier.nextSlide();
+          } else if (details.primaryVelocity! > 300) {
+            notifier.prevSlide();
+          }
+        },
+        child: Focus(
         autofocus: true,
         onKeyEvent: (FocusNode node, KeyEvent event) {
           if (event is KeyDownEvent) {
@@ -220,75 +242,152 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                       vertical: 48.0,
                     ),
                     child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _VerseText(
-                            text: activeText,
-                            key: ValueKey(slideKey),
-                            fontSize: activeFontSize,
-                          ),
-                          if (activeIsBible && activeLabel.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 24),
-                              child: _ReferenceLabel(label: activeLabel),
+                      child: activeText.isNotEmpty
+                          ? Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _VerseText(
+                                  text: activeText,
+                                  key: ValueKey(slideKey),
+                                  fontSize: activeFontSize,
+                                ),
+                                if (activeIsBible && activeLabel.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 24),
+                                    child: _ReferenceLabel(label: activeLabel),
+                                  ),
+                              ],
+                            )
+                          : const Text(
+                              'Awaiting projection…',
+                              style: TextStyle(
+                                color: Colors.white24,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w300,
+                                letterSpacing: 1.2,
+                              ),
                             ),
-                        ],
-                      ),
                     ),
                   ),
                 ),
 
-              // Close controls — visible for both primary and secondary windows
+              // Close button — subtle, only shows on hover
               Positioned(
                 top: 4,
                 left: 4,
-                child: SafeArea(
-                  child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white70, size: 20),
-                    onPressed: _handleClose,
-                    tooltip: 'Exit projection (Esc)',
-                    splashRadius: 18,
-                    padding: const EdgeInsets.all(6),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.black26,
+                child: AnimatedOpacity(
+                  opacity: _isHovering ? 0.4 : 0.0,
+                  duration: const Duration(milliseconds: 300),
+                  child: SafeArea(
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white, size: 18),
+                      onPressed: _handleClose,
+                      tooltip: 'Exit projection (Esc)',
+                      splashRadius: 16,
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                     ),
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                   ),
                 ),
               ),
 
-              // Navigation arrows for secondary window (desktop projector)
-              if (_isSecondaryWindow && state.slides.isNotEmpty)
-                Positioned(
-                  bottom: 32,
-                  left: 0,
-                  right: 0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.arrow_circle_left,
-                          size: 48,
-                          color: Colors.white54,
+              // Navigation arrows — very transparent, fade in slightly on hover
+              if (state.slides.isNotEmpty)
+                IgnorePointer(
+                  ignoring: !_isHovering,
+                  child: AnimatedOpacity(
+                    opacity: _isHovering ? 0.35 : 0.0,
+                    duration: const Duration(milliseconds: 400),
+                    child: Stack(
+                      children: [
+                        // Prev arrow — left edge
+                        Positioned(
+                          left: 8,
+                          top: 0,
+                          bottom: 0,
+                          child: Center(
+                            child: IconButton(
+                              icon: Icon(
+                                _isSecondaryWindow ? Icons.chevron_left : Icons.chevron_left,
+                                size: 36,
+                                color: Colors.white,
+                              ),
+                              onPressed: () {
+                                if (_isSecondaryWindow) {
+                                  _sendNavigateToMain('prev');
+                                } else {
+                                  notifier.prevSlide();
+                                }
+                              },
+                              splashRadius: 22,
+                              hoverColor: Colors.white.withValues(alpha: 0.1),
+                            ),
+                          ),
                         ),
-                        onPressed: () => _sendNavigateToMain('prev'),
-                        splashRadius: 28,
-                        hoverColor: Colors.white.withValues(alpha: 0.1),
-                      ),
-                      const SizedBox(width: 48),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.arrow_circle_right,
-                          size: 48,
-                          color: Colors.white54,
+                        // Next arrow — right edge
+                        Positioned(
+                          right: 8,
+                          top: 0,
+                          bottom: 0,
+                          child: Center(
+                            child: IconButton(
+                              icon: Icon(
+                                _isSecondaryWindow ? Icons.chevron_right : Icons.chevron_right,
+                                size: 36,
+                                color: Colors.white,
+                              ),
+                              onPressed: () {
+                                if (_isSecondaryWindow) {
+                                  _sendNavigateToMain('next');
+                                } else {
+                                  notifier.nextSlide();
+                                }
+                              },
+                              splashRadius: 22,
+                              hoverColor: Colors.white.withValues(alpha: 0.1),
+                            ),
+                          ),
                         ),
-                        onPressed: () => _sendNavigateToMain('next'),
-                        splashRadius: 28,
-                        hoverColor: Colors.white.withValues(alpha: 0.1),
-                      ),
-                    ],
+                        // Font size controls — top-right, even more subtle
+                        if (!_isSecondaryWindow)
+                          Positioned(
+                            top: 0,
+                            right: 48,
+                            child: SafeArea(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _FontSizeButton(
+                                    icon: Icons.text_decrease,
+                                    tooltip: 'Smaller font',
+                                    onPressed: state.fontSize > 16
+                                        ? () => notifier.setFontSize(state.fontSize - 4)
+                                        : null,
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                                    child: Text(
+                                      '${state.fontSize.toInt()}',
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(alpha: 0.4),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                  _FontSizeButton(
+                                    icon: Icons.text_increase,
+                                    tooltip: 'Larger font',
+                                    onPressed: state.fontSize < 96
+                                        ? () => notifier.setFontSize(state.fontSize + 4)
+                                        : null,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -307,6 +406,34 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
           ),
         ),
       ),
+      ),
+      ),
+    );
+  }
+}
+
+/// Subtle font-size button used inside projection output.
+class _FontSizeButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+
+  const _FontSizeButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Icon(icon, color: Colors.white.withValues(alpha: 0.4), size: 16),
+      tooltip: tooltip,
+      onPressed: onPressed,
+      splashRadius: 14,
+      padding: const EdgeInsets.all(4),
+      constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+      hoverColor: Colors.white.withValues(alpha: 0.08),
     );
   }
 }
@@ -373,6 +500,8 @@ class _VerseText extends StatelessWidget {
           ? Text(
               text,
               textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontFamily: 'Outfit',
                 color: Colors.white,

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:visual_song_book/core/widgets/neomorphic_widgets.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/features/bible/bible_controller.dart';
@@ -44,8 +43,6 @@ class BibleTab extends ConsumerWidget {
                       _SearchBar(
                         query: state.query,
                         onChanged: notifier.search,
-                        showBackButton: !isLargeScreen && state.selectedBookId != null,
-                        onBack: notifier.clearSelection,
                         onFocusChange: (focused) =>
                             ref.read(_searchBarFocusedProvider.notifier).state = focused,
                       ),
@@ -87,15 +84,22 @@ class BibleTab extends ConsumerWidget {
                                         .clearSearch();
                                   }
                                 },
-                                onProject: (v) {
-                                  ref
+                                onProject: (v) async {
+                                  await ref
                                       .read(projectionControllerProvider.notifier)
                                       .projectVerse(v.bookId, v.chapter, v.verse, v.bookName ?? '');
+                                  if (!context.mounted) return;
                                   ref
                                       .read(setRepositoryProvider)
                                       .recordBibleProjection(v.reference, v.text);
                                   if (isLargeScreen) {
-                                    ref.read(activeDashboardTabProvider.notifier).state = 4;
+                                    final opened = await ref.read(projectionControllerProvider.notifier).openProjectorWindow();
+                                    if (!context.mounted) return;
+                                    if (opened) {
+                                      ref.read(activeDashboardTabProvider.notifier).state = 4;
+                                    } else {
+                                      context.push('/projection');
+                                    }
                                   } else {
                                     context.push('/projection');
                                   }
@@ -110,19 +114,26 @@ class BibleTab extends ConsumerWidget {
                                 bookName: state.books
                                     .where((b) => b.id == state.selectedBookId)
                                     .firstOrNull?.name ?? '',
-                                onProjectPassage: (chapter, verses) {
+                                onProjectPassage: (chapter, verses) async {
                                   final v = verses.first;
                                   final bookName = state.books
                                       .where((b) => b.id == state.selectedBookId)
                                       .firstOrNull?.name ?? '';
-                                  ref
+                                  await ref
                                       .read(projectionControllerProvider.notifier)
                                       .projectVerse(v.bookId, v.chapter, v.verse, bookName);
+                                  if (!context.mounted) return;
                                   ref
                                       .read(setRepositoryProvider)
                                       .recordBibleProjection(v.reference, v.text);
                                   if (isLargeScreen) {
-                                    ref.read(activeDashboardTabProvider.notifier).state = 4;
+                                    final opened = await ref.read(projectionControllerProvider.notifier).openProjectorWindow();
+                                    if (!context.mounted) return;
+                                    if (opened) {
+                                      ref.read(activeDashboardTabProvider.notifier).state = 4;
+                                    } else {
+                                      context.push('/projection');
+                                    }
                                   } else {
                                     context.push('/projection');
                                   }
@@ -148,10 +159,6 @@ class BibleTab extends ConsumerWidget {
                                 },
                                 activeVerse: state.activeVerse,
                                 onSelectVerse: notifier.selectVerse,
-                                activeCrossReferences: state.activeCrossReferences,
-                                isLoadingCrossReferences: state.isLoadingCrossReferences,
-                                onNavigateToRef: (bookId, chapter, verse) =>
-                                    notifier.navigateToVerse(bookId, chapter, verse),
                               ),
                       ),
                     ],
@@ -236,15 +243,11 @@ class _BookPicker extends StatelessWidget {
 class _SearchBar extends StatefulWidget {
   final String query;
   final ValueChanged<String> onChanged;
-  final bool showBackButton;
-  final VoidCallback? onBack;
   final ValueChanged<bool>? onFocusChange;
 
   const _SearchBar({
     required this.query,
     required this.onChanged,
-    this.showBackButton = false,
-    this.onBack,
     this.onFocusChange,
   });
 
@@ -288,15 +291,6 @@ class _SearchBarState extends State<_SearchBar> {
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
       child: Row(
         children: [
-          if (widget.showBackButton) ...[
-            NeoButton(
-              onPressed: widget.onBack,
-              padding: const EdgeInsets.all(10),
-              borderRadius: 999,
-              child: const Icon(Icons.arrow_back, size: 20),
-            ),
-            const SizedBox(width: 16),
-          ],
           Expanded(
             child: Container(
               height: 56,
@@ -373,9 +367,6 @@ class _ReadingView extends StatefulWidget {
   final ValueChanged<BibleVerse> onToggleBookmark;
   final BibleVerse? activeVerse;
   final ValueChanged<BibleVerse> onSelectVerse;
-  final List<BibleCrossReference> activeCrossReferences;
-  final bool isLoadingCrossReferences;
-  final void Function(int bookId, int chapter, int verse) onNavigateToRef;
 
   const _ReadingView({
     this.selectedChapter,
@@ -385,9 +376,6 @@ class _ReadingView extends StatefulWidget {
     required this.onToggleBookmark,
     required this.activeVerse,
     required this.onSelectVerse,
-    this.activeCrossReferences = const [],
-    this.isLoadingCrossReferences = false,
-    required this.onNavigateToRef,
   });
 
   @override
@@ -435,12 +423,7 @@ class _ReadingViewState extends State<_ReadingView> {
     super.dispose();
   }
 
-  bool get _showCrossRefSection => widget.activeCrossReferences.isNotEmpty;
-
-  int get _totalItemCount {
-    if (!_showCrossRefSection) return widget.verses.length;
-    return widget.verses.length + 1 + widget.activeCrossReferences.length;
-  }
+  int get _totalItemCount => widget.verses.length;
 
   @override
   Widget build(BuildContext context) {
@@ -561,58 +544,6 @@ class _ReadingViewState extends State<_ReadingView> {
                                 ),
                               ],
                             ),
-                          ),
-                        ),
-                      );
-                    }
-
-                    // Cross-reference section header
-                    if (index == widget.verses.length) {
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Divider(),
-                            const SizedBox(height: 16),
-                            _SectionTitle(title: 'Cross-References'),
-                            const SizedBox(height: 12),
-                          ],
-                        ),
-                      );
-                    }
-
-                    // Cross-reference items
-                    final xrefIndex = index - widget.verses.length - 1;
-                    if (xrefIndex < widget.activeCrossReferences.length) {
-                      final cr = widget.activeCrossReferences[xrefIndex];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: InkWell(
-                          onTap: () => widget.onNavigateToRef(cr.toBookId, cr.toChapter, cr.toVerseStart),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                cr.reference,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.primary,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                cr.targetText,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
                           ),
                         ),
                       );
