@@ -25,6 +25,24 @@ class MainDashboardPage extends ConsumerWidget {
     final isExpanded = ref.watch(isSidebarExpandedProvider);
     final isLargeScreen = MediaQuery.of(context).size.width >= 900;
 
+    int getMobileSelectedIndex(int tabIdx) {
+      if (tabIdx <= 3) return tabIdx;
+      if (tabIdx == 5) return 4;
+      return 0;
+    }
+
+    int getActualTabIndexFromMobile(int mobileIdx) {
+      if (mobileIdx <= 3) return mobileIdx;
+      if (mobileIdx == 4) return 5;
+      return 0;
+    }
+
+    if (!isLargeScreen && activeTab == 4) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(activeDashboardTabProvider.notifier).state = 0;
+      });
+    }
+
     final tabTitles = [
       'Song Book',
       'Sets',
@@ -80,7 +98,7 @@ class MainDashboardPage extends ConsumerWidget {
                 ],
               ),
               actions: [
-                if (activeTab == 0) ...[const _AddMenuButton(), const SizedBox(width: 8)],
+                if (activeTab == 0) ...[const _AddMenuButton(isExpanded: false), const SizedBox(width: 8)],
               ],
             )
           : null,
@@ -173,9 +191,9 @@ class MainDashboardPage extends ConsumerWidget {
       ),
       bottomNavigationBar: !isLargeScreen
           ? NavigationBar(
-              selectedIndex: activeTab,
+              selectedIndex: getMobileSelectedIndex(activeTab),
               onDestinationSelected: (index) {
-                ref.read(activeDashboardTabProvider.notifier).state = index;
+                ref.read(activeDashboardTabProvider.notifier).state = getActualTabIndexFromMobile(index);
               },
               destinations: const [
                 NavigationDestination(
@@ -197,11 +215,6 @@ class MainDashboardPage extends ConsumerWidget {
                   icon: Icon(Icons.history_outlined),
                   selectedIcon: Icon(Icons.history),
                   label: 'History',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.tv_outlined),
-                  selectedIcon: Icon(Icons.tv),
-                  label: 'Projection',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.settings_outlined),

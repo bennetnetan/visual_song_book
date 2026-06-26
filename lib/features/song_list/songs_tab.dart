@@ -251,10 +251,8 @@ class SongsTab extends ConsumerWidget {
                                 ),
                               )
                             : ListView.builder(
-                                padding: EdgeInsets.only(
-                                  bottom: !isLargeScreen && selectedSongId != null
-                                      ? 88
-                                      : 24,
+                                padding: const EdgeInsets.only(
+                                  bottom: 24,
                                 ),
                                 itemCount: listState.songs.length,
                                 itemBuilder: (context, index) {
@@ -263,12 +261,21 @@ class SongsTab extends ConsumerWidget {
                                   return SongListItem(
                                     song: song,
                                     isSelected: isSelected,
+                                    isLargeScreen: isLargeScreen,
                                     onTap: () {
                                       ref
                                           .read(selectedSongIdProvider.notifier)
                                           .state = song.id;
                                     },
                                     onDoubleTap: () async {
+                                      ref
+                                          .read(projectionControllerProvider.notifier)
+                                          .setSong(song);
+                                      await ref
+                                          .read(projectionControllerProvider.notifier)
+                                          .triggerProjection(context, isLargeScreen);
+                                    },
+                                    onProjectTap: () async {
                                       ref
                                           .read(projectionControllerProvider.notifier)
                                           .setSong(song);
@@ -320,19 +327,6 @@ class SongsTab extends ConsumerWidget {
               ],
             ),
           ),
-          // Mobile bottom action bar (replaces FAB)
-          if (!isLargeScreen && selectedSong != null)
-            _MobileSongActions(
-              song: selectedSong,
-              onProject: () {
-                ref
-                    .read(projectionControllerProvider.notifier)
-                    .setSong(selectedSong);
-                context.push('/projection');
-              },
-              onEdit: () => context.push('/song-editor?id=${selectedSong.id}'),
-              onDelete: () => _confirmDeleteSong(context, ref, selectedSong.id),
-            ),
         ],
       ),
     );
@@ -370,112 +364,6 @@ class SongsTab extends ConsumerWidget {
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
-      ),
-    );
-  }
-
-  void _confirmDeleteSong(BuildContext context, WidgetRef ref, int songId) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Song'),
-        content: const Text('Are you sure you want to delete this song?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await ref.read(songRepositoryProvider).deleteSong(songId);
-              ref.read(selectedSongIdProvider.notifier).state = null;
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MobileSongActions extends StatelessWidget {
-  final Song song;
-  final VoidCallback onProject;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-
-  const _MobileSongActions({
-    required this.song,
-    required this.onProject,
-    required this.onEdit,
-    required this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        border: Border(
-          top: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-          ),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '${song.songNum}. ${song.title}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (song.author != null)
-                    Text(
-                      song.author!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.tv),
-              tooltip: 'Project',
-              onPressed: onProject,
-              style: IconButton.styleFrom(
-                foregroundColor: theme.colorScheme.primary,
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.edit_outlined),
-              tooltip: 'Edit',
-              onPressed: onEdit,
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.red),
-              tooltip: 'Delete',
-              onPressed: onDelete,
-            ),
-          ],
-        ),
       ),
     );
   }
