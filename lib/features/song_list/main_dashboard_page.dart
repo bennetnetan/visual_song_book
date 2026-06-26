@@ -53,7 +53,7 @@ class MainDashboardPage extends ConsumerWidget {
       'Song Book',
       'Sets',
       'Bible',
-      'History',
+      'Recent Activity',
       'Projection',
       'Settings',
     ];

@@ -19,15 +19,18 @@ class HistoryTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(historyControllerProvider);
     final selectedTab = ref.watch(_selectedHistoryTabProvider);
+    final isLargeScreen = MediaQuery.of(context).size.width >= 900;
 
     return DefaultTabController(
       length: 4,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text(
-            'Recent Activity',
-            style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
-          ),
+          title: isLargeScreen
+              ? const Text(
+                  'Recent Activity',
+                  style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
+                )
+              : null,
           bottom: TabBar(
             onTap: (i) => ref.read(_selectedHistoryTabProvider.notifier).state = HistoryTabType.values[i],
             isScrollable: false,
