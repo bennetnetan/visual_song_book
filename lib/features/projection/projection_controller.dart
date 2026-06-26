@@ -355,6 +355,26 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return false;
 
     try {
+      final controllers = await WindowController.getAll();
+      final currentWindow = await WindowController.fromCurrentEngine();
+
+      WindowController? existingWindow;
+      for (final c in controllers) {
+        if (c.windowId != currentWindow.windowId) {
+          existingWindow = c;
+          break;
+        }
+      }
+
+      if (existingWindow != null) {
+        debugPrint('Found existing projector window with ID: ${existingWindow.windowId}. Reusing it.');
+        await existingWindow.show();
+
+        state = state.copyWith(isSecondaryWindowOpen: true);
+        _syncSecondaryWindow();
+        return true;
+      }
+
       final window = await WindowController.create(
         const WindowConfiguration(arguments: 'Projection Output'),
       );

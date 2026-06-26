@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -85,15 +84,7 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
                   } else if (Platform.isWindows ||
                       Platform.isLinux ||
                       Platform.isMacOS) {
-                    final window = await WindowController.create(
-                      const WindowConfiguration(arguments: 'Projection Output'),
-                    );
-                    await window.show();
-                    Future.delayed(const Duration(milliseconds: 600), () {
-                      ref
-                          .read(projectionControllerProvider.notifier)
-                          .syncCurrentSlide();
-                    });
+                    await ref.read(projectionControllerProvider.notifier).openProjectorWindow();
                   } else {
                     context.push('/projection');
                   }
