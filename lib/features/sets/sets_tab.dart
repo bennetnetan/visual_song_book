@@ -133,12 +133,14 @@ class SetsTab extends ConsumerWidget {
                 onPressed: notifier.clearSelection,
               )
             : null,
-        title: Text(
-          !isLargeScreen && state.selectedSetId != null
-              ? notifier.selectedSet?.name ?? 'Set'
-              : 'Sets',
-          style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
-        ),
+        title: !isLargeScreen && state.selectedSetId == null
+            ? null
+            : Text(
+                !isLargeScreen && state.selectedSetId != null
+                    ? notifier.selectedSet?.name ?? 'Set'
+                    : 'Sets',
+                style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
+              ),
         actions: [
           if (isLargeScreen || state.selectedSetId == null) ...[
             IconButton(
