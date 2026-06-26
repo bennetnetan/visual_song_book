@@ -250,6 +250,7 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                   ),
                 )
               : ReorderableListView.builder(
+                  buildDefaultDragHandles: false,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   itemCount: widget.items.length,
                   onReorder: (oldIndex, newIndex) {
@@ -276,12 +277,26 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                       child: ListTile(
                         dense: true,
-                        leading: Text(
-                          '${index + 1}',
-                          style: TextStyle(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        leading: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ReorderableDragStartListener(
+                              index: index,
+                              child: Icon(
+                                Icons.drag_handle,
+                                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${index + 1}',
+                              style: TextStyle(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                         title: Text(
                           song?.title ?? 'Unknown',
