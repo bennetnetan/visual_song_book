@@ -74,6 +74,7 @@ class ProjectionPreferencesCard extends ConsumerWidget {
     final state = ref.watch(projectionControllerProvider);
     final notifier = ref.read(projectionControllerProvider.notifier);
     final theme = Theme.of(context);
+    final isLargeScreen = MediaQuery.of(context).size.width >= 900;
 
     return SettingsCard(
       child: Column(
@@ -112,48 +113,50 @@ class ProjectionPreferencesCard extends ConsumerWidget {
             onChanged: notifier.setAutoInsertChorus,
             contentPadding: EdgeInsets.zero,
           ),
-          const Divider(height: 24),
-          Text(
-            'Projection Display Mode',
-            style: GoogleFonts.plusJakartaSans(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: theme.colorScheme.onSurface,
+          if (isLargeScreen) ...[
+            const Divider(height: 24),
+            Text(
+              'Projection Display Mode',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: theme.colorScheme.onSurface,
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Choose how the live projection output should be positioned on desktop screens.',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              color: theme.colorScheme.onSurfaceVariant,
+            const SizedBox(height: 6),
+            Text(
+              'Choose how the live projection output should be positioned on desktop screens.',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(
-                value: 'single',
-                label: Text('Single Screen'),
-                icon: Icon(Icons.screenshot_monitor, size: 16),
-              ),
-              ButtonSegment(
-                value: 'duplicate',
-                label: Text('Duplicate'),
-                icon: Icon(Icons.copy, size: 16),
-              ),
-              ButtonSegment(
-                value: 'extended',
-                label: Text('Extended'),
-                icon: Icon(Icons.picture_in_picture, size: 16),
-              ),
-            ],
-            selected: {state.projectionMode},
-            onSelectionChanged: (val) {
-              notifier.setProjectionMode(val.first);
-            },
-            showSelectedIcon: false,
-          ),
+            const SizedBox(height: 16),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(
+                  value: 'single',
+                  label: Text('Single Screen'),
+                  icon: Icon(Icons.screenshot_monitor, size: 16),
+                ),
+                ButtonSegment(
+                  value: 'duplicate',
+                  label: Text('Duplicate'),
+                  icon: Icon(Icons.copy, size: 16),
+                ),
+                ButtonSegment(
+                  value: 'extended',
+                  label: Text('Extended'),
+                  icon: Icon(Icons.picture_in_picture, size: 16),
+                ),
+              ],
+              selected: {state.projectionMode},
+              onSelectionChanged: (val) {
+                notifier.setProjectionMode(val.first);
+              },
+              showSelectedIcon: false,
+            ),
+          ],
         ],
       ),
     );
