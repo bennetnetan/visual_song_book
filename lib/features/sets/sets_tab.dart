@@ -141,20 +141,7 @@ class SetsTab extends ConsumerWidget {
                     : 'Sets',
                 style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
               ),
-        actions: [
-          if (isLargeScreen || state.selectedSetId == null) ...[
-            IconButton(
-              icon: const Icon(Icons.file_upload),
-              tooltip: 'Import Set',
-              onPressed: () => _handleImport(context, ref),
-            ),
-            IconButton(
-              icon: const Icon(Icons.add),
-              tooltip: 'New Set',
-              onPressed: () => _showCreateDialog(context, ref),
-            ),
-          ],
-        ],
+        actions: const [],
       ),
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
