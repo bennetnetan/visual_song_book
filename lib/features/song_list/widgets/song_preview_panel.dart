@@ -72,12 +72,8 @@ class SongPreviewPanel extends ConsumerWidget {
           ElevatedButton.icon(
             onPressed: () async {
               ref.read(projectionControllerProvider.notifier).setSong(song);
-              final opened = await ref.read(projectionControllerProvider.notifier).openProjectorWindow();
-              if (opened) {
-                ref.read(activeDashboardTabProvider.notifier).state = 4;
-              } else if (context.mounted) {
-                context.push('/projection');
-              }
+              final isLargeScreen = MediaQuery.of(context).size.width >= 900;
+              await ref.read(projectionControllerProvider.notifier).triggerProjection(context, isLargeScreen);
             },
             icon: const Icon(Icons.tv),
             label: const Text('Send to Projector'),

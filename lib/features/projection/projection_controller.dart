@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -390,6 +392,25 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     } catch (e) {
       debugPrint('Failed to open projector window: $e');
       return false;
+    }
+  }
+
+  Future<void> triggerProjection(BuildContext context, bool isLargeScreen) async {
+    if (kIsWeb) {
+      if (context.mounted) context.push('/projection');
+      return;
+    }
+
+    if (isLargeScreen && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      final opened = await openProjectorWindow();
+      if (opened) {
+        ref.read(activeDashboardTabProvider.notifier).state = 4;
+        return;
+      }
+    }
+
+    if (context.mounted) {
+      context.push('/projection');
     }
   }
 

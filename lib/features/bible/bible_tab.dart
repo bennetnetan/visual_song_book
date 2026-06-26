@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
@@ -92,17 +91,9 @@ class BibleTab extends ConsumerWidget {
                                   ref
                                       .read(setRepositoryProvider)
                                       .recordBibleProjection(v.reference, v.text);
-                                  if (isLargeScreen) {
-                                    final opened = await ref.read(projectionControllerProvider.notifier).openProjectorWindow();
-                                    if (!context.mounted) return;
-                                    if (opened) {
-                                      ref.read(activeDashboardTabProvider.notifier).state = 4;
-                                    } else {
-                                      context.push('/projection');
-                                    }
-                                  } else {
-                                    context.push('/projection');
-                                  }
+                                  await ref
+                                      .read(projectionControllerProvider.notifier)
+                                      .triggerProjection(context, isLargeScreen);
                                 },
                                 onLoadMore: () => ref.read(bibleControllerProvider.notifier).loadMore(),
                               )
@@ -126,17 +117,9 @@ class BibleTab extends ConsumerWidget {
                                   ref
                                       .read(setRepositoryProvider)
                                       .recordBibleProjection(v.reference, v.text);
-                                  if (isLargeScreen) {
-                                    final opened = await ref.read(projectionControllerProvider.notifier).openProjectorWindow();
-                                    if (!context.mounted) return;
-                                    if (opened) {
-                                      ref.read(activeDashboardTabProvider.notifier).state = 4;
-                                    } else {
-                                      context.push('/projection');
-                                    }
-                                  } else {
-                                    context.push('/projection');
-                                  }
+                                  await ref
+                                      .read(projectionControllerProvider.notifier)
+                                      .triggerProjection(context, isLargeScreen);
                                 },
                                 onToggleBookmark: (v) {
                                   final setRepo = ref.read(setRepositoryProvider);

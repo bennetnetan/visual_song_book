@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
@@ -238,17 +237,7 @@ class SetsTab extends ConsumerWidget {
               state.selectedSetId!,
               notifier.selectedSet!.name,
             );
-        if (isLargeScreen) {
-          final opened = await ref.read(projectionControllerProvider.notifier).openProjectorWindow();
-          if (!context.mounted) return;
-          if (opened) {
-            ref.read(activeDashboardTabProvider.notifier).state = 4;
-          } else {
-            context.push('/projection');
-          }
-        } else {
-          context.push('/projection');
-        }
+        await ref.read(projectionControllerProvider.notifier).triggerProjection(context, isLargeScreen);
       },
     );
   }

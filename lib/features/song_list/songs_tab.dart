@@ -272,14 +272,9 @@ class SongsTab extends ConsumerWidget {
                                       ref
                                           .read(projectionControllerProvider.notifier)
                                           .setSong(song);
-                                      final opened = await ref
+                                      await ref
                                           .read(projectionControllerProvider.notifier)
-                                          .openProjectorWindow();
-                                      if (opened) {
-                                        ref.read(activeDashboardTabProvider.notifier).state = 4;
-                                      } else if (context.mounted) {
-                                        context.push('/projection');
-                                      }
+                                          .triggerProjection(context, isLargeScreen);
                                     },
                                   );
                                 },

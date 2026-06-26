@@ -536,25 +536,41 @@ class _VerseText extends StatelessWidget {
     final double availWidth = (size.width - 24).clamp(100.0, 10000.0);
     final double availHeight = (size.height - 24).clamp(100.0, 10000.0);
 
-    final List<String> lines = text.split('\n');
-    final int numLines = lines.length;
+    // Estimate line count and max characters per line if we wrap text
+    final List<String> paragraphs = text.split('\n');
+    int totalEstimatedLines = 0;
+    int maxCharsPerLine = 0;
 
-    int maxChars = 0;
-    for (final line in lines) {
-      final trimmedLen = line.trim().length;
-      if (trimmedLen > maxChars) {
-        maxChars = trimmedLen;
+    // We assume standard wrapping occurs at around 45 characters per line on a typical presentation screen
+    const int wrapThreshold = 45;
+
+    for (final paragraph in paragraphs) {
+      final trimmed = paragraph.trim();
+      if (trimmed.isEmpty) continue;
+
+      if (trimmed.length <= wrapThreshold) {
+        totalEstimatedLines += 1;
+        if (trimmed.length > maxCharsPerLine) {
+          maxCharsPerLine = trimmed.length;
+        }
+      } else {
+        // Estimate how many wrapped lines this paragraph will create
+        final int wrappedCount = (trimmed.length / wrapThreshold).ceil();
+        totalEstimatedLines += wrappedCount;
+        maxCharsPerLine = wrapThreshold;
       }
     }
-    if (maxChars == 0) maxChars = 10;
+
+    if (totalEstimatedLines == 0) totalEstimatedLines = 1;
+    if (maxCharsPerLine == 0) maxCharsPerLine = 10;
 
     // Calculate max font size based on lines height
     // Outfit font height is approx 1.35. Let's use 1.45 for layout safety
-    final double sizeByHeight = availHeight / (numLines * 1.45);
+    final double sizeByHeight = availHeight / (totalEstimatedLines * 1.45);
 
     // Calculate max font size based on characters width in longest line
     // Outfit width is approx 0.55 * fontSize
-    final double sizeByWidth = availWidth / (maxChars * 0.55);
+    final double sizeByWidth = availWidth / (maxCharsPerLine * 0.55);
 
     // Get the limiting constraint
     double baseSize = sizeByHeight < sizeByWidth ? sizeByHeight : sizeByWidth;
