@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:visual_song_book/core/utils/uuid_generator.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 
 class SetRepository {
@@ -6,15 +7,23 @@ class SetRepository {
 
   SetRepository(this.db);
 
-  Future<List<SongSet>> getAllSets() => db.select(db.songSets).get();
+  Future<List<SongSet>> getAllSets() => (db.select(db.songSets)
+        ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+      .get();
 
-  Stream<List<SongSet>> watchAllSets() => db.select(db.songSets).watch();
+  Stream<List<SongSet>> watchAllSets() => (db.select(db.songSets)
+        ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+      .watch();
+
+  Future<SongSet?> getSetByUuid(String uuid) =>
+      (db.select(db.songSets)..where((t) => t.uuid.equals(uuid))).getSingleOrNull();
 
   Future<SongSet> createSet(
     String name, {
     String? notes,
     String? occasion,
   }) async {
+    final generatedUuid = UuidGenerator.generate();
     final id = await db
         .into(db.songSets)
         .insert(
@@ -23,6 +32,28 @@ class SetRepository {
             notes: Value(notes),
             occasion: Value(occasion),
             createdAt: DateTime.now(),
+            uuid: Value(generatedUuid),
+          ),
+        );
+    return (db.select(db.songSets)..where((t) => t.id.equals(id))).getSingle();
+  }
+
+  Future<SongSet> createSetWithUuid({
+    required String name,
+    required String uuid,
+    String? notes,
+    String? occasion,
+    DateTime? createdAt,
+  }) async {
+    final id = await db
+        .into(db.songSets)
+        .insert(
+          SongSetsCompanion.insert(
+            name: name,
+            uuid: Value(uuid),
+            notes: Value(notes),
+            occasion: Value(occasion),
+            createdAt: createdAt ?? DateTime.now(),
           ),
         );
     return (db.select(db.songSets)..where((t) => t.id.equals(id))).getSingle();
@@ -148,6 +179,12 @@ class SetRepository {
     return (db.select(db.bibleBookmarks)
       ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
     ).get();
+  }
+
+  Stream<List<BibleBookmark>> watchBookmarks() {
+    return (db.select(db.bibleBookmarks)
+      ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+    ).watch();
   }
 
   Future<void> addBookmark(int bookId, int chapter, int verseNum, String reference, String verseText, String bookName) async {

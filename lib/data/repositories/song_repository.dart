@@ -6,23 +6,25 @@ class SongRepository {
 
   SongRepository(this.db);
 
-  // === Songs ===
+  // === Songs (only active songs are shown by default) ===
 
-  /// Fetches all songs, ordered by song number
+  /// Fetches all active songs, ordered by song number
   Future<List<Song>> getSongs() {
-    return (db.select(
-      db.songs,
-    )..orderBy([(t) => OrderingTerm.asc(t.songNum)])).get();
+    return (db.select(db.songs)
+          ..where((t) => t.isActive.equals(true))
+          ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
+        .get();
   }
 
-  /// Watches all songs, ordered by song number
+  /// Watches all active songs, ordered by song number
   Stream<List<Song>> watchSongs() {
-    return (db.select(
-      db.songs,
-    )..orderBy([(t) => OrderingTerm.asc(t.songNum)])).watch();
+    return (db.select(db.songs)
+          ..where((t) => t.isActive.equals(true))
+          ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
+        .watch();
   }
 
-  /// Searches songs by title, body, author, or song number
+  /// Searches active songs by title, body, author, or song number
   Future<List<Song>> searchSongs(String query) {
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
@@ -34,32 +36,34 @@ class SongRepository {
 
     final statement = db.select(db.songs)
       ..where((t) {
-        Expression<bool> expr =
+        Expression<bool> activeFilter = t.isActive.equals(true);
+
+        Expression<bool> searchExpr =
             t.title.lower().like(matchQuery) |
             t.body.lower().like(matchQuery) |
             t.author.lower().like(matchQuery) |
             t.search.lower().like(matchQuery);
 
         if (songNumInt != null) {
-          expr = expr | t.songNum.equals(songNumInt);
+          searchExpr = searchExpr | t.songNum.equals(songNumInt);
         }
-        return expr;
+        return activeFilter & searchExpr;
       })
       ..orderBy([(t) => OrderingTerm.asc(t.songNum)]);
 
     return statement.get();
   }
 
-  /// Watches songs in a specific category
+  /// Watches active songs in a specific category
   Stream<List<Song>> watchSongsByCategory(int? categoryId) {
     if (categoryId == null) {
       return (db.select(db.songs)
-            ..where((t) => t.categoryId.isNull())
+            ..where((t) => t.isActive.equals(true) & t.categoryId.isNull())
             ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
           .watch();
     }
     return (db.select(db.songs)
-          ..where((t) => t.categoryId.equals(categoryId))
+          ..where((t) => t.isActive.equals(true) & t.categoryId.equals(categoryId))
           ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
         .watch();
   }
@@ -78,8 +82,47 @@ class SongRepository {
     return db.update(db.songs).replace(companion);
   }
 
+  /// Hard-delete a song permanently
   Future<int> deleteSong(int id) {
     return (db.delete(db.songs)..where((t) => t.id.equals(id))).go();
+  }
+
+  // === Soft Delete / Reactivate ===
+
+  /// Soft-delete a song (mark as inactive, keep data)
+  Future<void> deactivateSong(int id) async {
+    await (db.update(db.songs)..where((t) => t.id.equals(id))).write(
+      const SongsCompanion(isActive: Value(false)),
+    );
+  }
+
+  /// Re-activate a previously soft-deleted song
+  Future<void> activateSong(int id) async {
+    await (db.update(db.songs)..where((t) => t.id.equals(id))).write(
+      const SongsCompanion(isActive: Value(true)),
+    );
+  }
+
+  /// Soft-delete all songs from a source path (mark as inactive)
+  Future<void> deactivateSongsBySource(String sourcePath) async {
+    await (db.update(db.songs)..where((t) => t.sourcePath.equals(sourcePath))).write(
+      const SongsCompanion(isActive: Value(false)),
+    );
+  }
+
+  /// Re-activate all songs from a source path
+  Future<void> activateSongsBySource(String sourcePath) async {
+    await (db.update(db.songs)..where((t) => t.sourcePath.equals(sourcePath))).write(
+      const SongsCompanion(isActive: Value(true)),
+    );
+  }
+
+  /// Returns all inactive (soft-deleted) songs
+  Future<List<Song>> getDeactivatedSongs() {
+    return (db.select(db.songs)
+          ..where((t) => t.isActive.equals(false))
+          ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
+        .get();
   }
 
   // === Categories ===
@@ -101,7 +144,8 @@ class SongRepository {
   }
 
   Future<int> getSongCountByCategory(int categoryId) {
-    return (db.select(db.songs)..where((t) => t.categoryId.equals(categoryId)))
+    return (db.select(db.songs)
+          ..where((t) => t.categoryId.equals(categoryId) & t.isActive.equals(true)))
         .map((row) => row.id)
         .get()
         .then((ids) => ids.length);
@@ -132,11 +176,19 @@ class SongRepository {
         .toList();
   }
 
-  /// Deletes all songs associated with a specific source path
+  /// Hard-deletes all songs associated with a specific source path
   Future<int> deleteSongsBySource(String sourcePath) {
     return (db.delete(
       db.songs,
     )..where((t) => t.sourcePath.equals(sourcePath))).go();
+  }
+
+  /// Deletes ALL songs and categories (danger zone wipe)
+  Future<void> deleteAllSongs() async {
+    await db.transaction(() async {
+      await db.delete(db.songs).go();
+      await db.delete(db.categories).go();
+    });
   }
 
   // === History ===
@@ -187,6 +239,6 @@ class SongRepository {
     return db.delete(db.history).go();
   }
 
-  /// Watches all songs (alias for watchSongs used by Sets controller)
+  /// Watches all active songs (alias for watchSongs used by Sets controller)
   Stream<List<Song>> watchAllSongs() => watchSongs();
 }

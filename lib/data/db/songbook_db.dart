@@ -31,6 +31,9 @@ class Songs extends Table {
   IntColumn get sourceSongId => integer().nullable()();
   TextColumn get sourcePath => text().nullable()();
   TextColumn get sourceFormat => text().nullable()();
+
+  // Soft-delete: songs can be deactivated without removing data
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
 }
 
 class SongBooks extends Table {
@@ -55,6 +58,7 @@ class SongSets extends Table {
   TextColumn get notes => text().nullable()();
   TextColumn get occasion => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
+  TextColumn get uuid => text().nullable()();
 }
 
 class SongSetItems extends Table {
@@ -112,7 +116,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -126,6 +130,12 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 3) {
         await m.createTable(bibleBookmarks);
+      }
+      if (from < 4) {
+        await m.addColumn(songs, songs.isActive);
+      }
+      if (from < 5) {
+        await m.addColumn(songSets, songSets.uuid);
       }
     },
   );

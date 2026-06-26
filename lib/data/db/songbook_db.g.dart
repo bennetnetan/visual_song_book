@@ -334,6 +334,21 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -349,6 +364,7 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
     sourceSongId,
     sourcePath,
     sourceFormat,
+    isActive,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -449,6 +465,12 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
         ),
       );
     }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
     return context;
   }
 
@@ -510,6 +532,10 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
         DriftSqlType.string,
         data['${effectivePrefix}source_format'],
       ),
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
     );
   }
 
@@ -533,6 +559,7 @@ class Song extends DataClass implements Insertable<Song> {
   final int? sourceSongId;
   final String? sourcePath;
   final String? sourceFormat;
+  final bool isActive;
   const Song({
     required this.id,
     required this.songNum,
@@ -547,6 +574,7 @@ class Song extends DataClass implements Insertable<Song> {
     this.sourceSongId,
     this.sourcePath,
     this.sourceFormat,
+    required this.isActive,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -582,6 +610,7 @@ class Song extends DataClass implements Insertable<Song> {
     if (!nullToAbsent || sourceFormat != null) {
       map['source_format'] = Variable<String>(sourceFormat);
     }
+    map['is_active'] = Variable<bool>(isActive);
     return map;
   }
 
@@ -616,6 +645,7 @@ class Song extends DataClass implements Insertable<Song> {
       sourceFormat: sourceFormat == null && nullToAbsent
           ? const Value.absent()
           : Value(sourceFormat),
+      isActive: Value(isActive),
     );
   }
 
@@ -638,6 +668,7 @@ class Song extends DataClass implements Insertable<Song> {
       sourceSongId: serializer.fromJson<int?>(json['sourceSongId']),
       sourcePath: serializer.fromJson<String?>(json['sourcePath']),
       sourceFormat: serializer.fromJson<String?>(json['sourceFormat']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
     );
   }
   @override
@@ -657,6 +688,7 @@ class Song extends DataClass implements Insertable<Song> {
       'sourceSongId': serializer.toJson<int?>(sourceSongId),
       'sourcePath': serializer.toJson<String?>(sourcePath),
       'sourceFormat': serializer.toJson<String?>(sourceFormat),
+      'isActive': serializer.toJson<bool>(isActive),
     };
   }
 
@@ -674,6 +706,7 @@ class Song extends DataClass implements Insertable<Song> {
     Value<int?> sourceSongId = const Value.absent(),
     Value<String?> sourcePath = const Value.absent(),
     Value<String?> sourceFormat = const Value.absent(),
+    bool? isActive,
   }) => Song(
     id: id ?? this.id,
     songNum: songNum ?? this.songNum,
@@ -688,6 +721,7 @@ class Song extends DataClass implements Insertable<Song> {
     sourceSongId: sourceSongId.present ? sourceSongId.value : this.sourceSongId,
     sourcePath: sourcePath.present ? sourcePath.value : this.sourcePath,
     sourceFormat: sourceFormat.present ? sourceFormat.value : this.sourceFormat,
+    isActive: isActive ?? this.isActive,
   );
   Song copyWithCompanion(SongsCompanion data) {
     return Song(
@@ -712,6 +746,7 @@ class Song extends DataClass implements Insertable<Song> {
       sourceFormat: data.sourceFormat.present
           ? data.sourceFormat.value
           : this.sourceFormat,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
     );
   }
 
@@ -730,7 +765,8 @@ class Song extends DataClass implements Insertable<Song> {
           ..write('categoryId: $categoryId, ')
           ..write('sourceSongId: $sourceSongId, ')
           ..write('sourcePath: $sourcePath, ')
-          ..write('sourceFormat: $sourceFormat')
+          ..write('sourceFormat: $sourceFormat, ')
+          ..write('isActive: $isActive')
           ..write(')'))
         .toString();
   }
@@ -750,6 +786,7 @@ class Song extends DataClass implements Insertable<Song> {
     sourceSongId,
     sourcePath,
     sourceFormat,
+    isActive,
   );
   @override
   bool operator ==(Object other) =>
@@ -767,7 +804,8 @@ class Song extends DataClass implements Insertable<Song> {
           other.categoryId == this.categoryId &&
           other.sourceSongId == this.sourceSongId &&
           other.sourcePath == this.sourcePath &&
-          other.sourceFormat == this.sourceFormat);
+          other.sourceFormat == this.sourceFormat &&
+          other.isActive == this.isActive);
 }
 
 class SongsCompanion extends UpdateCompanion<Song> {
@@ -784,6 +822,7 @@ class SongsCompanion extends UpdateCompanion<Song> {
   final Value<int?> sourceSongId;
   final Value<String?> sourcePath;
   final Value<String?> sourceFormat;
+  final Value<bool> isActive;
   const SongsCompanion({
     this.id = const Value.absent(),
     this.songNum = const Value.absent(),
@@ -798,6 +837,7 @@ class SongsCompanion extends UpdateCompanion<Song> {
     this.sourceSongId = const Value.absent(),
     this.sourcePath = const Value.absent(),
     this.sourceFormat = const Value.absent(),
+    this.isActive = const Value.absent(),
   });
   SongsCompanion.insert({
     this.id = const Value.absent(),
@@ -813,6 +853,7 @@ class SongsCompanion extends UpdateCompanion<Song> {
     this.sourceSongId = const Value.absent(),
     this.sourcePath = const Value.absent(),
     this.sourceFormat = const Value.absent(),
+    this.isActive = const Value.absent(),
   }) : songNum = Value(songNum),
        title = Value(title),
        body = Value(body);
@@ -830,6 +871,7 @@ class SongsCompanion extends UpdateCompanion<Song> {
     Expression<int>? sourceSongId,
     Expression<String>? sourcePath,
     Expression<String>? sourceFormat,
+    Expression<bool>? isActive,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -845,6 +887,7 @@ class SongsCompanion extends UpdateCompanion<Song> {
       if (sourceSongId != null) 'source_song_id': sourceSongId,
       if (sourcePath != null) 'source_path': sourcePath,
       if (sourceFormat != null) 'source_format': sourceFormat,
+      if (isActive != null) 'is_active': isActive,
     });
   }
 
@@ -862,6 +905,7 @@ class SongsCompanion extends UpdateCompanion<Song> {
     Value<int?>? sourceSongId,
     Value<String?>? sourcePath,
     Value<String?>? sourceFormat,
+    Value<bool>? isActive,
   }) {
     return SongsCompanion(
       id: id ?? this.id,
@@ -877,6 +921,7 @@ class SongsCompanion extends UpdateCompanion<Song> {
       sourceSongId: sourceSongId ?? this.sourceSongId,
       sourcePath: sourcePath ?? this.sourcePath,
       sourceFormat: sourceFormat ?? this.sourceFormat,
+      isActive: isActive ?? this.isActive,
     );
   }
 
@@ -922,6 +967,9 @@ class SongsCompanion extends UpdateCompanion<Song> {
     if (sourceFormat.present) {
       map['source_format'] = Variable<String>(sourceFormat.value);
     }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
     return map;
   }
 
@@ -940,7 +988,8 @@ class SongsCompanion extends UpdateCompanion<Song> {
           ..write('categoryId: $categoryId, ')
           ..write('sourceSongId: $sourceSongId, ')
           ..write('sourcePath: $sourcePath, ')
-          ..write('sourceFormat: $sourceFormat')
+          ..write('sourceFormat: $sourceFormat, ')
+          ..write('isActive: $isActive')
           ..write(')'))
         .toString();
   }
@@ -1572,8 +1621,24 @@ class $SongSetsTable extends SongSets with TableInfo<$SongSetsTable, SongSet> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
   @override
-  List<GeneratedColumn> get $columns => [id, name, notes, occasion, createdAt];
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+    'uuid',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    notes,
+    occasion,
+    createdAt,
+    uuid,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1617,6 +1682,12 @@ class $SongSetsTable extends SongSets with TableInfo<$SongSetsTable, SongSet> {
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
+    if (data.containsKey('uuid')) {
+      context.handle(
+        _uuidMeta,
+        uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta),
+      );
+    }
     return context;
   }
 
@@ -1646,6 +1717,10 @@ class $SongSetsTable extends SongSets with TableInfo<$SongSetsTable, SongSet> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      uuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uuid'],
+      ),
     );
   }
 
@@ -1661,12 +1736,14 @@ class SongSet extends DataClass implements Insertable<SongSet> {
   final String? notes;
   final String? occasion;
   final DateTime createdAt;
+  final String? uuid;
   const SongSet({
     required this.id,
     required this.name,
     this.notes,
     this.occasion,
     required this.createdAt,
+    this.uuid,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1680,6 +1757,9 @@ class SongSet extends DataClass implements Insertable<SongSet> {
       map['occasion'] = Variable<String>(occasion);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || uuid != null) {
+      map['uuid'] = Variable<String>(uuid);
+    }
     return map;
   }
 
@@ -1694,6 +1774,7 @@ class SongSet extends DataClass implements Insertable<SongSet> {
           ? const Value.absent()
           : Value(occasion),
       createdAt: Value(createdAt),
+      uuid: uuid == null && nullToAbsent ? const Value.absent() : Value(uuid),
     );
   }
 
@@ -1708,6 +1789,7 @@ class SongSet extends DataClass implements Insertable<SongSet> {
       notes: serializer.fromJson<String?>(json['notes']),
       occasion: serializer.fromJson<String?>(json['occasion']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      uuid: serializer.fromJson<String?>(json['uuid']),
     );
   }
   @override
@@ -1719,6 +1801,7 @@ class SongSet extends DataClass implements Insertable<SongSet> {
       'notes': serializer.toJson<String?>(notes),
       'occasion': serializer.toJson<String?>(occasion),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'uuid': serializer.toJson<String?>(uuid),
     };
   }
 
@@ -1728,12 +1811,14 @@ class SongSet extends DataClass implements Insertable<SongSet> {
     Value<String?> notes = const Value.absent(),
     Value<String?> occasion = const Value.absent(),
     DateTime? createdAt,
+    Value<String?> uuid = const Value.absent(),
   }) => SongSet(
     id: id ?? this.id,
     name: name ?? this.name,
     notes: notes.present ? notes.value : this.notes,
     occasion: occasion.present ? occasion.value : this.occasion,
     createdAt: createdAt ?? this.createdAt,
+    uuid: uuid.present ? uuid.value : this.uuid,
   );
   SongSet copyWithCompanion(SongSetsCompanion data) {
     return SongSet(
@@ -1742,6 +1827,7 @@ class SongSet extends DataClass implements Insertable<SongSet> {
       notes: data.notes.present ? data.notes.value : this.notes,
       occasion: data.occasion.present ? data.occasion.value : this.occasion,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
     );
   }
 
@@ -1752,13 +1838,14 @@ class SongSet extends DataClass implements Insertable<SongSet> {
           ..write('name: $name, ')
           ..write('notes: $notes, ')
           ..write('occasion: $occasion, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('uuid: $uuid')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, notes, occasion, createdAt);
+  int get hashCode => Object.hash(id, name, notes, occasion, createdAt, uuid);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1767,7 +1854,8 @@ class SongSet extends DataClass implements Insertable<SongSet> {
           other.name == this.name &&
           other.notes == this.notes &&
           other.occasion == this.occasion &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.uuid == this.uuid);
 }
 
 class SongSetsCompanion extends UpdateCompanion<SongSet> {
@@ -1776,12 +1864,14 @@ class SongSetsCompanion extends UpdateCompanion<SongSet> {
   final Value<String?> notes;
   final Value<String?> occasion;
   final Value<DateTime> createdAt;
+  final Value<String?> uuid;
   const SongSetsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.notes = const Value.absent(),
     this.occasion = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.uuid = const Value.absent(),
   });
   SongSetsCompanion.insert({
     this.id = const Value.absent(),
@@ -1789,6 +1879,7 @@ class SongSetsCompanion extends UpdateCompanion<SongSet> {
     this.notes = const Value.absent(),
     this.occasion = const Value.absent(),
     required DateTime createdAt,
+    this.uuid = const Value.absent(),
   }) : name = Value(name),
        createdAt = Value(createdAt);
   static Insertable<SongSet> custom({
@@ -1797,6 +1888,7 @@ class SongSetsCompanion extends UpdateCompanion<SongSet> {
     Expression<String>? notes,
     Expression<String>? occasion,
     Expression<DateTime>? createdAt,
+    Expression<String>? uuid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1804,6 +1896,7 @@ class SongSetsCompanion extends UpdateCompanion<SongSet> {
       if (notes != null) 'notes': notes,
       if (occasion != null) 'occasion': occasion,
       if (createdAt != null) 'created_at': createdAt,
+      if (uuid != null) 'uuid': uuid,
     });
   }
 
@@ -1813,6 +1906,7 @@ class SongSetsCompanion extends UpdateCompanion<SongSet> {
     Value<String?>? notes,
     Value<String?>? occasion,
     Value<DateTime>? createdAt,
+    Value<String?>? uuid,
   }) {
     return SongSetsCompanion(
       id: id ?? this.id,
@@ -1820,6 +1914,7 @@ class SongSetsCompanion extends UpdateCompanion<SongSet> {
       notes: notes ?? this.notes,
       occasion: occasion ?? this.occasion,
       createdAt: createdAt ?? this.createdAt,
+      uuid: uuid ?? this.uuid,
     );
   }
 
@@ -1841,6 +1936,9 @@ class SongSetsCompanion extends UpdateCompanion<SongSet> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
     return map;
   }
 
@@ -1851,7 +1949,8 @@ class SongSetsCompanion extends UpdateCompanion<SongSet> {
           ..write('name: $name, ')
           ..write('notes: $notes, ')
           ..write('occasion: $occasion, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('uuid: $uuid')
           ..write(')'))
         .toString();
   }
@@ -3573,6 +3672,7 @@ typedef $$SongsTableCreateCompanionBuilder =
       Value<int?> sourceSongId,
       Value<String?> sourcePath,
       Value<String?> sourceFormat,
+      Value<bool> isActive,
     });
 typedef $$SongsTableUpdateCompanionBuilder =
     SongsCompanion Function({
@@ -3589,6 +3689,7 @@ typedef $$SongsTableUpdateCompanionBuilder =
       Value<int?> sourceSongId,
       Value<String?> sourcePath,
       Value<String?> sourceFormat,
+      Value<bool> isActive,
     });
 
 final class $$SongsTableReferences
@@ -3714,6 +3815,11 @@ class $$SongsTableFilterComposer extends Composer<_$AppDatabase, $SongsTable> {
 
   ColumnFilters<String> get sourceFormat => $composableBuilder(
     column: $table.sourceFormat,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3860,6 +3966,11 @@ class $$SongsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isActive => $composableBuilder(
+    column: $table.isActive,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$CategoriesTableOrderingComposer get categoryId {
     final $$CategoriesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -3934,6 +4045,9 @@ class $$SongsTableAnnotationComposer
     column: $table.sourceFormat,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
 
   $$CategoriesTableAnnotationComposer get categoryId {
     final $$CategoriesTableAnnotationComposer composer = $composerBuilder(
@@ -4054,6 +4168,7 @@ class $$SongsTableTableManager
                 Value<int?> sourceSongId = const Value.absent(),
                 Value<String?> sourcePath = const Value.absent(),
                 Value<String?> sourceFormat = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
               }) => SongsCompanion(
                 id: id,
                 songNum: songNum,
@@ -4068,6 +4183,7 @@ class $$SongsTableTableManager
                 sourceSongId: sourceSongId,
                 sourcePath: sourcePath,
                 sourceFormat: sourceFormat,
+                isActive: isActive,
               ),
           createCompanionCallback:
               ({
@@ -4084,6 +4200,7 @@ class $$SongsTableTableManager
                 Value<int?> sourceSongId = const Value.absent(),
                 Value<String?> sourcePath = const Value.absent(),
                 Value<String?> sourceFormat = const Value.absent(),
+                Value<bool> isActive = const Value.absent(),
               }) => SongsCompanion.insert(
                 id: id,
                 songNum: songNum,
@@ -4098,6 +4215,7 @@ class $$SongsTableTableManager
                 sourceSongId: sourceSongId,
                 sourcePath: sourcePath,
                 sourceFormat: sourceFormat,
+                isActive: isActive,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -4671,6 +4789,7 @@ typedef $$SongSetsTableCreateCompanionBuilder =
       Value<String?> notes,
       Value<String?> occasion,
       required DateTime createdAt,
+      Value<String?> uuid,
     });
 typedef $$SongSetsTableUpdateCompanionBuilder =
     SongSetsCompanion Function({
@@ -4679,6 +4798,7 @@ typedef $$SongSetsTableUpdateCompanionBuilder =
       Value<String?> notes,
       Value<String?> occasion,
       Value<DateTime> createdAt,
+      Value<String?> uuid,
     });
 
 final class $$SongSetsTableReferences
@@ -4753,6 +4873,11 @@ class $$SongSetsTableFilterComposer
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uuid => $composableBuilder(
+    column: $table.uuid,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4840,6 +4965,11 @@ class $$SongSetsTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SongSetsTableAnnotationComposer
@@ -4865,6 +4995,9 @@ class $$SongSetsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
 
   Expression<T> songSetItemsRefs<T extends Object>(
     Expression<T> Function($$SongSetItemsTableAnnotationComposer a) f,
@@ -4950,12 +5083,14 @@ class $$SongSetsTableTableManager
                 Value<String?> notes = const Value.absent(),
                 Value<String?> occasion = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<String?> uuid = const Value.absent(),
               }) => SongSetsCompanion(
                 id: id,
                 name: name,
                 notes: notes,
                 occasion: occasion,
                 createdAt: createdAt,
+                uuid: uuid,
               ),
           createCompanionCallback:
               ({
@@ -4964,12 +5099,14 @@ class $$SongSetsTableTableManager
                 Value<String?> notes = const Value.absent(),
                 Value<String?> occasion = const Value.absent(),
                 required DateTime createdAt,
+                Value<String?> uuid = const Value.absent(),
               }) => SongSetsCompanion.insert(
                 id: id,
                 name: name,
                 notes: notes,
                 occasion: occasion,
                 createdAt: createdAt,
+                uuid: uuid,
               ),
           withReferenceMapper: (p0) => p0
               .map(

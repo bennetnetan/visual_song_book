@@ -76,6 +76,7 @@ flutter:
   assets:
     - assets/images/logo.png
     - assets/songbooks/
+    - assets/songbooks/data/
     - assets/databases/
 
   fonts:
