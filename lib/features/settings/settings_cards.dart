@@ -354,8 +354,38 @@ class ChangelogCard extends StatelessWidget {
           ),
           SizedBox(height: 24),
           _ChangelogEntry(
-            version: 'v1.4.0',
+            version: 'v1.4.2',
             date: '2026-06-26',
+            changes: [
+              'Multi-monitor detection — projection opens secondary window on multi-display, fullscreen on single',
+              'UI polish — subtle hover-only nav arrows, transparent controls, PopScope blocks back gesture in projection',
+              'Fixed Positioned/AnimatedOpacity nesting crash in projection output view',
+              'Removed redundant CHANGELOG section from About card, consolidated into versioned Changelog card',
+              'Removed Bible search back button on mobile (was opening book picker instead of navigating back)',
+              'App bar hidden on mobile for History and Sets tabs',
+              'Mobile-friendly action buttons for Sets with redesigned layout',
+              'Unified Bible app bar font styling with dashboard tabs',
+              'Collapsible inline lyrics preview on mobile song list',
+              'Slide timeline with auto-scroll to active verse in projection view',
+            ],
+          ),
+          SizedBox(height: 16),
+          _ChangelogEntry(
+            version: 'v1.4.1',
+            date: '2026-06-25',
+            changes: [
+              'Inline song preview with collapsible lyrics on mobile',
+              'Low-opacity slide timeline at bottom of projection output',
+              'Drag-and-drop reorder hint above set list',
+              'Full-color app icon branding throughout UI',
+              'Mobile optimization — hide projection tab, clean up Bible book pickers',
+              'High-resolution app icon logo in settings',
+            ],
+          ),
+          SizedBox(height: 16),
+          _ChangelogEntry(
+            version: 'v1.4.0',
+            date: '2026-06-24',
             changes: [
               'Interactive Book and Chapter pop-up navigation dialog matching Bible specs',
               'Subtle inline verse cross-references displayable for active verses',
@@ -365,27 +395,6 @@ class ChangelogCard extends StatelessWidget {
               'Responsive stacked live preview layout for narrow screen mobile devices',
               'Subtle hover-only display controls in projection output view',
               'Implemented drag-and-drop song sets reordering and inline list search filtering',
-            ],
-          ),
-          SizedBox(height: 16),
-          _ChangelogEntry(
-            version: 'v1.3.0',
-            date: '2026-06-25',
-            changes: [
-              'Unified Bible/Song search logic — shared utilities and Riverpod provider',
-              'Projection search matches Bible tab: BEST MATCH cards, query highlighting, pagination',
-              'Inline projection search with loading states, error handling, and history recording',
-            ],
-          ),
-          SizedBox(height: 16),
-          _ChangelogEntry(
-            version: 'v1.2.0',
-            date: '2026-06-24',
-            changes: [
-              'Full KJV Bible reader with cross-references and bookmarks',
-              'Song set management — create, edit, reorder sets',
-              'Chapter-aware Bible projection (auto-advance to next/prev chapter)',
-              'History tab with Songs/Sets/Bible sub-tabs',
             ],
           ),
         ],
@@ -524,7 +533,7 @@ class AboutCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Chip(
                   label: Text(
-                    'v1.4.1',
+                    'v1.4.2',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -548,89 +557,9 @@ class AboutCard extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          Divider(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-          const SizedBox(height: 16),
-          Text(
-            'CHANGELOG',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.0,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildChangelogItem(
-            context,
-            'Inline Song Preview',
-            'Preview song lyrics directly in the song list without opening another view.',
-          ),
-          _buildChangelogItem(
-            context,
-            'Creative Verse Timeline',
-            'Subtle verse and slide progress timeline indicator at the bottom of projection output screens.',
-          ),
-          _buildChangelogItem(
-            context,
-            'Sets Reorder Hint',
-            'Visual guidance in the service sets screen for reordering songs via drag handle.',
-          ),
-          _buildChangelogItem(
-            context,
-            'Full-color Branding',
-            'Replaced standard/generic icons with the premium full-color app icon logo throughout the app.',
-          ),
-          _buildChangelogItem(
-            context,
-            'Mobile Optimization',
-            'Cleaned up Bible book pickers and hid desktop-only projection tabs for a cleaner mobile interface.',
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildChangelogItem(BuildContext context, String title, String description) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 5.0, right: 8.0),
-            child: Container(
-              width: 5,
-              height: 5,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          Expanded(
-            child: RichText(
-              text: TextSpan(
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  height: 1.4,
-                  color: theme.colorScheme.onSurface,
-                ),
-                children: [
-                  TextSpan(
-                    text: '$title: ',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  TextSpan(
-                    text: description,
-                    style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
