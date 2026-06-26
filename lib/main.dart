@@ -3,8 +3,10 @@ import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/routing/app_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:screen_retriever/screen_retriever.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -21,20 +23,38 @@ void main(List<String> args) async {
 
       try {
         final displays = await screenRetriever.getAllDisplays();
-        if (displays.length > 1) {
-          final secondDisplay = displays[1];
-          await windowManager.setBounds(
-            Rect.fromLTWH(
-              secondDisplay.visiblePosition!.dx,
-              secondDisplay.visiblePosition!.dy,
-              secondDisplay.size.width,
-              secondDisplay.size.height,
-            ),
-          );
+        final prefs = await SharedPreferences.getInstance();
+        final mode = prefs.getString('projection_mode') ?? 'extended';
+
+        Display? targetDisplay;
+        if (mode == 'extended' && displays.length > 1) {
+          targetDisplay = displays[1];
+        } else {
+          targetDisplay = displays[0];
+        }
+
+        await windowManager.setBounds(
+          Rect.fromLTWH(
+            targetDisplay.visiblePosition?.dx ?? 0,
+            targetDisplay.visiblePosition?.dy ?? 0,
+            targetDisplay.size.width,
+            targetDisplay.size.height,
+          ),
+        );
+
+        if (mode == 'single' || mode == 'duplicate') {
+          await windowManager.setAlwaysOnTop(true);
         }
       } catch (_) {}
     }
-    runApp(const ProviderScope(child: MyApp(isProjectionWindow: true)));
+    runApp(
+      ProviderScope(
+        overrides: [
+          isProjectionWindowProvider.overrideWithValue(true),
+        ],
+        child: const MyApp(isProjectionWindow: true),
+      ),
+    );
     return;
   }
 
@@ -74,24 +94,44 @@ class MyApp extends ConsumerWidget {
         scheme: FlexScheme.tealM3,
         useMaterial3: true,
         fontFamily: 'Inter',
+        surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
+        blendLevel: 1,
         subThemesData: const FlexSubThemesData(
           inputDecoratorBorderType: FlexInputBorderType.outline,
           inputDecoratorRadius: 16.0,
-          cardRadius: 20.0,
-          dialogRadius: 24.0,
+          cardRadius: 16.0,
+          cardElevation: 0,
+          dialogRadius: 20.0,
+          dialogElevation: 0,
+          bottomSheetElevation: 0,
+          navigationBarElevation: 0,
+          navigationRailElevation: 0,
           navigationRailUseIndicator: true,
+          appBarScrolledUnderElevation: 0,
+          elevatedButtonElevation: 0,
+          popupMenuElevation: 2,
         ),
       ),
       darkTheme: FlexThemeData.dark(
         scheme: FlexScheme.tealM3,
         useMaterial3: true,
         fontFamily: 'Inter',
+        surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
+        blendLevel: 2,
         subThemesData: const FlexSubThemesData(
           inputDecoratorBorderType: FlexInputBorderType.outline,
           inputDecoratorRadius: 16.0,
-          cardRadius: 20.0,
-          dialogRadius: 24.0,
+          cardRadius: 16.0,
+          cardElevation: 0,
+          dialogRadius: 20.0,
+          dialogElevation: 0,
+          bottomSheetElevation: 0,
+          navigationBarElevation: 0,
+          navigationRailElevation: 0,
           navigationRailUseIndicator: true,
+          appBarScrolledUnderElevation: 0,
+          elevatedButtonElevation: 0,
+          popupMenuElevation: 2,
         ),
       ),
       themeMode: themeMode,

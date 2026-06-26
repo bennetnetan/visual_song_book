@@ -54,3 +54,7 @@ final importersProvider = Provider<List<SongbookImporter>>((ref) {
   final db = ref.watch(databaseProvider);
   return [MdbToolsImporter(db), VsBookImporter(db)];
 });
+
+// Provider to identify if the current process is the secondary projection window
+final isProjectionWindowProvider = Provider<bool>((ref) => false);
+

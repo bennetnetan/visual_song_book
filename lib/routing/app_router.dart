@@ -9,7 +9,9 @@ final GoRouter appRouter = GoRouter(
     GoRoute(path: '/', builder: (context, state) => const MainDashboardPage()),
     GoRoute(
       path: '/projection',
-      builder: (context, state) => const ProjectionOutputView(),
+      pageBuilder: (context, state) => const NoTransitionPage(
+        child: ProjectionOutputView(),
+      ),
     ),
     GoRoute(
       path: '/song-editor',
@@ -27,7 +29,9 @@ final GoRouter projectionRouter = GoRouter(
   routes: [
     GoRoute(
       path: '/projection',
-      builder: (context, state) => const ProjectionOutputView(),
+      pageBuilder: (context, state) => const NoTransitionPage(
+        child: ProjectionOutputView(),
+      ),
     ),
   ],
 );

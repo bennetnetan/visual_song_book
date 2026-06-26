@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:screen_retriever/screen_retriever.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/verse_parser.dart';
@@ -20,14 +19,12 @@ class ProjectionState {
   final double fontSize;
   final bool autoInsertChorus;
   final bool isSecondaryWindowOpen;
-  /// True when the current content is a Bible passage (not a song).
   final bool isBibleMode;
-  /// Title shown on the projection tab header (book+chapter or song title).
   final String? contentTitle;
-  /// Bible passage metadata for chapter-aware navigation.
   final int? bibleBookId;
   final int? bibleChapter;
   final String? bibleBookName;
+  final String projectionMode; // 'single', 'duplicate', 'extended'
 
   ProjectionState({
     this.currentSong,
@@ -42,6 +39,7 @@ class ProjectionState {
     this.bibleBookId,
     this.bibleChapter,
     this.bibleBookName,
+    required this.projectionMode,
   });
 
   ProjectionState copyWith({
@@ -57,6 +55,7 @@ class ProjectionState {
     int? Function()? bibleBookId,
     int? Function()? bibleChapter,
     String? Function()? bibleBookName,
+    String? projectionMode,
   }) {
     return ProjectionState(
       currentSong: currentSong != null ? currentSong() : this.currentSong,
@@ -72,6 +71,7 @@ class ProjectionState {
       bibleBookId: bibleBookId != null ? bibleBookId() : this.bibleBookId,
       bibleChapter: bibleChapter != null ? bibleChapter() : this.bibleChapter,
       bibleBookName: bibleBookName != null ? bibleBookName() : this.bibleBookName,
+      projectionMode: projectionMode ?? this.projectionMode,
     );
   }
 
@@ -89,6 +89,7 @@ class ProjectionState {
       bibleBookId: null,
       bibleChapter: null,
       bibleBookName: null,
+      projectionMode: 'extended',
     );
   }
 
@@ -107,12 +108,14 @@ class ProjectionState {
 class ProjectionController extends StateNotifier<ProjectionState> {
   final SongRepository _songRepository;
   final BibleRepository _bibleRepo;
+  final Ref ref;
   SharedPreferences? _prefs;
   bool _isLoadingChapter = false;
 
-  ProjectionController(this._songRepository, this._bibleRepo)
+  ProjectionController(this._songRepository, this._bibleRepo, this.ref)
     : super(ProjectionState.initial()) {
     _loadSettings();
+    _setupMainWindowHandler();
   }
 
   Future<void> _loadSettings() async {
@@ -121,11 +124,13 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       final savedFontSize = _prefs?.getDouble('projection_font_size') ?? 40.0;
       final savedKeepAwake = _prefs?.getBool('projection_keep_awake') ?? true;
       final savedAutoChorus = _prefs?.getBool('projection_auto_chorus') ?? true;
+      final savedMode = _prefs?.getString('projection_mode') ?? 'extended';
 
       state = state.copyWith(
         fontSize: savedFontSize,
         keepAwake: savedKeepAwake,
         autoInsertChorus: savedAutoChorus,
+        projectionMode: savedMode,
       );
 
       if (state.keepAwake) {
@@ -194,9 +199,11 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     }
   }
 
-  Future<void> setFontSize(double size) async {
-    state = state.copyWith(fontSize: size.clamp(16.0, 96.0));
-    await _prefs?.setDouble('projection_font_size', state.fontSize);
+  void setFontSize(double size) {
+    final clamped = size.clamp(16.0, 160.0);
+    if (state.fontSize == clamped) return;
+    state = state.copyWith(fontSize: clamped);
+    _prefs?.setDouble('projection_font_size', clamped);
     _syncSecondaryWindow();
   }
 
@@ -218,6 +225,11 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     } else {
       await WakelockPlus.disable();
     }
+  }
+
+  Future<void> setProjectionMode(String mode) async {
+    state = state.copyWith(projectionMode: mode);
+    await _prefs?.setString('projection_mode', mode);
   }
 
   /// Project a list of Bible verses. [title] is the passage heading shown in
@@ -330,6 +342,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       currentSong: () => null,
       slides: slides,
       currentSlideIndex: 0,
+      isBibleMode: false,
     );
     _syncSecondaryWindow();
   }
@@ -341,26 +354,18 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     if (kIsWeb) return false;
     if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return false;
 
-    // Check if multiple displays are connected.
-    try {
-      final displays = await screenRetriever.getAllDisplays();
-      if (displays.length < 2) return false;
-    } catch (_) {
-      return false; // can't detect displays — fall back to fullscreen
-    }
-
     try {
       final window = await WindowController.create(
         const WindowConfiguration(arguments: 'Projection Output'),
       );
       await window.show();
-      // Retry syncing up to 3 times with increasing delays to give the
-      // secondary window time to register its IPC handler.
-      for (var attempt = 0; attempt < 3; attempt++) {
-        await Future.delayed(Duration(milliseconds: 800 + attempt * 400));
-        if (await _syncSecondaryWindow()) break;
-      }
+      
       state = state.copyWith(isSecondaryWindowOpen: true);
+      
+      // Perform synchronization retries in the background so we do not block
+      // the caller (and the primary UI thread) with async delays.
+      _syncSecondaryWindowWithRetry();
+      
       return true;
     } catch (e) {
       debugPrint('Failed to open projector window: $e');
@@ -368,8 +373,45 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     }
   }
 
+  Future<void> _syncSecondaryWindowWithRetry() async {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      await Future.delayed(Duration(milliseconds: 200 + attempt * 200));
+      if (await _syncSecondaryWindow()) {
+        debugPrint('Secondary window synced successfully on attempt $attempt');
+        break;
+      }
+    }
+  }
+
   void setSecondaryWindowOpen(bool isOpen) {
     state = state.copyWith(isSecondaryWindowOpen: isOpen);
+  }
+
+  void _setupMainWindowHandler() async {
+    if (kIsWeb) return;
+    if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return;
+    if (ref.read(isProjectionWindowProvider)) return;
+
+    try {
+      final controller = await WindowController.fromCurrentEngine();
+      controller.setWindowMethodHandler((call) async {
+        debugPrint('Main window received IPC call: ${call.method}');
+        if (call.method == 'navigate_slide') {
+          final action = call.arguments['action'] as String?;
+          if (action == 'prev') {
+            prevSlide();
+          } else if (action == 'next') {
+            nextSlide();
+          }
+        } else if (call.method == 'secondary_window_ready') {
+          debugPrint('Secondary window reported ready. Syncing current slide...');
+          _syncSecondaryWindow();
+        }
+        return 'OK';
+      });
+    } catch (e) {
+      debugPrint('Failed to register main window IPC handler: $e');
+    }
   }
 
   void syncCurrentSlide() {
@@ -382,6 +424,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     if (kIsWeb) return false;
     if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return false;
 
+    // OPTIMIZATION: If we know the secondary window is not open, do not query the OS window manager.
+    if (!state.isSecondaryWindowOpen) return false;
+
     final slide = state.currentSlide;
     final text = slide?.text ?? '';
     final label = slide?.label ?? '';
@@ -393,11 +438,17 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     try {
       final controllers = await WindowController.getAll();
       final currentWindow = await WindowController.fromCurrentEngine();
+      
+      // OPTIMIZATION: Detect if the secondary window was closed and clean up state.
+      final targetControllers = controllers.where((c) => c.windowId != currentWindow.windowId).toList();
+      if (targetControllers.isEmpty) {
+        state = state.copyWith(isSecondaryWindowOpen: false);
+        return false;
+      }
+
       var anySuccess = false;
 
-      for (final controller in controllers) {
-        if (controller.windowId == currentWindow.windowId) continue;
-
+      for (final controller in targetControllers) {
         debugPrint('Sending update to window ID: ${controller.windowId}');
         try {
           final result = await controller.invokeMethod('update_slide', {
@@ -424,5 +475,5 @@ final projectionControllerProvider =
     StateNotifierProvider<ProjectionController, ProjectionState>((ref) {
       final songRepo = ref.watch(songRepositoryProvider);
       final bibleRepo = ref.watch(bibleRepositoryProvider);
-      return ProjectionController(songRepo, bibleRepo);
+      return ProjectionController(songRepo, bibleRepo, ref);
     });

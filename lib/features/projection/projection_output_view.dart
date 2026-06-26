@@ -22,10 +22,16 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
   String _ipcText = '';
   String _ipcLabel = '';
   bool _ipcIsBible = false;
+  double? _ipcFontSize;
   bool _isSecondaryWindow = false;
   late AnimationController _fadeController;
   bool _isClosing = false;
   bool _isHovering = false;
+
+  double _baseFontSize = 40.0;
+  bool _pinchActive = false;
+  Offset _panStartOffset = Offset.zero;
+  double _panDeltaX = 0.0;
 
   @override
   void initState() {
@@ -76,11 +82,27 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
           if (call.arguments['text'] != null) _ipcText = call.arguments['text'] as String;
           if (call.arguments['label'] != null) _ipcLabel = call.arguments['label'] as String;
           if (call.arguments['isBible'] != null) _ipcIsBible = call.arguments['isBible'] as bool;
+          if (call.arguments['fontSize'] != null) {
+            _ipcFontSize = (call.arguments['fontSize'] as num).toDouble();
+          }
         });
-        debugPrint('Updated secondary window text: "$_ipcText" label: "$_ipcLabel"');
+        debugPrint('Updated secondary window text: "$_ipcText" label: "$_ipcLabel" fontSize: $_ipcFontSize');
       }
       return 'OK';
     });
+
+    // Notify main window that secondary window is ready to receive updates
+    try {
+      final controllers = await WindowController.getAll();
+      final currentWindow = await WindowController.fromCurrentEngine();
+      for (final c in controllers) {
+        if (c.windowId == currentWindow.windowId) continue;
+        await c.invokeMethod('secondary_window_ready');
+        debugPrint('Notified main window (ID: ${c.windowId}) that secondary window is ready.');
+      }
+    } catch (e) {
+      debugPrint('Failed to send secondary_window_ready signal: $e');
+    }
   }
 
   Future<void> _sendNavigateToMain(String action) async {
@@ -161,7 +183,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     final bool activeIsBible = _isSecondaryWindow
         ? _ipcIsBible
         : state.isBibleMode;
-    final double activeFontSize = state.fontSize;
+    final double activeFontSize = _isSecondaryWindow
+        ? (_ipcFontSize ?? state.fontSize)
+        : state.fontSize;
     final String slideKey = _isSecondaryWindow
         ? 'ipc_${_ipcText.hashCode}'
         : '${state.currentSong?.id}_${state.currentSlideIndex}';
@@ -185,13 +209,32 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
             }
           }
         },
-        // Swipe left = next, swipe right = prev (for tablet/mobile presenters)
-        onHorizontalDragEnd: (details) {
-          if (details.primaryVelocity == null) return;
-          if (details.primaryVelocity! < -300) {
-            notifier.nextSlide();
-          } else if (details.primaryVelocity! > 300) {
-            notifier.prevSlide();
+        // Pinch-to-zoom (scale font size) + Pan to swipe left/right (unified implementation to prevent gestures conflicts)
+        onScaleStart: (details) {
+          _baseFontSize = activeFontSize;
+          _pinchActive = false;
+          _panStartOffset = details.localFocalPoint;
+          _panDeltaX = 0.0;
+        },
+        onScaleUpdate: (details) {
+          if (details.pointerCount > 1) {
+            _pinchActive = true;
+            final newSize = (_baseFontSize * details.scale).clamp(16.0, 160.0);
+            notifier.setFontSize(newSize);
+          } else {
+            _panDeltaX = details.localFocalPoint.dx - _panStartOffset.dx;
+          }
+        },
+        onScaleEnd: (details) {
+          if (!_pinchActive) {
+            // Check horizontal swipe gesture threshold
+            if (_panDeltaX.abs() > 60.0) {
+              if (_panDeltaX < 0) {
+                notifier.nextSlide();
+              } else {
+                notifier.prevSlide();
+              }
+            }
           }
         },
         child: Focus(
@@ -246,10 +289,14 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                           ? Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                _VerseText(
-                                  text: activeText,
-                                  key: ValueKey(slideKey),
-                                  fontSize: activeFontSize,
+                                Expanded(
+                                  child: Center(
+                                    child: _VerseText(
+                                      text: activeText,
+                                      key: ValueKey(slideKey),
+                                      fontSize: activeFontSize,
+                                    ),
+                                  ),
                                 ),
                                 if (activeIsBible && activeLabel.isNotEmpty)
                                   Padding(
@@ -391,15 +438,19 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                   ),
                 ),
 
-              // Slide indicator dots at the bottom
+              // Slide indicator dots at the bottom — subtle, only shows on hover
               if (state.slides.isNotEmpty)
                 Positioned(
                   bottom: _isSecondaryWindow ? 96 : 20,
                   left: 0,
                   right: 0,
-                  child: _SlideIndicator(
-                    count: state.slides.length,
-                    current: state.currentSlideIndex,
+                  child: AnimatedOpacity(
+                    opacity: _isHovering ? 0.4 : 0.0,
+                    duration: const Duration(milliseconds: 300),
+                    child: _SlideIndicator(
+                      count: state.slides.length,
+                      current: state.currentSlideIndex,
+                    ),
                   ),
                 ),
             ],
@@ -471,59 +522,104 @@ class _SlideIndicator extends StatelessWidget {
   }
 }
 
-/// Animated verse text with slide-up/fade transition.
+/// Animated verse text with slide-up/fade transition and auto-fit to container size.
 class _VerseText extends StatelessWidget {
   final String text;
   final double fontSize;
 
   const _VerseText({required this.text, super.key, required this.fontSize});
 
+  double _calculateDefaultFontSize(String text, Size size) {
+    if (text.isEmpty) return 40.0;
+
+    // Available bounds inside padding
+    final double availWidth = (size.width - 24).clamp(100.0, 10000.0);
+    final double availHeight = (size.height - 24).clamp(100.0, 10000.0);
+
+    final List<String> lines = text.split('\n');
+    final int numLines = lines.length;
+
+    int maxChars = 0;
+    for (final line in lines) {
+      final trimmedLen = line.trim().length;
+      if (trimmedLen > maxChars) {
+        maxChars = trimmedLen;
+      }
+    }
+    if (maxChars == 0) maxChars = 10;
+
+    // Calculate max font size based on lines height
+    // Outfit font height is approx 1.35. Let's use 1.45 for layout safety
+    final double sizeByHeight = availHeight / (numLines * 1.45);
+
+    // Calculate max font size based on characters width in longest line
+    // Outfit width is approx 0.55 * fontSize
+    final double sizeByWidth = availWidth / (maxChars * 0.55);
+
+    // Get the limiting constraint
+    double baseSize = sizeByHeight < sizeByWidth ? sizeByHeight : sizeByWidth;
+
+    // Clamp to a reasonable baseline range
+    return baseSize.clamp(20.0, 100.0);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 350),
-      switchInCurve: Curves.easeInOut,
-      switchOutCurve: Curves.easeInOut,
-      transitionBuilder: (child, animation) {
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.04),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
-            child: child,
-          ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final Size size = Size(constraints.maxWidth, constraints.maxHeight);
+        
+        // Calculate the base fitted size
+        final double baseFontSize = _calculateDefaultFontSize(text, size);
+        
+        // Treat 40.0 as the baseline setting. Scale factor is (fontSize / 40.0)
+        final double scaleFactor = fontSize / 40.0;
+        final double finalFontSize = (baseFontSize * scaleFactor).clamp(14.0, 180.0);
+
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 350),
+          switchInCurve: Curves.easeInOut,
+          switchOutCurve: Curves.easeInOut,
+          transitionBuilder: (child, animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.04),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
+                child: child,
+              ),
+            );
+          },
+          child: text.isNotEmpty
+              ? Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    color: Colors.white,
+                    fontSize: finalFontSize,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                    letterSpacing: 0.3,
+                    shadows: [
+                      Shadow(
+                        offset: const Offset(0, 2),
+                        blurRadius: 12,
+                        color: Colors.black.withValues(alpha: 0.8),
+                      ),
+                      Shadow(
+                        offset: const Offset(0, 0),
+                        blurRadius: 30,
+                        color: const Color(0xFF00E5CC).withValues(alpha: 0.12),
+                      ),
+                    ],
+                  ),
+                )
+              : const SizedBox.shrink(),
         );
       },
-      child: text.isNotEmpty
-          ? Text(
-              text,
-              textAlign: TextAlign.center,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontFamily: 'Outfit',
-                color: Colors.white,
-                fontSize: fontSize,
-                fontWeight: FontWeight.w600,
-                height: 1.35,
-                letterSpacing: 0.3,
-                shadows: [
-                  Shadow(
-                    offset: const Offset(0, 2),
-                    blurRadius: 12,
-                    color: Colors.black.withValues(alpha: 0.8),
-                  ),
-                  Shadow(
-                    offset: const Offset(0, 0),
-                    blurRadius: 30,
-                    color: const Color(0xFF00E5CC).withValues(alpha: 0.12),
-                  ),
-                ],
-              ),
-            )
-          : const SizedBox.shrink(),
     );
   }
 }
