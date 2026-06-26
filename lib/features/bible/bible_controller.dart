@@ -240,4 +240,45 @@ class BibleController extends StateNotifier<BibleState> {
       activeCrossReferences: [],
     );
   }
+
+  Future<void> nextChapter() async {
+    final bookId = state.selectedBookId;
+    final chapter = state.selectedChapter;
+    if (bookId == null || chapter == null) return;
+
+    final nextChapter = chapter + 1;
+    if (state.chapters.contains(nextChapter)) {
+      await selectChapter(nextChapter);
+    } else {
+      final currentIdx = state.books.indexWhere((b) => b.id == bookId);
+      final nextIdx = currentIdx + 1;
+      if (nextIdx >= 0 && nextIdx < state.books.length) {
+        final nextBook = state.books[nextIdx];
+        await selectBook(nextBook.id);
+        await selectChapter(1);
+      }
+    }
+  }
+
+  Future<void> prevChapter() async {
+    final bookId = state.selectedBookId;
+    final chapter = state.selectedChapter;
+    if (bookId == null || chapter == null) return;
+
+    final prevChapter = chapter - 1;
+    if (state.chapters.contains(prevChapter)) {
+      await selectChapter(prevChapter);
+    } else {
+      final currentIdx = state.books.indexWhere((b) => b.id == bookId);
+      final prevIdx = currentIdx - 1;
+      if (prevIdx >= 0 && prevIdx < state.books.length) {
+        final prevBook = state.books[prevIdx];
+        await selectBook(prevBook.id);
+        final chs = await _repo.getChapters(prevBook.id);
+        if (chs.isNotEmpty) {
+          await selectChapter(chs.last);
+        }
+      }
+    }
+  }
 }

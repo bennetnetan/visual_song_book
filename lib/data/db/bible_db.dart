@@ -43,6 +43,9 @@ class BibleDatabase {
     }
 
     _db = sqlite3.open(dbPath);
+    try {
+      _db!.execute("UPDATE books SET name = 'Revelation' WHERE name LIKE 'Revelation%'");
+    } catch (_) {}
   }
 
   Database get db {

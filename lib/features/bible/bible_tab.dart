@@ -295,20 +295,11 @@ class _SearchBarState extends State<_SearchBar> {
             child: Container(
               height: 56,
               decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
+                color: theme.colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    offset: const Offset(2, 2),
-                    blurRadius: 4,
-                  ),
-                  BoxShadow(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    offset: const Offset(-2, -2),
-                    blurRadius: 4,
-                  ),
-                ],
+                border: Border.all(
+                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                ),
               ),
               child: TextField(
                 controller: _controller,
@@ -425,44 +416,83 @@ class _ReadingViewState extends State<_ReadingView> {
 
   int get _totalItemCount => widget.verses.length;
 
+  void _showNavigationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => const _BibleNavigationDialog(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isLargeScreen = MediaQuery.of(context).size.width >= 900;
 
     return Column(
       children: [
-        // Chapter title
+        // Chapter selector navigation header
         if (widget.selectedChapter != null && widget.verses.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
+                if (!isLargeScreen)
+                  Consumer(
+                    builder: (context, ref, child) {
+                      return IconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: () {
+                          ref.read(bibleControllerProvider.notifier).clearSelection();
+                        },
+                        tooltip: 'Back to books',
+                      );
+                    },
+                  ),
+                Consumer(
+                  builder: (context, ref, child) {
+                    return IconButton(
+                      icon: const Icon(Icons.chevron_left),
+                      onPressed: () {
+                        ref.read(bibleControllerProvider.notifier).prevChapter();
+                      },
+                      tooltip: 'Previous Chapter',
+                    );
+                  },
+                ),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.bookName.toUpperCase(),
+                  child: Center(
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        backgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+                      label: Text(
+                        '${widget.bookName} ${widget.selectedChapter}',
                         style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.5,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                           color: colorScheme.primary,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Chapter ${widget.selectedChapter}',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w500,
-                          fontFamily: 'Inter',
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                    ],
+                      onPressed: () => _showNavigationDialog(context),
+                    ),
                   ),
+                ),
+                Consumer(
+                  builder: (context, ref, child) {
+                    return IconButton(
+                      icon: const Icon(Icons.chevron_right),
+                      onPressed: () {
+                        ref.read(bibleControllerProvider.notifier).nextChapter();
+                      },
+                      tooltip: 'Next Chapter',
+                    );
+                  },
                 ),
               ],
             ),
@@ -513,14 +543,23 @@ class _ReadingViewState extends State<_ReadingView> {
                                   ),
                                 ),
                                 Expanded(
-                                  child: Text(
-                                    v.text,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      height: 1.65,
-                                      fontFamily: 'Inter',
-                                      color: colorScheme.onSurface,
-                                    ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        v.text,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          height: 1.65,
+                                          fontFamily: 'Inter',
+                                          color: colorScheme.onSurface,
+                                        ),
+                                      ),
+                                      if (isActive) ...[
+                                        const SizedBox(height: 8),
+                                        _InlineCrossReferences(verse: v),
+                                      ],
+                                    ],
                                   ),
                                 ),
                                 if (isActive)
@@ -528,19 +567,50 @@ class _ReadingViewState extends State<_ReadingView> {
                                     padding: const EdgeInsets.only(top: 2, right: 4),
                                     child: Icon(Icons.link, size: 14, color: colorScheme.primary),
                                   ),
-                                PopupMenuButton<String>(
-                                  icon: Icon(Icons.more_vert, size: 16, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
-                                  onSelected: (action) {
-                                    if (action == 'project') {
-                                      widget.onProjectPassage(v.chapter, [v]);
-                                    } else if (action == 'bookmark') {
-                                      widget.onToggleBookmark(v);
-                                    }
+                                Consumer(
+                                  builder: (context, ref, child) {
+                                    return FutureBuilder<bool>(
+                                      future: ref.read(setRepositoryProvider).isBookmarked(v.bookId, v.chapter, v.verse),
+                                      builder: (context, snapshot) {
+                                        final isBookmarked = snapshot.data ?? false;
+                                        return PopupMenuButton<String>(
+                                          icon: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              if (isBookmarked)
+                                                Icon(Icons.bookmark, size: 14, color: colorScheme.primary),
+                                              Icon(Icons.more_vert, size: 16, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                                            ],
+                                          ),
+                                          onSelected: (action) {
+                                            if (action == 'project') {
+                                              widget.onProjectPassage(v.chapter, [v]);
+                                            } else if (action == 'bookmark') {
+                                              widget.onToggleBookmark(v);
+                                            }
+                                          },
+                                          itemBuilder: (context) => [
+                                            const PopupMenuItem(
+                                              value: 'project',
+                                              child: ListTile(
+                                                leading: Icon(Icons.tv, size: 18),
+                                                title: Text('Project', style: TextStyle(fontSize: 13)),
+                                                dense: true,
+                                              ),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'bookmark',
+                                              child: ListTile(
+                                                leading: Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_border, size: 18),
+                                                title: Text(isBookmarked ? 'Remove Bookmark' : 'Bookmark', style: const TextStyle(fontSize: 13)),
+                                                dense: true,
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    );
                                   },
-                                  itemBuilder: (context) => [
-                                    const PopupMenuItem(value: 'project', child: ListTile(leading: Icon(Icons.tv, size: 18), title: Text('Project', style: TextStyle(fontSize: 13)), dense: true)),
-                                    const PopupMenuItem(value: 'bookmark', child: ListTile(leading: Icon(Icons.bookmark_border, size: 18), title: Text('Bookmark', style: TextStyle(fontSize: 13)), dense: true)),
-                                  ],
                                 ),
                               ],
                             ),
@@ -1017,6 +1087,464 @@ class _SidebarLabel extends StatelessWidget {
         letterSpacing: 1.2,
         color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
+    );
+  }
+}
+
+class _InlineCrossReferences extends ConsumerWidget {
+  final BibleVerse verse;
+  const _InlineCrossReferences({required this.verse});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(bibleControllerProvider);
+    final notifier = ref.read(bibleControllerProvider.notifier);
+    final theme = Theme.of(context);
+
+    if (state.isLoadingCrossReferences) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 4.0),
+        child: SizedBox(
+          height: 12,
+          width: 12,
+          child: CircularProgressIndicator(strokeWidth: 1.5),
+        ),
+      );
+    }
+
+    if (state.activeCrossReferences.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'CROSS-REFERENCES:',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: state.activeCrossReferences.take(6).map((cr) {
+              return ActionChip(
+                label: Text(
+                  cr.reference,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                padding: EdgeInsets.zero,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+                backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.08),
+                side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
+                onPressed: () {
+                  notifier.navigateToVerse(cr.toBookId, cr.toChapter, cr.toVerseStart);
+                },
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BibleNavigationDialog extends ConsumerStatefulWidget {
+  const _BibleNavigationDialog();
+
+  @override
+  ConsumerState<_BibleNavigationDialog> createState() => _BibleNavigationDialogState();
+}
+
+class _BibleNavigationDialogState extends ConsumerState<_BibleNavigationDialog> {
+  String _tab = 'book'; // 'book', 'chapter', or 'verse'
+  int? _tempBookId;
+  String _tempBookName = '';
+  List<int> _tempChapters = [];
+  int? _tempChapter;
+  List<int> _tempVerses = [];
+  String _bookFilter = '';
+
+  @override
+  void initState() {
+    super.initState();
+    final state = ref.read(bibleControllerProvider);
+    _tempBookId = state.selectedBookId;
+    if (_tempBookId != null) {
+      final bk = state.books.where((b) => b.id == _tempBookId).firstOrNull;
+      if (bk != null) {
+        _tempBookName = bk.name;
+        _tempChapters = state.chapters;
+        _tempChapter = state.selectedChapter;
+        if (_tempChapter != null) {
+          _fetchVersesForInit(_tempBookId!, _tempChapter!);
+        }
+      }
+    }
+  }
+
+  void _fetchVersesForInit(int bookId, int chapter) async {
+    final verses = await ref.read(bibleRepositoryProvider).getVerses(bookId, chapter);
+    if (mounted) {
+      setState(() {
+        _tempVerses = verses.map((v) => v.verse).toList();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(bibleControllerProvider);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final otBooks = state.books.where((b) => b.id <= 39).toList();
+    final ntBooks = state.books.where((b) => b.id > 39).toList();
+
+    final filteredOt = otBooks.where((b) => b.name.toLowerCase().contains(_bookFilter.toLowerCase())).toList();
+    final filteredNt = ntBooks.where((b) => b.name.toLowerCase().contains(_bookFilter.toLowerCase())).toList();
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 500, maxHeight: 520),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 16, 8),
+              child: Row(
+                children: [
+                  Text(
+                    'BIBLE NAVIGATION',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Center(child: Text('Book', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold))),
+                      selected: _tab == 'book',
+                      onSelected: (val) {
+                        if (val) setState(() => _tab = 'book');
+                      },
+                      showCheckmark: false,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: ChoiceChip(
+                      label: Center(
+                        child: Text(
+                          _tempBookId == null ? 'Chapter' : _tempBookName,
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      selected: _tab == 'chapter',
+                      onSelected: _tempBookId == null ? null : (val) {
+                        if (val) setState(() => _tab = 'chapter');
+                      },
+                      showCheckmark: false,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: ChoiceChip(
+                      label: Center(
+                        child: Text(
+                          _tempChapter == null ? 'Verse' : 'Ch $_tempChapter',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      selected: _tab == 'verse',
+                      onSelected: (_tempBookId == null || _tempChapter == null) ? null : (val) {
+                        if (val) setState(() => _tab = 'verse');
+                      },
+                      showCheckmark: false,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (_tab == 'book')
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search books...',
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onChanged: (val) => setState(() => _bookFilter = val),
+                ),
+              ),
+            Expanded(
+              child: _tab == 'book'
+                  ? _buildBookSelector(filteredOt, filteredNt, colorScheme)
+                  : _tab == 'chapter'
+                      ? _buildChapterSelector(colorScheme)
+                      : _buildVerseSelector(colorScheme),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBookSelector(List<BibleBook> ot, List<BibleBook> nt, ColorScheme colorScheme) {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      children: [
+        if (ot.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 8),
+            child: Text(
+              'OLD TESTAMENT',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.0,
+                color: colorScheme.primary,
+              ),
+            ),
+          ),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 2.8,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+            itemCount: ot.length,
+            itemBuilder: (context, i) {
+              final b = ot[i];
+              final isSelected = b.id == _tempBookId;
+              return InkWell(
+                onTap: () => _selectBook(b),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isSelected ? colorScheme.primary : colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isSelected ? colorScheme.primary : colorScheme.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    b.name,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (nt.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 8),
+            child: Text(
+              'NEW TESTAMENT',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.0,
+                color: colorScheme.primary,
+              ),
+            ),
+          ),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 2.8,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+            itemCount: nt.length,
+            itemBuilder: (context, i) {
+              final b = nt[i];
+              final isSelected = b.id == _tempBookId;
+              return InkWell(
+                onTap: () => _selectBook(b),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isSelected ? colorScheme.primary : colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isSelected ? colorScheme.primary : colorScheme.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    b.name,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _selectBook(BibleBook b) async {
+    final chapters = await ref.read(bibleRepositoryProvider).getChapters(b.id);
+    setState(() {
+      _tempBookId = b.id;
+      _tempBookName = b.name;
+      _tempChapters = chapters;
+      _tempChapter = null;
+      _tempVerses = [];
+      _tab = 'chapter';
+    });
+  }
+
+  Future<void> _selectChapter(int ch) async {
+    final verses = await ref.read(bibleRepositoryProvider).getVerses(_tempBookId!, ch);
+    if (mounted) {
+      setState(() {
+        _tempChapter = ch;
+        _tempVerses = verses.map((v) => v.verse).toList();
+        _tab = 'verse';
+      });
+    }
+  }
+
+  Widget _buildChapterSelector(ColorScheme colorScheme) {
+    if (_tempBookId == null) {
+      return const Center(child: Text('Please select a book first'));
+    }
+
+    final displayChapters = _tempChapters.isNotEmpty
+        ? _tempChapters
+        : List.generate(50, (index) => index + 1);
+
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 5,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+      ),
+      itemCount: displayChapters.length,
+      itemBuilder: (context, i) {
+        final ch = displayChapters[i];
+        return InkWell(
+          onTap: () => _selectChapter(ch),
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '$ch',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: colorScheme.primary,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildVerseSelector(ColorScheme colorScheme) {
+    if (_tempBookId == null || _tempChapter == null) {
+      return const Center(child: Text('Please select book and chapter first'));
+    }
+
+    final displayVerses = _tempVerses.isNotEmpty
+        ? _tempVerses
+        : List.generate(50, (index) => index + 1);
+
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 5,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+      ),
+      itemCount: displayVerses.length,
+      itemBuilder: (context, i) {
+        final v = displayVerses[i];
+        return InkWell(
+          onTap: () {
+            ref.read(bibleControllerProvider.notifier).navigateToVerse(_tempBookId!, _tempChapter!, v);
+            Navigator.pop(context);
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '$v',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: colorScheme.primary,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
