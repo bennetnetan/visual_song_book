@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,20 +26,24 @@ class MainDashboardPage extends ConsumerWidget {
     final activeTab = ref.watch(activeDashboardTabProvider);
     final isExpanded = ref.watch(isSidebarExpandedProvider);
     final isLargeScreen = MediaQuery.of(context).size.width >= 900;
+    final isMobilePlatform = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+    final hideProjection = isMobilePlatform || !isLargeScreen;
 
-    int getMobileSelectedIndex(int tabIdx) {
+    int getSelectedIndex(int tabIdx) {
+      if (!hideProjection) return tabIdx;
       if (tabIdx <= 3) return tabIdx;
       if (tabIdx == 5) return 4;
       return 0;
     }
 
-    int getActualTabIndexFromMobile(int mobileIdx) {
-      if (mobileIdx <= 3) return mobileIdx;
-      if (mobileIdx == 4) return 5;
+    int getActualTabIndex(int selectedIdx) {
+      if (!hideProjection) return selectedIdx;
+      if (selectedIdx <= 3) return selectedIdx;
+      if (selectedIdx == 4) return 5;
       return 0;
     }
 
-    if (!isLargeScreen && activeTab == 4) {
+    if (hideProjection && activeTab == 4) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(activeDashboardTabProvider.notifier).state = 0;
       });
@@ -107,7 +113,7 @@ class MainDashboardPage extends ConsumerWidget {
           if (isLargeScreen) ...[
             NavigationRail(
               extended: isExpanded,
-              selectedIndex: activeTab,
+              selectedIndex: getSelectedIndex(activeTab),
               labelType: isExpanded
                   ? NavigationRailLabelType.none
                   : NavigationRailLabelType.all,
@@ -149,35 +155,36 @@ class MainDashboardPage extends ConsumerWidget {
                 ),
               ),
               onDestinationSelected: (index) {
-                ref.read(activeDashboardTabProvider.notifier).state = index;
+                ref.read(activeDashboardTabProvider.notifier).state = getActualTabIndex(index);
               },
-              destinations: const [
-                NavigationRailDestination(
+              destinations: [
+                const NavigationRailDestination(
                   icon: Icon(Icons.music_note_outlined),
                   selectedIcon: Icon(Icons.music_note),
                   label: Text('Songs'),
                 ),
-                NavigationRailDestination(
+                const NavigationRailDestination(
                   icon: Icon(Icons.playlist_add_check_outlined),
                   selectedIcon: Icon(Icons.playlist_add_check),
                   label: Text('Sets'),
                 ),
-                NavigationRailDestination(
+                const NavigationRailDestination(
                   icon: Icon(Icons.menu_book_outlined),
                   selectedIcon: Icon(Icons.menu_book),
                   label: Text('Bible'),
                 ),
-                NavigationRailDestination(
+                const NavigationRailDestination(
                   icon: Icon(Icons.history_outlined),
                   selectedIcon: Icon(Icons.history),
                   label: Text('History'),
                 ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.tv_outlined),
-                  selectedIcon: Icon(Icons.tv),
-                  label: Text('Projection'),
-                ),
-                NavigationRailDestination(
+                if (!hideProjection)
+                  const NavigationRailDestination(
+                    icon: Icon(Icons.tv_outlined),
+                    selectedIcon: Icon(Icons.tv),
+                    label: Text('Projection'),
+                  ),
+                const NavigationRailDestination(
                   icon: Icon(Icons.settings_outlined),
                   selectedIcon: Icon(Icons.settings),
                   label: Text('Settings'),
@@ -191,32 +198,38 @@ class MainDashboardPage extends ConsumerWidget {
       ),
       bottomNavigationBar: !isLargeScreen
           ? NavigationBar(
-              selectedIndex: getMobileSelectedIndex(activeTab),
+              selectedIndex: getSelectedIndex(activeTab),
               onDestinationSelected: (index) {
-                ref.read(activeDashboardTabProvider.notifier).state = getActualTabIndexFromMobile(index);
+                ref.read(activeDashboardTabProvider.notifier).state = getActualTabIndex(index);
               },
-              destinations: const [
-                NavigationDestination(
+              destinations: [
+                const NavigationDestination(
                   icon: Icon(Icons.music_note_outlined),
                   selectedIcon: Icon(Icons.music_note),
                   label: 'Songs',
                 ),
-                NavigationDestination(
+                const NavigationDestination(
                   icon: Icon(Icons.playlist_add_check_outlined),
                   selectedIcon: Icon(Icons.playlist_add_check),
                   label: 'Sets',
                 ),
-                NavigationDestination(
+                const NavigationDestination(
                   icon: Icon(Icons.menu_book_outlined),
                   selectedIcon: Icon(Icons.menu_book),
                   label: 'Bible',
                 ),
-                NavigationDestination(
+                const NavigationDestination(
                   icon: Icon(Icons.history_outlined),
                   selectedIcon: Icon(Icons.history),
                   label: 'History',
                 ),
-                NavigationDestination(
+                if (!hideProjection)
+                  const NavigationDestination(
+                    icon: Icon(Icons.tv_outlined),
+                    selectedIcon: Icon(Icons.tv),
+                    label: 'Projection',
+                  ),
+                const NavigationDestination(
                   icon: Icon(Icons.settings_outlined),
                   selectedIcon: Icon(Icons.settings),
                   label: 'Settings',
