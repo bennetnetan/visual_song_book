@@ -494,17 +494,20 @@ class AboutCard extends StatelessWidget {
                   height: 64,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
-                    gradient: LinearGradient(
-                      colors: [
-                        theme.colorScheme.primary,
-                        theme.colorScheme.primary.withValues(alpha: 0.7),
-                      ],
-                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.colorScheme.shadow.withValues(alpha: 0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  child: const Icon(
-                    Icons.auto_stories,
-                    color: Colors.white,
-                    size: 32,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -518,7 +521,7 @@ class AboutCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Chip(
                   label: Text(
-                    'v1.4.0',
+                    'v1.4.1',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -540,6 +543,88 @@ class AboutCard extends StatelessWidget {
               height: 1.5,
             ),
             textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          Divider(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+          const SizedBox(height: 16),
+          Text(
+            'CHANGELOG',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.0,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildChangelogItem(
+            context,
+            'Inline Song Preview',
+            'Preview song lyrics directly in the song list without opening another view.',
+          ),
+          _buildChangelogItem(
+            context,
+            'Creative Verse Timeline',
+            'Subtle verse and slide progress timeline indicator at the bottom of projection output screens.',
+          ),
+          _buildChangelogItem(
+            context,
+            'Sets Reorder Hint',
+            'Visual guidance in the service sets screen for reordering songs via drag handle.',
+          ),
+          _buildChangelogItem(
+            context,
+            'Full-color Branding',
+            'Replaced standard/generic icons with the premium full-color app icon logo throughout the app.',
+          ),
+          _buildChangelogItem(
+            context,
+            'Mobile Optimization',
+            'Cleaned up Bible book pickers and hid desktop-only projection tabs for a cleaner mobile interface.',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChangelogItem(BuildContext context, String title, String description) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 5.0, right: 8.0),
+            child: Container(
+              width: 5,
+              height: 5,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: theme.colorScheme.onSurface,
+                ),
+                children: [
+                  TextSpan(
+                    text: '$title: ',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  TextSpan(
+                    text: description,
+                    style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),

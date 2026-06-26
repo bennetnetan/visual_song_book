@@ -79,7 +79,6 @@ class MainDashboardPage extends ConsumerWidget {
                           'assets/images/logo.png',
                           width: 24,
                           height: 24,
-                          color: Theme.of(context).colorScheme.onPrimaryContainer,
                         ),
                       ),
                     ),
