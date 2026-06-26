@@ -438,19 +438,26 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                   ),
                 ),
 
-              // Slide indicator dots at the bottom — subtle, only shows on hover
+              // Slide indicator dots or timeline at the bottom — subtle, always visible at low opacity on main controls
               if (state.slides.isNotEmpty)
                 Positioned(
-                  bottom: _isSecondaryWindow ? 96 : 20,
+                  bottom: _isSecondaryWindow ? 96 : 14,
                   left: 0,
                   right: 0,
                   child: AnimatedOpacity(
-                    opacity: _isHovering ? 0.4 : 0.0,
+                    opacity: _isSecondaryWindow
+                        ? (_isHovering ? 0.4 : 0.0)
+                        : (_isHovering ? 0.65 : 0.18),
                     duration: const Duration(milliseconds: 300),
-                    child: _SlideIndicator(
-                      count: state.slides.length,
-                      current: state.currentSlideIndex,
-                    ),
+                    child: _isSecondaryWindow
+                        ? _SlideIndicator(
+                            count: state.slides.length,
+                            current: state.currentSlideIndex,
+                          )
+                        : _SlideTextTimeline(
+                            slides: state.slides,
+                            current: state.currentSlideIndex,
+                          ),
                   ),
                 ),
             ],
@@ -521,6 +528,73 @@ class _SlideIndicator extends StatelessWidget {
     );
   }
 }
+
+/// Creative horizontal timeline displaying short labels for verses/slides
+class _SlideTextTimeline extends StatelessWidget {
+  final List<dynamic> slides;
+  final int current;
+
+  const _SlideTextTimeline({required this.slides, required this.current});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(slides.length, (index) {
+          final isActive = index == current;
+          final slide = slides[index];
+
+          String shortLabel = slide.label;
+          if (shortLabel.toLowerCase().startsWith('verse')) {
+            final parts = shortLabel.split(' ');
+            shortLabel = parts.length > 1 ? 'V${parts[1]}' : 'Verse';
+          } else if (shortLabel.toLowerCase().startsWith('chorus')) {
+            shortLabel = 'Chorus';
+          } else if (shortLabel.toLowerCase().startsWith('refrain')) {
+            shortLabel = 'Ref';
+          } else {
+            // For Bible references, e.g. "Genesis 1:1" -> "v1" or "1"
+            final colonIdx = shortLabel.lastIndexOf(':');
+            if (colonIdx != -1) {
+              shortLabel = 'v${shortLabel.substring(colonIdx + 1)}';
+            }
+          }
+
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? const Color(0xFF00E5CC).withValues(alpha: 0.15)
+                  : Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: isActive
+                    ? const Color(0xFF00E5CC).withValues(alpha: 0.4)
+                    : Colors.white.withValues(alpha: 0.1),
+                width: 0.8,
+              ),
+            ),
+            child: Text(
+              shortLabel,
+              style: TextStyle(
+                color: isActive ? const Color(0xFF00E5CC) : Colors.white70,
+                fontSize: 11,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                letterSpacing: 0.5,
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
 
 /// Animated verse text with slide-up/fade transition and auto-fit to container size.
 class _VerseText extends StatelessWidget {
