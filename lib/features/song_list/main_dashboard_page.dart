@@ -62,28 +62,26 @@ class MainDashboardPage extends ConsumerWidget {
     return Scaffold(
       appBar: !isLargeScreen
           ? AppBar(
-              centerTitle: activeTab == 2,
+              centerTitle: false,
               title: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (activeTab == 0) ...[
-                      Hero(
-                      tag: 'app_logo',
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer,
-                          borderRadius: const BorderRadius.all(Radius.circular(10)),
-                        ),
-                        child: Image.asset(
-                          'assets/images/logo.png',
-                          width: 24,
-                          height: 24,
-                        ),
+                  Hero(
+                    tag: 'app_logo',
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: const BorderRadius.all(Radius.circular(10)),
+                      ),
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        width: 24,
+                        height: 24,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                  ],
+                  ),
+                  const SizedBox(width: 12),
                   Text(
                     currentTitle,
                     style: activeTab == 2
