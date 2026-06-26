@@ -28,10 +28,6 @@ class BibleTab extends ConsumerWidget {
     return Scaffold(
       body: !state.isLoaded
           ? const Center(child: CircularProgressIndicator())
-          : !isLargeScreen && state.selectedBookId == null
-          // Mobile: full-screen book picker when no book is selected
-          ? _BookPicker(books: state.books, onSelect: notifier.selectBook)
-          // Desktop layout or mobile with book selected
           : Row(
               children: [
           // Main reading area
@@ -167,61 +163,7 @@ class BibleTab extends ConsumerWidget {
   }
 }
 
-class _BookPicker extends StatelessWidget {
-  final List<BibleBook> books;
-  final ValueChanged<int> onSelect;
 
-  const _BookPicker({required this.books, required this.onSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-          child: Text(
-            'SELECT A BOOK',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.2,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-        ),
-        const Divider(height: 1),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            itemCount: books.length,
-            itemBuilder: (context, index) {
-              final book = books[index];
-              return Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => onSelect(book.id),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Text(
-                      book.name,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _SearchBar extends StatefulWidget {
   final String query;
@@ -410,7 +352,6 @@ class _ReadingViewState extends State<_ReadingView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isLargeScreen = MediaQuery.of(context).size.width >= 900;
 
     return Column(
       children: [
@@ -420,18 +361,7 @@ class _ReadingViewState extends State<_ReadingView> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
-                if (!isLargeScreen)
-                  Consumer(
-                    builder: (context, ref, child) {
-                      return IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: () {
-                          ref.read(bibleControllerProvider.notifier).clearSelection();
-                        },
-                        tooltip: 'Back to books',
-                      );
-                    },
-                  ),
+
                 Consumer(
                   builder: (context, ref, child) {
                     return IconButton(
