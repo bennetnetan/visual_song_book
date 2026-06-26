@@ -444,6 +444,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
           } else if (action == 'next') {
             nextSlide();
           }
+        } else if (call.method == 'secondary_window_closed') {
+          debugPrint('Secondary window reported closed.');
+          setSecondaryWindowOpen(false);
         } else if (call.method == 'secondary_window_ready') {
           debugPrint('Secondary window reported ready. Syncing current slide...');
           _syncSecondaryWindow();

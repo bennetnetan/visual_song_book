@@ -55,9 +55,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       _setupSecondaryWindowChannel();
       windowManager.addListener(this);
-      if (Platform.isLinux) {
-        windowManager.setPreventClose(true);
-      }
+      windowManager.setPreventClose(true);
     }
   }
 
@@ -82,6 +80,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
       if (call.method == 'update_slide') {
         if (!mounted) return null;
         setState(() {
+          _isClosing = false;
           if (call.arguments['text'] != null) _ipcText = call.arguments['text'] as String;
           if (call.arguments['label'] != null) _ipcLabel = call.arguments['label'] as String;
           if (call.arguments['isBible'] != null) _ipcIsBible = call.arguments['isBible'] as bool;
@@ -121,11 +120,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
 
   @override
   void onWindowClose() async {
-    if (Platform.isLinux) {
-      await _handleManualClose();
-    } else {
-      await windowManager.close();
-    }
+    await _handleManualClose();
   }
 
   void _handleClose() {
@@ -145,18 +140,15 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
       await windowManager.hide();
     } catch (_) {}
 
+    // Notify main window that secondary window is closed (hidden)
     try {
-      windowManager.removeListener(this);
+      final controllers = await WindowController.getAll();
+      final currentWindow = await WindowController.fromCurrentEngine();
+      for (final c in controllers) {
+        if (c.windowId == currentWindow.windowId) continue;
+        await c.invokeMethod('secondary_window_closed');
+      }
     } catch (_) {}
-
-    // Wait for the graphics pipeline/engine to finish pending render calls before close
-    await Future.delayed(const Duration(milliseconds: 200));
-
-    try {
-      await windowManager.close();
-    } catch (e) {
-      debugPrint('Error during manual close on Linux: $e');
-    }
   }
 
   @override
