@@ -25,6 +25,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
   double? _ipcFontSize;
   bool _isSecondaryWindow = false;
   late AnimationController _fadeController;
+  late final FocusNode _focusNode;
   bool _isClosing = false;
   bool _isHovering = false;
 
@@ -36,6 +37,8 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
   @override
   void initState() {
     super.initState();
+
+    _focusNode = FocusNode(debugLabel: 'ProjectionOutputFocus');
 
     _fadeController = AnimationController(
       vsync: this,
@@ -158,6 +161,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
 
   @override
   void dispose() {
+    _focusNode.dispose();
     _fadeController.dispose();
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -201,6 +205,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
       child: GestureDetector(
         // Tap left half = prev, tap right half = next (for mobile presenters)
         onTapUp: (details) {
+          _focusNode.requestFocus();
           if (!_isSecondaryWindow && state.slides.length > 1) {
             if (details.localPosition.dx < context.size!.width / 2) {
               notifier.prevSlide();
@@ -230,25 +235,44 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
             // Check horizontal swipe gesture threshold
             if (_panDeltaX.abs() > 60.0) {
               if (_panDeltaX < 0) {
-                notifier.nextSlide();
+                if (_isSecondaryWindow) {
+                  _sendNavigateToMain('next');
+                } else {
+                  notifier.nextSlide();
+                }
               } else {
-                notifier.prevSlide();
+                if (_isSecondaryWindow) {
+                  _sendNavigateToMain('prev');
+                } else {
+                  notifier.prevSlide();
+                }
               }
             }
           }
         },
         child: Focus(
+        focusNode: _focusNode,
         autofocus: true,
         onKeyEvent: (FocusNode node, KeyEvent event) {
           if (event is KeyDownEvent) {
             if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
                 event.logicalKey == LogicalKeyboardKey.arrowDown ||
+                event.logicalKey == LogicalKeyboardKey.pageDown ||
                 event.logicalKey == LogicalKeyboardKey.space) {
-              notifier.nextSlide();
+              if (_isSecondaryWindow) {
+                _sendNavigateToMain('next');
+              } else {
+                notifier.nextSlide();
+              }
               return KeyEventResult.handled;
             } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
-                event.logicalKey == LogicalKeyboardKey.arrowUp) {
-              notifier.prevSlide();
+                event.logicalKey == LogicalKeyboardKey.arrowUp ||
+                event.logicalKey == LogicalKeyboardKey.pageUp) {
+              if (_isSecondaryWindow) {
+                _sendNavigateToMain('prev');
+              } else {
+                notifier.prevSlide();
+              }
               return KeyEventResult.handled;
             } else if (event.logicalKey == LogicalKeyboardKey.escape) {
               _handleClose();
@@ -530,67 +554,131 @@ class _SlideIndicator extends StatelessWidget {
 }
 
 /// Creative horizontal timeline displaying short labels for verses/slides
-class _SlideTextTimeline extends StatelessWidget {
+class _SlideTextTimeline extends StatefulWidget {
   final List<dynamic> slides;
   final int current;
 
   const _SlideTextTimeline({required this.slides, required this.current});
 
   @override
+  State<_SlideTextTimeline> createState() => _SlideTextTimelineState();
+}
+
+class _SlideTextTimelineState extends State<_SlideTextTimeline> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SlideTextTimeline oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.current != widget.current) {
+      _scrollToCurrent();
+    }
+  }
+
+  void _scrollToCurrent() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+
+      const itemWidth = 80.0;
+      const horizontalMargin = 8.0; // 4.0 on left, 4.0 on right
+      const totalItemWidth = itemWidth + horizontalMargin;
+
+      // Center of the active item
+      final centerOfItem = (widget.current * totalItemWidth) + (totalItemWidth / 2);
+
+      // Get the width of the scroll view viewport
+      final double viewportWidth = _scrollController.position.viewportDimension;
+      final maxScroll = _scrollController.position.maxScrollExtent;
+
+      final targetOffset = (centerOfItem - (viewportWidth / 2)).clamp(0.0, maxScroll);
+
+      _scrollController.animateTo(
+        targetOffset,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(slides.length, (index) {
-          final isActive = index == current;
-          final slide = slides[index];
+    // Scroll to current on first build to center the initial slide
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrent());
 
-          String shortLabel = slide.label;
-          if (shortLabel.toLowerCase().startsWith('verse')) {
-            final parts = shortLabel.split(' ');
-            shortLabel = parts.length > 1 ? 'V${parts[1]}' : 'Verse';
-          } else if (shortLabel.toLowerCase().startsWith('chorus')) {
-            shortLabel = 'Chorus';
-          } else if (shortLabel.toLowerCase().startsWith('refrain')) {
-            shortLabel = 'Ref';
-          } else {
-            // For Bible references, e.g. "Genesis 1:1" -> "v1" or "1"
-            final colonIdx = shortLabel.lastIndexOf(':');
-            if (colonIdx != -1) {
-              shortLabel = 'v${shortLabel.substring(colonIdx + 1)}';
-            }
-          }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const itemWidth = 80.0;
+        const totalItemWidth = 88.0; // 80 + 8
+        final double horizontalPadding = (constraints.maxWidth - totalItemWidth) / 2;
 
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: isActive
-                  ? const Color(0xFF00E5CC).withValues(alpha: 0.15)
-                  : Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: isActive
-                    ? const Color(0xFF00E5CC).withValues(alpha: 0.4)
-                    : Colors.white.withValues(alpha: 0.1),
-                width: 0.8,
-              ),
-            ),
-            child: Text(
-              shortLabel,
-              style: TextStyle(
-                color: isActive ? const Color(0xFF00E5CC) : Colors.white70,
-                fontSize: 11,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                letterSpacing: 0.5,
-              ),
-            ),
-          );
-        }),
-      ),
+        return SingleChildScrollView(
+          controller: _scrollController,
+          scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding > 0 ? horizontalPadding : 32.0,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(widget.slides.length, (index) {
+              final isActive = index == widget.current;
+              final slide = widget.slides[index];
+
+              String shortLabel = slide.label;
+              if (shortLabel.toLowerCase().startsWith('verse')) {
+                final parts = shortLabel.split(' ');
+                shortLabel = parts.length > 1 ? 'V${parts[1]}' : 'Verse';
+              } else if (shortLabel.toLowerCase().startsWith('chorus')) {
+                shortLabel = 'Chorus';
+              } else if (shortLabel.toLowerCase().startsWith('refrain')) {
+                shortLabel = 'Ref';
+              } else {
+                // For Bible references, e.g. "Genesis 1:1" -> "v1" or "1"
+                final colonIdx = shortLabel.lastIndexOf(':');
+                if (colonIdx != -1) {
+                  shortLabel = 'v${shortLabel.substring(colonIdx + 1)}';
+                }
+              }
+
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                width: itemWidth,
+                height: 28,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? const Color(0xFF00E5CC).withValues(alpha: 0.15)
+                      : Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: isActive
+                        ? const Color(0xFF00E5CC).withValues(alpha: 0.4)
+                        : Colors.white.withValues(alpha: 0.1),
+                    width: 0.8,
+                  ),
+                ),
+                child: Text(
+                  shortLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: isActive ? const Color(0xFF00E5CC) : Colors.white70,
+                    fontSize: 11,
+                    fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              );
+            }),
+          ),
+        );
+      },
     );
   }
 }
