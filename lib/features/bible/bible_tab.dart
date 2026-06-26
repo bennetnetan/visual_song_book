@@ -25,137 +25,142 @@ class BibleTab extends ConsumerWidget {
     final state = ref.watch(bibleControllerProvider);
     final notifier = ref.read(bibleControllerProvider.notifier);
 
-    return Scaffold(
-      body: !state.isLoaded
-          ? const Center(child: CircularProgressIndicator())
-          : Row(
-              children: [
-          // Main reading area
-                Expanded(
-                  child: Column(
+    if (!state.isLoaded) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Row(
+      children: [
+        // Main reading area
+        Expanded(
+          child: Column(
+            children: [
+              // Search bar
+              _SearchBar(
+                query: state.query,
+                onChanged: notifier.search,
+                onFocusChange: (focused) =>
+                    ref.read(_searchBarFocusedProvider.notifier).state = focused,
+              ),
+              // Suggested searches when search bar is focused and empty
+              if (ref.watch(_searchBarFocusedProvider) && state.query.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      // Search bar
-                      _SearchBar(
-                        query: state.query,
-                        onChanged: notifier.search,
-                        onFocusChange: (focused) =>
-                            ref.read(_searchBarFocusedProvider.notifier).state = focused,
-                      ),
-                      // Suggested searches when search bar is focused and empty
-                      if (ref.watch(_searchBarFocusedProvider) && state.query.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              _buildSuggestionChip('Salvation', notifier),
-                              _buildSuggestionChip('Love', notifier),
-                              _buildSuggestionChip('Eternal Life', notifier),
-                              _buildSuggestionChip('Faith', notifier),
-                              _buildSuggestionChip('Grace', notifier),
-                              _buildSuggestionChip('Peace', notifier),
-                              _buildSuggestionChip('Gen 1:1', notifier),
-                              _buildSuggestionChip('Jn 3:16', notifier),
-                              _buildSuggestionChip('Ps 23:1', notifier),
-                              _buildSuggestionChip('Rev 2:1', notifier),
-                            ],
-                          ),
-                        ),
-                      // Content area
-                      Expanded(
-                        child: state.searchResults.isNotEmpty || state.exactMatch != null || state.query.isNotEmpty
-                            ? _SearchResultsView(
-                                results: state.searchResults,
-                                exactMatch: state.exactMatch,
-                                onSelectExact: () {
-                                  final v = state.exactMatch;
-                                  if (v != null) {
-                                    ref
-                                        .read(bibleControllerProvider.notifier)
-                                        .navigateToVerse(v.bookId, v.chapter, v.verse);
-                                    ref
-                                        .read(bibleControllerProvider.notifier)
-                                        .clearSearch();
-                                  }
-                                },
-                                onProject: (v) async {
-                                  await ref
-                                      .read(projectionControllerProvider.notifier)
-                                      .projectVerse(v.bookId, v.chapter, v.verse, v.bookName ?? '');
-                                  if (!context.mounted) return;
-                                  ref
-                                      .read(setRepositoryProvider)
-                                      .recordBibleProjection(v.reference, v.text);
-                                  await ref
-                                      .read(projectionControllerProvider.notifier)
-                                      .triggerProjection(context, isLargeScreen);
-                                },
-                                onLoadMore: () => ref.read(bibleControllerProvider.notifier).loadMore(),
-                              )
-                            : state.selectedBookId == null
-                            ? _EmptyReadingView()
-                            : _ReadingView(
-                                verses: state.verses,
-                                selectedChapter: state.selectedChapter,
-                                bookName: state.books
-                                    .where((b) => b.id == state.selectedBookId)
-                                    .firstOrNull?.name ?? '',
-                                onProjectPassage: (chapter, verses) async {
-                                  final v = verses.first;
-                                  final bookName = state.books
-                                      .where((b) => b.id == state.selectedBookId)
-                                      .firstOrNull?.name ?? '';
-                                  await ref
-                                      .read(projectionControllerProvider.notifier)
-                                      .projectVerse(v.bookId, v.chapter, v.verse, bookName);
-                                  if (!context.mounted) return;
-                                  ref
-                                      .read(setRepositoryProvider)
-                                      .recordBibleProjection(v.reference, v.text);
-                                  await ref
-                                      .read(projectionControllerProvider.notifier)
-                                      .triggerProjection(context, isLargeScreen);
-                                },
-                                onToggleBookmark: (v) {
-                                  final setRepo = ref.read(setRepositoryProvider);
-                                  setRepo.isBookmarked(v.bookId, v.chapter, v.verse).then((isMarked) {
-                                    if (isMarked) {
-                                      setRepo.getBookmarks().then((marks) {
-                                        final existing = marks.firstWhere(
-                                          (m) => m.bookId == v.bookId && m.chapter == v.chapter && m.verseNum == v.verse,
-                                          orElse: () => BibleBookmark(id: -1, bookId: 0, chapter: 0, verseNum: 0, reference: '', verseText: '', bookName: '', createdAt: DateTime.now()),
-                                        );
-                                        if (existing.id != -1) setRepo.removeBookmark(existing.id);
-                                      });
-                                    } else {
-                                      setRepo.addBookmark(
-                                        v.bookId, v.chapter, v.verse,
-                                        v.reference, v.text, v.bookName ?? '',
-                                      );
-                                    }
-                                  });
-                                },
-                                activeVerse: state.activeVerse,
-                                onSelectVerse: notifier.selectVerse,
-                              ),
-                      ),
+                      _buildSuggestionChip('Salvation', notifier),
+                      _buildSuggestionChip('Love', notifier),
+                      _buildSuggestionChip('Eternal Life', notifier),
+                      _buildSuggestionChip('Faith', notifier),
+                      _buildSuggestionChip('Grace', notifier),
+                      _buildSuggestionChip('Peace', notifier),
+                      _buildSuggestionChip('Gen 1:1', notifier),
+                      _buildSuggestionChip('Jn 3:16', notifier),
+                      _buildSuggestionChip('Ps 23:1', notifier),
+                      _buildSuggestionChip('Rev 2:1', notifier),
                     ],
                   ),
                 ),
-                // Right sidebar - cross references & bookmarks (desktop only)
-                if (isLargeScreen) ...[                  const VerticalDivider(width: 1, thickness: 1),
-                  const _RightSidebar(),
-                ],
-              ],
-            ),
+              // Content area
+              Expanded(
+                child: state.searchResults.isNotEmpty || state.exactMatch != null || state.query.isNotEmpty
+                    ? _SearchResultsView(
+                        results: state.searchResults,
+                        exactMatch: state.exactMatch,
+                        onSelectExact: () {
+                          final v = state.exactMatch;
+                          if (v != null) {
+                            ref
+                                .read(bibleControllerProvider.notifier)
+                                .navigateToVerse(v.bookId, v.chapter, v.verse);
+                            ref
+                                .read(bibleControllerProvider.notifier)
+                                .clearSearch();
+                            FocusManager.instance.primaryFocus?.unfocus();
+                          }
+                        },
+                        onProject: (v) async {
+                          await ref
+                              .read(projectionControllerProvider.notifier)
+                              .projectVerse(v.bookId, v.chapter, v.verse, v.bookName ?? '');
+                          if (!context.mounted) return;
+                          ref
+                              .read(setRepositoryProvider)
+                              .recordBibleProjection(v.reference, v.text);
+                          await ref
+                              .read(projectionControllerProvider.notifier)
+                              .triggerProjection(context, isLargeScreen);
+                        },
+                        onLoadMore: () => ref.read(bibleControllerProvider.notifier).loadMore(),
+                      )
+                    : state.selectedBookId == null
+                    ? _EmptyReadingView()
+                    : _ReadingView(
+                        verses: state.verses,
+                        selectedChapter: state.selectedChapter,
+                        bookName: state.books
+                            .where((b) => b.id == state.selectedBookId)
+                            .firstOrNull?.name ?? '',
+                        onProjectPassage: (chapter, verses) async {
+                          final v = verses.first;
+                          final bookName = state.books
+                              .where((b) => b.id == state.selectedBookId)
+                              .firstOrNull?.name ?? '';
+                          await ref
+                              .read(projectionControllerProvider.notifier)
+                              .projectVerse(v.bookId, v.chapter, v.verse, bookName);
+                          if (!context.mounted) return;
+                          ref
+                              .read(setRepositoryProvider)
+                              .recordBibleProjection(v.reference, v.text);
+                          await ref
+                              .read(projectionControllerProvider.notifier)
+                              .triggerProjection(context, isLargeScreen);
+                        },
+                        onToggleBookmark: (v) {
+                          final setRepo = ref.read(setRepositoryProvider);
+                          setRepo.isBookmarked(v.bookId, v.chapter, v.verse).then((isMarked) {
+                            if (isMarked) {
+                              setRepo.getBookmarks().then((marks) {
+                                final existing = marks.firstWhere(
+                                  (m) => m.bookId == v.bookId && m.chapter == v.chapter && m.verseNum == v.verse,
+                                  orElse: () => BibleBookmark(id: -1, bookId: 0, chapter: 0, verseNum: 0, reference: '', verseText: '', bookName: '', createdAt: DateTime.now()),
+                                );
+                                if (existing.id != -1) setRepo.removeBookmark(existing.id);
+                              });
+                            } else {
+                              setRepo.addBookmark(
+                                v.bookId, v.chapter, v.verse,
+                                v.reference, v.text, v.bookName ?? '',
+                              );
+                            }
+                          });
+                        },
+                        activeVerse: state.activeVerse,
+                        onSelectVerse: notifier.selectVerse,
+                      ),
+              ),
+            ],
+          ),
+        ),
+        // Right sidebar - cross references & bookmarks (desktop only)
+        if (isLargeScreen) ...[
+          const VerticalDivider(width: 1, thickness: 1),
+          const _RightSidebar(),
+        ],
+      ],
     );
   }
 
   Widget _buildSuggestionChip(String label, BibleController notifier) {
     return ActionChip(
       label: Text(label, style: const TextStyle(fontSize: 12, fontFamily: 'Inter')),
-      onPressed: () => notifier.search(label),
+      onPressed: () {
+        notifier.search(label);
+        FocusManager.instance.primaryFocus?.unfocus();
+      },
       padding: const EdgeInsets.symmetric(horizontal: 4),
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       visualDensity: VisualDensity.compact,
@@ -230,6 +235,8 @@ class _SearchBarState extends State<_SearchBar> {
                 controller: _controller,
                 focusNode: _focusNode,
                 onChanged: widget.onChanged,
+                onSubmitted: (_) => _focusNode.unfocus(),
+                textInputAction: TextInputAction.search,
                 style: GoogleFonts.inter(fontSize: 16),
                 decoration: InputDecoration(
                   hintText: 'Search verses, keywords...',
@@ -300,6 +307,7 @@ class _ReadingView extends StatefulWidget {
 
 class _ReadingViewState extends State<_ReadingView> {
   final _scrollController = ScrollController();
+  final _activeVerseKey = GlobalKey();
 
   @override
   void initState() {
@@ -318,18 +326,29 @@ class _ReadingViewState extends State<_ReadingView> {
   void _scheduleScrollToActive() {
     final v = widget.activeVerse;
     if (v == null) return;
-    final index = widget.verses.indexWhere((verse) => verse.id == v.id);
-    if (index < 0) return;
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
-      const itemHeight = 60.0;
-      final viewportHeight = _scrollController.position.viewportDimension;
-      final targetOffset = (index * itemHeight) - (viewportHeight * 0.3);
-      _scrollController.animateTo(
-        targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      
+      final currentContext = _activeVerseKey.currentContext;
+      if (currentContext != null) {
+        Scrollable.ensureVisible(
+          currentContext,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        final index = widget.verses.indexWhere((verse) => verse.id == v.id);
+        if (index < 0) return;
+        const itemHeight = 60.0;
+        final viewportHeight = _scrollController.position.viewportDimension;
+        final targetOffset = (index * itemHeight) - (viewportHeight * 0.3);
+        _scrollController.animateTo(
+          targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
     });
   }
 
@@ -418,8 +437,9 @@ class _ReadingViewState extends State<_ReadingView> {
                   child: Text('Select a chapter', style: TextStyle(color: colorScheme.onSurfaceVariant)),
                 )
               : ListView.builder(
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                   controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(context).padding.bottom + 24),
                   itemCount: _totalItemCount,
                   itemBuilder: (context, index) {
                     // Verse items
@@ -427,6 +447,7 @@ class _ReadingViewState extends State<_ReadingView> {
                       final v = widget.verses[index];
                       final isActive = widget.activeVerse?.id == v.id;
                       return Container(
+                        key: isActive ? _activeVerseKey : null,
                         color: isActive
                             ? colorScheme.primaryContainer.withValues(alpha: 0.3)
                             : Colors.transparent,
@@ -597,7 +618,8 @@ class _SearchResultsView extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: EdgeInsets.fromLTRB(24, 10, 24, MediaQuery.of(context).padding.bottom + 24),
       children: [
         if (exactMatch != null) ...[
           Container(
@@ -926,7 +948,10 @@ class _RightSidebar extends ConsumerWidget {
                 ...state.activeCrossReferences.take(5).map((cr) => Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: InkWell(
-                        onTap: () => notifier.navigateToVerse(cr.toBookId, cr.toChapter, cr.toVerseStart),
+                        onTap: () {
+                          notifier.navigateToVerse(cr.toBookId, cr.toChapter, cr.toVerseStart);
+                          FocusManager.instance.primaryFocus?.unfocus();
+                        },
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -1075,6 +1100,7 @@ class _InlineCrossReferences extends ConsumerWidget {
                 side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
                 onPressed: () {
                   notifier.navigateToVerse(cr.toBookId, cr.toChapter, cr.toVerseStart);
+                  FocusManager.instance.primaryFocus?.unfocus();
                 },
               );
             }).toList(),
