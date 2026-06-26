@@ -165,6 +165,7 @@ class _SetDetailState extends ConsumerState<SetDetail> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final itemSongIds = widget.items.map((i) => i.songId).toSet();
+    final isLargeScreen = MediaQuery.of(context).size.width >= 900;
 
     final query = _searchQuery.trim().toLowerCase();
     final filteredSongs = widget.availableSongs.where((song) {
@@ -175,263 +176,334 @@ class _SetDetailState extends ConsumerState<SetDetail> {
           song.body.toLowerCase().contains(query);
     }).toList();
 
+    final titleWidget = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: Text(
+            widget.setObj.name,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Outfit',
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.edit_outlined, size: 16),
+          tooltip: 'Rename Set',
+          onPressed: () => _showRenameDialog(context),
+          constraints: const BoxConstraints(),
+          padding: const EdgeInsets.only(left: 8),
+        ),
+      ],
+    );
+
+    final subtitleWidget = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (widget.setObj.occasion != null && widget.setObj.occasion!.isNotEmpty) ...[
+          Text(
+            widget.setObj.occasion!,
+            style: TextStyle(
+              color: theme.colorScheme.primary,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 1),
+        ],
+        Text(
+          '${widget.items.length} songs',
+          style: TextStyle(
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+
+    final songsInSetColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (isLargeScreen)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text(
+              'Songs in Set',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        Expanded(
+          child: widget.items.isEmpty
+              ? Center(
+                  child: Text(
+                    'No songs yet',
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                    ),
+                  ),
+                )
+              : ReorderableListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  itemCount: widget.items.length,
+                  onReorder: (oldIndex, newIndex) {
+                    ref.read(setsControllerProvider.notifier).reorderSongs(
+                      widget.selectedSetId,
+                      oldIndex,
+                      newIndex,
+                    );
+                  },
+                  itemBuilder: (context, index) {
+                    final item = widget.items[index];
+                    final song = widget.availableSongs
+                        .where((s) => s.id == item.songId)
+                        .firstOrNull;
+                    return Card(
+                      key: ValueKey(item.id),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                      child: ListTile(
+                        dense: true,
+                        leading: Text(
+                          '${index + 1}',
+                          style: TextStyle(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        title: Text(
+                          song?.title ?? 'Unknown',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                        ),
+                        subtitle: song != null
+                            ? Text(
+                                'Song ${song.songNum}',
+                                style: const TextStyle(fontSize: 11),
+                              )
+                            : null,
+                        trailing: IconButton(
+                          icon: Icon(
+                            Icons.remove_circle_outline,
+                            size: 18,
+                            color: theme.colorScheme.error.withValues(alpha: 0.7),
+                          ),
+                          onPressed: () => widget.onRemoveSong(item.songId),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+
+    final allSongsColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (isLargeScreen)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Text(
+              'All Songs',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search title, number, lyrics...',
+              prefixIcon: const Icon(Icons.search, size: 18),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 16),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                      constraints: const BoxConstraints(),
+                      padding: EdgeInsets.zero,
+                    )
+                  : null,
+            ),
+            style: theme.textTheme.bodyMedium,
+            onChanged: (val) => setState(() => _searchQuery = val),
+          ),
+        ),
+        Expanded(
+          child: filteredSongs.isEmpty
+              ? Center(
+                  child: Text(
+                    'No matching songs',
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  itemCount: filteredSongs.length,
+                  itemBuilder: (context, index) {
+                    final song = filteredSongs[index];
+                    final inSet = itemSongIds.contains(song.id);
+                    return Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                      child: ListTile(
+                        dense: true,
+                        title: Text(
+                          song.title,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                        ),
+                        subtitle: Text(
+                          'Song ${song.songNum}',
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                        trailing: inSet
+                            ? Icon(
+                                Icons.check,
+                                size: 18,
+                                color: theme.colorScheme.primary,
+                              )
+                            : IconButton(
+                                icon: const Icon(
+                                  Icons.add_circle_outline,
+                                  size: 18,
+                                ),
+                                onPressed: () => widget.onAddSong(song.id),
+                              ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+
+    final headerPadding = isLargeScreen
+        ? const EdgeInsets.symmetric(horizontal: 20, vertical: 16)
+        : const EdgeInsets.symmetric(horizontal: 16, vertical: 12);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: headerPadding,
           child: Row(
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            widget.setObj.name,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Outfit',
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined, size: 16),
-                          tooltip: 'Rename Set',
-                          onPressed: () => _showRenameDialog(context),
-                          constraints: const BoxConstraints(),
-                          padding: const EdgeInsets.only(left: 8),
-                        ),
-                      ],
-                    ),
+                    titleWidget,
                     const SizedBox(height: 2),
-                    if (widget.setObj.occasion != null && widget.setObj.occasion!.isNotEmpty)
-                      Text(
-                        widget.setObj.occasion!,
-                        style: TextStyle(
-                          color: theme.colorScheme.primary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    Text(
-                      '${widget.items.length} songs',
-                      style: TextStyle(
-                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                        fontSize: 12,
-                      ),
-                    ),
+                    subtitleWidget,
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.share_outlined),
-                tooltip: 'Share Set',
-                onPressed: widget.items.isEmpty ? null : () => _showShareMenu(context),
-              ),
-              const SizedBox(width: 8),
-              FilledButton.tonalIcon(
-                icon: const Icon(Icons.tv, size: 18),
-                label: const Text('Project All'),
-                onPressed: widget.items.isEmpty ? null : widget.onProject,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.share_outlined),
+                    tooltip: 'Share Set',
+                    onPressed: widget.items.isEmpty ? null : () => _showShareMenu(context),
+                  ),
+                  const SizedBox(width: 8),
+                  if (isLargeScreen)
+                    FilledButton.tonalIcon(
+                      icon: const Icon(Icons.tv, size: 18),
+                      label: const Text('Project All'),
+                      onPressed: widget.items.isEmpty ? null : widget.onProject,
+                    )
+                  else
+                    FilledButton.tonal(
+                      onPressed: widget.items.isEmpty ? null : widget.onProject,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.tv, size: 16),
+                          SizedBox(width: 6),
+                          Text(
+                            'Project',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
         ),
         const Divider(height: 1),
         Expanded(
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: isLargeScreen
+              ? Row(
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                      child: Text(
-                        'Songs in Set',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: widget.items.isEmpty
-                          ? Center(
-                              child: Text(
-                                'No songs yet',
-                                style: TextStyle(
-                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                                ),
-                              ),
-                            )
-                          : ReorderableListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              itemCount: widget.items.length,
-                              onReorder: (oldIndex, newIndex) {
-                                ref.read(setsControllerProvider.notifier).reorderSongs(
-                                  widget.selectedSetId,
-                                  oldIndex,
-                                  newIndex,
-                                );
-                              },
-                              itemBuilder: (context, index) {
-                                final item = widget.items[index];
-                                final song = widget.availableSongs
-                                    .where((s) => s.id == item.songId)
-                                    .firstOrNull;
-                                return Card(
-                                  key: ValueKey(item.id),
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    side: BorderSide(
-                                      color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-                                    ),
-                                  ),
-                                  margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                                  child: ListTile(
-                                    dense: true,
-                                    leading: Text(
-                                      '${index + 1}',
-                                      style: TextStyle(
-                                        color: theme.colorScheme.primary,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    title: Text(
-                                      song?.title ?? 'Unknown',
-                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                                    ),
-                                    subtitle: song != null
-                                        ? Text(
-                                            'Song ${song.songNum}',
-                                            style: const TextStyle(fontSize: 11),
-                                          )
-                                        : null,
-                                    trailing: IconButton(
-                                      icon: Icon(
-                                        Icons.remove_circle_outline,
-                                        size: 18,
-                                        color: theme.colorScheme.error.withValues(alpha: 0.7),
-                                      ),
-                                      onPressed: () => widget.onRemoveSong(item.songId),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
+                    Expanded(child: songsInSetColumn),
+                    const VerticalDivider(width: 1, thickness: 1),
+                    Expanded(child: allSongsColumn),
                   ],
-                ),
-              ),
-              const VerticalDivider(width: 1, thickness: 1),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                      child: Text(
-                        'All Songs',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurfaceVariant,
+                )
+              : DefaultTabController(
+                  length: 2,
+                  child: Column(
+                    children: [
+                      TabBar(
+                        tabs: const [
+                          Tab(text: 'Songs in Set'),
+                          Tab(text: 'Add Songs'),
+                        ],
+                        labelColor: theme.colorScheme.primary,
+                        unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
+                        indicatorColor: theme.colorScheme.primary,
+                      ),
+                      Expanded(
+                        child: TabBarView(
+                          children: [
+                            songsInSetColumn,
+                            allSongsColumn,
+                          ],
                         ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Search title, number, lyrics...',
-                          prefixIcon: const Icon(Icons.search, size: 18),
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear, size: 16),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _searchQuery = '');
-                                  },
-                                  constraints: const BoxConstraints(),
-                                  padding: EdgeInsets.zero,
-                                )
-                              : null,
-                        ),
-                        style: theme.textTheme.bodyMedium,
-                        onChanged: (val) => setState(() => _searchQuery = val),
-                      ),
-                    ),
-                    Expanded(
-                      child: filteredSongs.isEmpty
-                          ? Center(
-                              child: Text(
-                                'No matching songs',
-                                style: TextStyle(
-                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                                ),
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              itemCount: filteredSongs.length,
-                              itemBuilder: (context, index) {
-                                final song = filteredSongs[index];
-                                final inSet = itemSongIds.contains(song.id);
-                                return Card(
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    side: BorderSide(
-                                      color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-                                    ),
-                                  ),
-                                  margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                                  child: ListTile(
-                                    dense: true,
-                                    title: Text(
-                                      song.title,
-                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                                    ),
-                                    subtitle: Text(
-                                      'Song ${song.songNum}',
-                                      style: const TextStyle(fontSize: 11),
-                                    ),
-                                    trailing: inSet
-                                        ? Icon(
-                                            Icons.check,
-                                            size: 18,
-                                            color: theme.colorScheme.primary,
-                                          )
-                                        : IconButton(
-                                            icon: const Icon(
-                                              Icons.add_circle_outline,
-                                              size: 18,
-                                            ),
-                                            onPressed: () => widget.onAddSong(song.id),
-                                          ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
         ),
       ],
     );
