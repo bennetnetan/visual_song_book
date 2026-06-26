@@ -1,21 +1,24 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/repositories/set_repository.dart';
 import 'package:visual_song_book/data/repositories/song_repository.dart';
 
-enum HistoryTabType { songs, sets, bible }
+enum HistoryTabType { songs, sets, bible, bookmarks }
 
 class HistoryState {
   final List<Song> songs;
   final List<SetHistoryData> sets;
   final List<BibleHistoryData> bible;
+  final List<BibleBookmark> bookmarks;
   final bool isLoading;
 
   HistoryState({
     required this.songs,
     required this.sets,
     required this.bible,
+    required this.bookmarks,
     required this.isLoading,
   });
 
@@ -23,12 +26,14 @@ class HistoryState {
     List<Song>? songs,
     List<SetHistoryData>? sets,
     List<BibleHistoryData>? bible,
+    List<BibleBookmark>? bookmarks,
     bool? isLoading,
   }) {
     return HistoryState(
       songs: songs ?? this.songs,
       sets: sets ?? this.sets,
       bible: bible ?? this.bible,
+      bookmarks: bookmarks ?? this.bookmarks,
       isLoading: isLoading ?? this.isLoading,
     );
   }
@@ -37,14 +42,16 @@ class HistoryState {
 class HistoryController extends StateNotifier<HistoryState> {
   final SongRepository _songRepository;
   final SetRepository _setRepository;
+  StreamSubscription<List<Song>>? _songsSub;
+  StreamSubscription<List<BibleBookmark>>? _bookmarksSub;
 
   HistoryController(this._songRepository, this._setRepository)
-    : super(HistoryState(songs: [], sets: [], bible: [], isLoading: true)) {
+    : super(HistoryState(songs: [], sets: [], bible: [], bookmarks: [], isLoading: true)) {
     _init();
   }
 
   void _init() {
-    _songRepository.watchHistory().listen((historyList) {
+    _songsSub = _songRepository.watchHistory().listen((historyList) {
       state = state.copyWith(songs: historyList, isLoading: false);
     });
     _setRepository.getSetHistory().then((setHistory) {
@@ -52,6 +59,9 @@ class HistoryController extends StateNotifier<HistoryState> {
     });
     _setRepository.getBibleHistory().then((bibleHistory) {
       state = state.copyWith(bible: bibleHistory);
+    });
+    _bookmarksSub = _setRepository.watchBookmarks().listen((bookmarksList) {
+      state = state.copyWith(bookmarks: bookmarksList);
     });
   }
 
@@ -67,6 +77,13 @@ class HistoryController extends StateNotifier<HistoryState> {
   Future<void> clearBibleHistory() async {
     await _setRepository.clearBibleHistory();
     state = state.copyWith(bible: []);
+  }
+
+  @override
+  void dispose() {
+    _songsSub?.cancel();
+    _bookmarksSub?.cancel();
+    super.dispose();
   }
 }
 

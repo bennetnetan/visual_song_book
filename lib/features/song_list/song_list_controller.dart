@@ -1,12 +1,8 @@
 import 'dart:async';
-import 'dart:io';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
-import 'package:visual_song_book/data/importers/mdb_tools_importer.dart';
-import 'package:visual_song_book/data/importers/vsb_importer.dart';
+import 'package:visual_song_book/data/importers/bundled_json_importer.dart';
 import 'package:visual_song_book/data/repositories/song_repository.dart';
 
 enum SongSortMode { byNumber, byTitle, byKey }
@@ -82,8 +78,8 @@ class SongListController extends StateNotifier<SongListState> {
   }
 
   /// Automatically imports bundled default songbooks on first launch (empty DB).
-  /// Extracts each .vsb from Flutter assets to a temp file and imports via MdbToolsImporter.
-  /// On mobile/web (where mdb-tools is unavailable), this is silently skipped.
+  /// Uses pre-exported JSON files from Flutter assets — works on ALL platforms
+  /// (Android, iOS, desktop, web) without needing any external tools.
   Future<void> checkAndImportDefaultSongbooks({bool force = false}) async {
     try {
       // Only run when the database is completely empty, unless forced
@@ -92,54 +88,35 @@ class SongListController extends StateNotifier<SongListState> {
         if (songs.isNotEmpty) return;
       }
 
-      const bundledSongbooks = [
-        'assets/songbooks/Full Song Book.vsb',
-        'assets/songbooks/Injili Song Book.vsb',
+      const bundledBooks = [
+        {
+          'asset': 'assets/songbooks/data/full_song_book.json',
+          'name': 'Full Song Book',
+        },
+        {
+          'asset': 'assets/songbooks/data/injili_song_book.json',
+          'name': 'Injili Song Book',
+        },
       ];
 
-      final importer = MdbToolsImporter(_repository.db);
-
-      // MdbToolsImporter only works on desktop platforms with mdb-tools installed
-      final testSource = ImportSource.fromFile('test.vsb');
-      if (!importer.canImport(testSource)) return;
+      final importer = BundledJsonImporter(_repository.db);
 
       state = state.copyWith(
         isLoading: true,
         error: 'Loading default song books...',
       );
 
-      final tempDir = await getTemporaryDirectory();
       int totalImported = 0;
 
-      for (final assetPath in bundledSongbooks) {
+      for (final book in bundledBooks) {
         try {
-          // Load asset bytes
-          final byteData = await rootBundle.load(assetPath);
-          final bytes = byteData.buffer.asUint8List();
-
-          // Write to a temp file so MdbToolsImporter (which uses mdb-export CLI) can read it
-          final fileName = assetPath.split('/').last;
-          final tempFile = File('${tempDir.path}/$fileName');
-          await tempFile.writeAsBytes(bytes);
-
-          final source = ImportSource.fromFile(tempFile.path);
-          if (importer.canImport(source)) {
-            // Extract book name from asset path to use as category name
-            // e.g. "assets/songbooks/Injili Song Book.vsb" -> "Injili Song Book"
-            final bookName = fileName
-                .replaceAll('.vsb', '')
-                .replaceAll('.mdb', '');
-            final result = await importer.import(
-              source,
-              overrideCategoryName: bookName,
-            );
-            if (result.success) totalImported += result.songsImported;
-          }
-
-          // Clean up temp file
-          if (await tempFile.exists()) await tempFile.delete();
+          final result = await importer.importFromAsset(
+            book['asset']!,
+            bookName: book['name']!,
+          );
+          if (result.success) totalImported += result.songsAdded;
         } catch (_) {
-          // Skip individual files that fail — don't abort the whole process
+          // Skip individual books that fail — don't abort the whole process
         }
       }
 

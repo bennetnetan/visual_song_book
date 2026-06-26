@@ -1,49 +1,59 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:visual_song_book/core/widgets/neomorphic_widgets.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
+
+class SettingsCard extends StatelessWidget {
+  final Widget child;
+  const SettingsCard({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+        ),
+      ),
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: child,
+      ),
+    );
+  }
+}
 
 class SectionHeader extends StatelessWidget {
   final IconData icon;
   final String title;
-  final Color? iconColor;
-  final Color? accentColor;
+  final Color? color;
 
   const SectionHeader({
     super.key,
     required this.icon,
     required this.title,
-    this.iconColor,
-    this.accentColor,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final accentColor = color ?? theme.colorScheme.primary;
     return Row(
       children: [
         Container(
-          width: 4,
-          height: 32,
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: (accentColor ?? iconColor ?? theme.colorScheme.primary)
-                .withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(4),
+            color: accentColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
           ),
+          child: Icon(icon, color: accentColor, size: 22),
         ),
         const SizedBox(width: 16),
-        NeoPressedContainer(
-          padding: const EdgeInsets.all(8),
-          borderRadius: 999,
-          child: Icon(
-            icon,
-            color: iconColor ?? theme.colorScheme.primary,
-            size: 24,
-          ),
-        ),
-        const SizedBox(width: 12),
         Text(
           title,
           style: GoogleFonts.plusJakartaSans(
@@ -65,58 +75,84 @@ class ProjectionPreferencesCard extends ConsumerWidget {
     final notifier = ref.read(projectionControllerProvider.notifier);
     final theme = Theme.of(context);
 
-    return NeoRaisedCard(
+    return SettingsCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SectionHeader(
             icon: Icons.settings_overscan,
-            title: 'Projection Preferences',
-            accentColor: Colors.blue,
+            title: 'Projection Settings',
+            color: Colors.blue,
           ),
           const SizedBox(height: 24),
-          _PreferenceToggle(
-            title: 'Prevent Screen Sleep',
-            subtitle: 'Keeps the display awake',
+          SwitchListTile(
+            title: Text(
+              'Prevent Screen Sleep',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            subtitle: Text(
+              'Keep the display active during presentation',
+              style: GoogleFonts.plusJakartaSans(fontSize: 12),
+            ),
             value: state.keepAwake,
             onChanged: notifier.setKeepAwake,
+            contentPadding: EdgeInsets.zero,
           ),
-          const _Divider(),
-          _PreferenceToggle(
-            title: 'Auto-insert Chorus',
-            subtitle: 'Repeat chorus between verses',
+          const Divider(height: 24),
+          SwitchListTile(
+            title: Text(
+              'Auto-insert Chorus',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            subtitle: Text(
+              'Automatically repeat chorus slides between verses',
+              style: GoogleFonts.plusJakartaSans(fontSize: 12),
+            ),
             value: state.autoInsertChorus,
             onChanged: notifier.setAutoInsertChorus,
+            contentPadding: EdgeInsets.zero,
           ),
-          const _Divider(),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.auto_awesome,
-                    size: 20,
-                    color: theme.colorScheme.tertiary,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Presentation Skills',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+          const Divider(height: 24),
+          Text(
+            'Projection Display Mode',
+            style: GoogleFonts.plusJakartaSans(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Choose how the live projection output should be positioned on desktop screens.',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 12,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(
+                value: 'single',
+                label: Text('Single Screen'),
+                icon: Icon(Icons.screenshot_monitor, size: 16),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Configure transitions, effects, and presentation behavior.',
-                style: GoogleFonts.plusJakartaSans(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontSize: 13,
-                ),
+              ButtonSegment(
+                value: 'duplicate',
+                label: Text('Duplicate'),
+                icon: Icon(Icons.copy, size: 16),
+              ),
+              ButtonSegment(
+                value: 'extended',
+                label: Text('Extended'),
+                icon: Icon(Icons.picture_in_picture, size: 16),
               ),
             ],
+            selected: {state.projectionMode},
+            onSelectionChanged: (val) {
+              notifier.setProjectionMode(val.first);
+            },
+            showSelectedIcon: false,
           ),
         ],
       ),
@@ -132,57 +168,47 @@ class AppearanceCard extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final notifier = ref.read(themeModeProvider.notifier);
 
-    return NeoRaisedCard(
+    return SettingsCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SectionHeader(
             icon: Icons.palette,
             title: 'Appearance',
-            iconColor: Colors.purple,
-            accentColor: Colors.purple,
+            color: Colors.purple,
           ),
           const SizedBox(height: 24),
-          // Theme Selector
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Theme',
-                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w500),
+          Text(
+            'Application Theme',
+            style: GoogleFonts.plusJakartaSans(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<ThemeMode>(
+            segments: const [
+              ButtonSegment(
+                value: ThemeMode.light,
+                label: Text('Light Mode'),
+                icon: Icon(Icons.light_mode, size: 16),
               ),
-              const SizedBox(height: 16),
-              NeoSegmentedControl<ThemeMode>(
-                groupValue: themeMode,
-                onValueChanged: (value) => notifier.setThemeMode(value),
-                children: const {
-                  ThemeMode.light: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.light_mode, size: 16),
-                      SizedBox(width: 4),
-                      Text('Light'),
-                    ],
-                  ),
-                  ThemeMode.dark: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.dark_mode, size: 16),
-                      SizedBox(width: 4),
-                      Text('Dark'),
-                    ],
-                  ),
-                  ThemeMode.system: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.settings_brightness, size: 16),
-                      SizedBox(width: 4),
-                      Text('System'),
-                    ],
-                  ),
-                },
+              ButtonSegment(
+                value: ThemeMode.dark,
+                label: Text('Dark Mode'),
+                icon: Icon(Icons.dark_mode, size: 16),
+              ),
+              ButtonSegment(
+                value: ThemeMode.system,
+                label: Text('System'),
+                icon: Icon(Icons.settings_brightness, size: 16),
               ),
             ],
+            selected: {themeMode},
+            onSelectionChanged: (val) {
+              notifier.setThemeMode(val.first);
+            },
+            showSelectedIcon: false,
           ),
         ],
       ),
@@ -213,30 +239,30 @@ class ImportExportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return NeoRaisedCard(
+    return SettingsCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SectionHeader(
             icon: Icons.import_export,
             title: 'Import & Export',
-            accentColor: Colors.blue,
+            color: Colors.teal,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
-            'Import legacy VSB or MDB files, or restore .vsbook backups.',
+            'Import legacy VSB or MDB files, or manage song database backups.',
             style: GoogleFonts.plusJakartaSans(
               color: theme.colorScheme.onSurfaceVariant,
               fontSize: 13,
             ),
           ),
           if (isImporting) ...[
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             Row(
               children: [
                 const SizedBox(
-                  width: 18,
-                  height: 18,
+                  width: 16,
+                  height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 const SizedBox(width: 12),
@@ -244,72 +270,61 @@ class ImportExportCard extends StatelessWidget {
                   importStatus ?? 'Processing...',
                   style: GoogleFonts.plusJakartaSans(
                     color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
                   ),
                 ),
               ],
             ),
           ],
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           Column(
             children: [
-              NeoButton(
+              FilledButton.icon(
                 onPressed: isImporting ? null : onImportBundled,
-                isPrimary: true,
-                tooltip: 'Import pre-installed songbooks into your library',
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.library_add, size: 20),
-                    SizedBox(width: 8),
-                    Text('Import Bundled Books'),
-                  ],
+                icon: const Icon(Icons.library_add, size: 18),
+                label: const Text('Import Pre-installed Songbooks'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
-                    child: NeoButton(
+                    child: OutlinedButton.icon(
                       onPressed: isImporting ? null : onImportMdb,
-                      tooltip: 'Import songs from legacy VSB or MDB files',
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.folder_open, size: 20),
-                          SizedBox(width: 8),
-                          Text('Import VSB / MDB'),
-                        ],
+                      icon: const Icon(Icons.folder_open, size: 18),
+                      label: const Text('Import VSB / MDB'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: NeoButton(
+                    child: OutlinedButton.icon(
                       onPressed: isImporting ? null : onImportVsBook,
-                      tooltip: 'Restore songs from a .vsbook backup file',
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.restore, size: 20),
-                          SizedBox(width: 8),
-                          Text('Import .vsbook'),
-                        ],
+                      icon: const Icon(Icons.restore, size: 18),
+                      label: const Text('Restore .vsbook'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              NeoButton(
+              FilledButton.tonalIcon(
                 onPressed: isExporting || isImporting ? null : onExportVsBook,
-                tooltip: 'Export your entire library as a .vsbook backup',
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.cloud_upload, size: 20),
-                    SizedBox(width: 8),
-                    Text('Export .vsbook'),
-                  ],
+                icon: const Icon(Icons.cloud_upload, size: 18),
+                label: const Text('Export .vsbook Backup'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ],
@@ -320,97 +335,43 @@ class ImportExportCard extends StatelessWidget {
   }
 }
 
-class _PreferenceToggle extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  const _PreferenceToggle({
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        NeoToggle(value: value, onChanged: onChanged),
-      ],
-    );
-  }
-}
-
-class _Divider extends StatelessWidget {
-  const _Divider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Container(
-        height: 1,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Theme.of(
-            context,
-          ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(999),
-        ),
-      ),
-    );
-  }
-}
-
 class ChangelogCard extends StatelessWidget {
   const ChangelogCard({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const NeoRaisedCard(
+    return const SettingsCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SectionHeader(
             icon: Icons.history,
             title: 'Changelog',
-            accentColor: Colors.amber,
+            color: Colors.amber,
           ),
           SizedBox(height: 24),
+          _ChangelogEntry(
+            version: 'v1.4.0',
+            date: '2026-06-26',
+            changes: [
+              'Interactive Book and Chapter pop-up navigation dialog matching Bible specs',
+              'Subtle inline verse cross-references displayable for active verses',
+              'Bible Bookmarks list supported on mobile and desktop via History tab',
+              'Overhauled settings cards into clean, responsive Material 3 flat designs',
+              'Unified Project actions for Bible, Songs, and Sets with Display settings options',
+              'Responsive stacked live preview layout for narrow screen mobile devices',
+              'Subtle hover-only display controls in projection output view',
+              'Implemented drag-and-drop song sets reordering and inline list search filtering',
+            ],
+          ),
+          SizedBox(height: 16),
           _ChangelogEntry(
             version: 'v1.3.0',
             date: '2026-06-25',
             changes: [
               'Unified Bible/Song search logic — shared utilities and Riverpod provider',
-              'Projection search now matches Bible tab: BEST MATCH cards, query highlighting, pagination',
+              'Projection search matches Bible tab: BEST MATCH cards, query highlighting, pagination',
               'Inline projection search with loading states, error handling, and history recording',
-              'SearchAnchor overlay also shares state with inline search bar',
-              'First 10 Bible results shown with "Show more (N remaining)" pagination button',
-              'HighlightedText query highlighting reused in projection search results',
-              'Structured Bible reference parsing extracted to shared bible_search_utils.dart',
             ],
           ),
           SizedBox(height: 16),
@@ -422,34 +383,6 @@ class ChangelogCard extends StatelessWidget {
               'Song set management — create, edit, reorder sets',
               'Chapter-aware Bible projection (auto-advance to next/prev chapter)',
               'History tab with Songs/Sets/Bible sub-tabs',
-              'Mobile-optimized layout for all tabs',
-              'Right-click / double-click verse actions (Project, Bookmark)',
-              'Split-view Bible projection — full chapter on left, current verse on right',
-            ],
-          ),
-          SizedBox(height: 16),
-          _ChangelogEntry(
-            version: 'v1.1.0',
-            date: '2026-05-15',
-            changes: [
-              'Revamped Settings page with neumorphic dark-mode-safe shadows',
-              'Projection window opens borderless fullscreen on second monitor',
-              'New about section with app info',
-              'Hover outlines and tooltips on all interactive buttons',
-              'Reorganized import/export button layout',
-            ],
-          ),
-          SizedBox(height: 16),
-          _ChangelogEntry(
-            version: 'v1.0.0',
-            date: '2026-03-01',
-            changes: [
-              'Initial release',
-              'Song library management with categories',
-              'VSB and MDB file import',
-              'Multi-window projection output',
-              'Backup and restore via .vsbook files',
-              'Dark and light theme support',
             ],
           ),
         ],
@@ -543,14 +476,14 @@ class AboutCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return NeoRaisedCard(
+    return SettingsCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SectionHeader(
             icon: Icons.info_outline,
             title: 'About',
-            accentColor: Colors.teal,
+            color: Colors.teal,
           ),
           const SizedBox(height: 24),
           Center(
@@ -567,13 +500,6 @@ class AboutCard extends StatelessWidget {
                         theme.colorScheme.primary.withValues(alpha: 0.7),
                       ],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                        offset: const Offset(4, 4),
-                        blurRadius: 12,
-                      ),
-                    ],
                   ),
                   child: const Icon(
                     Icons.auto_stories,
@@ -589,25 +515,16 @@ class AboutCard extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(999),
-                    boxShadow: NeoShadows.insetSmall(context),
-                  ),
-                  child: Text(
-                    'v1.3.0',
+                const SizedBox(height: 6),
+                Chip(
+                  label: Text(
+                    'v1.4.0',
                     style: GoogleFonts.plusJakartaSans(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
+                  backgroundColor: theme.colorScheme.surfaceContainerHigh,
                 ),
               ],
             ),
@@ -623,18 +540,6 @@ class AboutCard extends StatelessWidget {
               height: 1.5,
             ),
             textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          Center(
-            child: Text(
-              'Built with Flutter & Riverpod',
-              style: GoogleFonts.plusJakartaSans(
-                color: theme.colorScheme.onSurfaceVariant.withValues(
-                  alpha: 0.6,
-                ),
-                fontSize: 11,
-              ),
-            ),
           ),
         ],
       ),

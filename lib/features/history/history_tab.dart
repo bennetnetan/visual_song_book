@@ -21,7 +21,7 @@ class HistoryTab extends ConsumerWidget {
     final selectedTab = ref.watch(_selectedHistoryTabProvider);
 
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: const Text(
@@ -35,6 +35,7 @@ class HistoryTab extends ConsumerWidget {
               Tab(text: 'Songs'),
               Tab(text: 'Sets'),
               Tab(text: 'Bible'),
+              Tab(text: 'Bookmarks'),
             ],
           ),
         ),
@@ -132,6 +133,36 @@ class HistoryTab extends ConsumerWidget {
                   );
                 },
               );
+      case HistoryTabType.bookmarks:
+        return state.bookmarks.isEmpty
+            ? _emptyState(context, 'bookmark')
+            : ListView.builder(
+                padding: const EdgeInsets.only(top: 8, bottom: 24),
+                itemCount: state.bookmarks.length,
+                itemBuilder: (context, index) {
+                  final item = state.bookmarks[index];
+                  return ListTile(
+                    leading: Icon(Icons.bookmark, color: Theme.of(context).colorScheme.primary),
+                    title: Text(item.reference),
+                    subtitle: Text(item.verseText, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      onPressed: () {
+                        ref.read(setRepositoryProvider).removeBookmark(item.id);
+                      },
+                    ),
+                    onTap: () async {
+                      final repo = ref.read(bibleRepositoryProvider);
+                      final notifier = ref.read(bibleControllerProvider.notifier);
+                      final book = await repo.getBookByName(item.bookName);
+                      if (book != null) {
+                        await notifier.navigateToVerse(book.id, item.chapter, item.verseNum);
+                        ref.read(activeDashboardTabProvider.notifier).state = 2;
+                      }
+                    },
+                  );
+                },
+              );
     }
   }
 
@@ -140,12 +171,19 @@ class HistoryTab extends ConsumerWidget {
         ? Icons.queue_music_outlined
         : type == 'bible'
         ? Icons.menu_book_outlined
+        : type == 'bookmark'
+        ? Icons.bookmark_outline
         : Icons.history;
     final label = type == 'set'
         ? 'Sets'
         : type == 'bible'
         ? 'Bible passages'
+        : type == 'bookmark'
+        ? 'Bookmarks'
         : 'Songs';
+    final message = type == 'bookmark'
+        ? 'No bookmarks saved yet.'
+        : 'No $label projected yet.';
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -159,7 +197,7 @@ class HistoryTab extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'No $label projected yet.',
+            message,
             style: TextStyle(
               fontSize: 18,
               color: Theme.of(

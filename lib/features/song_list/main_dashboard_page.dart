@@ -43,24 +43,19 @@ class MainDashboardPage extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (activeTab == 0) ...[
-                    Hero(
+                      Hero(
                       tag: 'app_logo',
                       child: Container(
                         padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Color(0xFF00BFA5), // Teal primary
-                              Color(0xFF00796B), // Teal secondary
-                            ],
-                          ),
-                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          borderRadius: const BorderRadius.all(Radius.circular(10)),
                         ),
                         child: Image.asset(
                           'assets/images/logo.png',
                           width: 24,
                           height: 24,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
                         ),
                       ),
                     ),
