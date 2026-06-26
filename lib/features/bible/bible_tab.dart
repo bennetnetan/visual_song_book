@@ -502,24 +502,27 @@ class _ReadingViewState extends State<_ReadingView> {
                                               widget.onToggleBookmark(v);
                                             }
                                           },
-                                          itemBuilder: (context) => [
-                                            const PopupMenuItem(
-                                              value: 'project',
-                                              child: ListTile(
-                                                leading: Icon(Icons.tv, size: 18),
-                                                title: Text('Project', style: TextStyle(fontSize: 13)),
-                                                dense: true,
-                                              ),
-                                            ),
-                                            PopupMenuItem(
-                                              value: 'bookmark',
-                                              child: ListTile(
-                                                leading: Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_border, size: 18),
-                                                title: Text(isBookmarked ? 'Remove Bookmark' : 'Bookmark', style: const TextStyle(fontSize: 13)),
-                                                dense: true,
-                                              ),
-                                            ),
-                                          ],
+                                          itemBuilder: (context) {
+                                             final isLargeScreen = MediaQuery.of(context).size.width >= 900;
+                                             return [
+                                               PopupMenuItem(
+                                                 value: 'project',
+                                                 child: ListTile(
+                                                   leading: const Icon(Icons.tv, size: 18),
+                                                   title: Text(isLargeScreen ? 'Project' : 'Present', style: const TextStyle(fontSize: 13)),
+                                                   dense: true,
+                                                 ),
+                                               ),
+                                               PopupMenuItem(
+                                                 value: 'bookmark',
+                                                 child: ListTile(
+                                                   leading: Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_border, size: 18),
+                                                   title: Text(isBookmarked ? 'Remove Bookmark' : 'Bookmark', style: const TextStyle(fontSize: 13)),
+                                                   dense: true,
+                                                 ),
+                                               ),
+                                             ];
+                                           },
                                         );
                                       },
                                     );
@@ -548,11 +551,19 @@ class _ReadingViewState extends State<_ReadingView> {
   ) {
     final renderBox = context.findRenderObject() as RenderBox?;
     final center = renderBox?.localToGlobal(renderBox.size.center(Offset.zero)) ?? Offset.zero;
+    final isLargeScreen = MediaQuery.of(context).size.width >= 900;
     showMenu<String>(
       context: context,
       position: RelativeRect.fromLTRB(center.dx, center.dy, center.dx + 1, center.dy + 1),
       items: [
-        const PopupMenuItem(value: 'project', child: ListTile(leading: Icon(Icons.tv, size: 18), title: Text('Project'), dense: true)),
+        PopupMenuItem(
+          value: 'project',
+          child: ListTile(
+            leading: const Icon(Icons.tv, size: 18),
+            title: Text(isLargeScreen ? 'Project' : 'Present'),
+            dense: true,
+          ),
+        ),
         const PopupMenuItem(value: 'bookmark', child: ListTile(leading: Icon(Icons.bookmark_border, size: 18), title: Text('Bookmark'), dense: true)),
       ],
     ).then((action) {
