@@ -25,6 +25,7 @@ class HistoryTab extends ConsumerWidget {
       length: 4,
       child: Scaffold(
         appBar: AppBar(
+          toolbarHeight: isLargeScreen ? null : 0,
           title: isLargeScreen
               ? const Text(
                   'Recent Activity',

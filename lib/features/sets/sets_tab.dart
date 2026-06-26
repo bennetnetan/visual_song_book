@@ -126,23 +126,23 @@ class SetsTab extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        leading: !isLargeScreen && state.selectedSetId != null
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: notifier.clearSelection,
-              )
-            : null,
-        title: !isLargeScreen && state.selectedSetId == null
-            ? null
-            : Text(
+      appBar: !isLargeScreen && state.selectedSetId == null
+          ? null
+          : AppBar(
+              leading: !isLargeScreen && state.selectedSetId != null
+                  ? IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: notifier.clearSelection,
+                    )
+                  : null,
+              title: Text(
                 !isLargeScreen && state.selectedSetId != null
                     ? notifier.selectedSet?.name ?? 'Set'
                     : 'Sets',
                 style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
               ),
-        actions: const [],
-      ),
+              actions: const [],
+            ),
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : isLargeScreen
