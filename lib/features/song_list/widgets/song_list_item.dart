@@ -7,12 +7,17 @@ class SongListItem extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onDoubleTap;
 
+  final bool isLargeScreen;
+  final VoidCallback? onProjectTap;
+
   const SongListItem({
     super.key,
     required this.song,
     required this.isSelected,
     required this.onTap,
     this.onDoubleTap,
+    this.isLargeScreen = true,
+    this.onProjectTap,
   });
 
   @override
@@ -118,42 +123,76 @@ class SongListItem extends StatelessWidget {
                 ],
               ),
             ),
-            trailing: song.key != null
-                ? Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Theme.of(
-                              context,
-                            ).colorScheme.primary.withValues(alpha: 0.2)
-                          : Theme.of(context).colorScheme.secondaryContainer,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isSelected
-                            ? Theme.of(
-                                context,
-                              ).colorScheme.primary.withValues(alpha: 0.4)
-                            : Colors.transparent,
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      song.key!,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: isSelected
-                            ? Theme.of(context).colorScheme.onPrimaryContainer
-                            : Theme.of(
-                                context,
-                              ).colorScheme.onSecondaryContainer,
-                      ),
-                    ),
-                  )
-                : null,
+            trailing: (song.key == null && (isLargeScreen || !isSelected))
+                ? null
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (song.key != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? Theme.of(
+                                    context,
+                                  ).colorScheme.primary.withValues(alpha: 0.2)
+                                : Theme.of(context).colorScheme.secondaryContainer,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isSelected
+                                  ? Theme.of(
+                                      context,
+                                    ).colorScheme.primary.withValues(alpha: 0.4)
+                                  : Colors.transparent,
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            song.key!,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.onPrimaryContainer
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onSecondaryContainer,
+                            ),
+                          ),
+                        ),
+                      if (!isLargeScreen && isSelected && onProjectTap != null) ...[
+                        if (song.key != null) const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: onProjectTap,
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Open',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              SizedBox(width: 6),
+                              Icon(Icons.tv, size: 16),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
             selected: isSelected,
             onTap: onTap,
           ),
