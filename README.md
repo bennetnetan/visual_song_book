@@ -34,10 +34,11 @@ The app uses **SQLite via Drift** as its main database and a bundled **KJV Bible
 - Create, rename, reorder, and delete **song sets** for services or events
 - **Drag-to-reorder** songs within a set via `ReorderableListView`
 - Project an entire set as a continuous slide sequence
+- **Mobile Optimised**: Replaces cramped side-by-side desktop layout with a clean, responsive tabbed view (Songs in Set / Add Songs) on narrow screens
 
 ### 📽️ Live Projection
 - **Desktop (Windows / Linux / macOS)**: Opens a dedicated secondary window on any connected screen using `desktop_multi_window`. Operator controls stay in the main window; lyrics appear full-screen in the projection window
-- **Mobile / Tablet**: Push to `/projection` route in immersive sticky fullscreen mode (`SystemUiMode.immersiveSticky`)
+- **Mobile / Tablet**: Immersive sticky fullscreen projection mode (`SystemUiMode.immersiveSticky`) with inline "Open" actions next to selected songs, hiding edit/delete controls and the redundant projection tab to keep operation clean.
 - **Bible projection**: Project individual verses or full chapters with scripture reference displayed below the text
 - **Unified search**: Inline search bar and SearchAnchor overlay share state — search Bible or songs directly from the projection tab with structured reference parsing ("Jn 3:16"), BEST MATCH cards, query highlighting, and paginated results
 - **Chapter-aware navigation** in Bible mode: advancing past the last verse auto-loads the next chapter (handles book boundaries); chapter stepper buttons in the controls panel
