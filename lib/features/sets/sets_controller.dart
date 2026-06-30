@@ -175,10 +175,8 @@ class SetsController extends StateNotifier<SetsState> {
       final item = items[i];
       final song = state.availableSongs.where((s) => s.id == item.songId).firstOrNull;
       if (song != null) {
-        buffer.writeln('${i + 1}. ${song.title.toUpperCase()} ${song.key != null ? "(${song.key})" : ""}');
-        buffer.writeln('----------------------------------------');
-        buffer.writeln(song.body);
-        buffer.writeln('\n\n');
+        final numberText = song.songNum > 0 ? ' (#${song.songNum})' : '';
+        buffer.writeln('${i + 1}. ${song.title}$numberText');
       }
     }
 

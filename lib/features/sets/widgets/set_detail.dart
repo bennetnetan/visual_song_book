@@ -101,7 +101,7 @@ class _SetDetailState extends ConsumerState<SetDetail> {
               ListTile(
                 leading: const Icon(Icons.text_snippet),
                 title: const Text('Share as Plain Text (.txt)'),
-                subtitle: const Text('Export full printable lyrics of all songs'),
+                subtitle: const Text('Export a plain text list of songs in this set'),
                 onTap: () {
                   Navigator.pop(ctx);
                   widget.onShareText();
@@ -133,8 +133,8 @@ class _SetDetailState extends ConsumerState<SetDetail> {
               ),
               ListTile(
                 leading: const Icon(Icons.content_copy),
-                title: const Text('Copy Plain Text Lyrics'),
-                subtitle: const Text('Copy lyrics of all songs in set to clipboard'),
+                title: const Text('Copy Plain Text List'),
+                subtitle: const Text('Copy list of songs in set to clipboard'),
                 onTap: () async {
                   Navigator.pop(ctx);
                   try {
@@ -142,7 +142,7 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                     await Clipboard.setData(ClipboardData(text: textString));
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Plain text lyrics copied to clipboard!')),
+                        const SnackBar(content: Text('Set list copied to clipboard!')),
                       );
                     }
                   } catch (e) {
