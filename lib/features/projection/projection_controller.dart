@@ -531,9 +531,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       return true;
     } catch (e) {
       debugPrint('Sync failed for window ${_secondaryWindow!.windowId}: $e');
-      // Window is dead — stop trying.
-      _secondaryWindow = null;
-      state = state.copyWith(isSecondaryWindowOpen: false);
+      // During startup, the channel might not be registered yet.
+      // Do not clear _secondaryWindow here; let the retry mechanism handle it.
+      // Actual window closure is handled by onWindowsChanged and IPC.
       return false;
     }
   }
