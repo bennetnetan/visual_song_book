@@ -116,6 +116,11 @@ class ProjectionController extends StateNotifier<ProjectionState> {
   bool _isLoadingChapter = false;
   StreamSubscription<void>? _windowsChangedSubscription;
 
+  /// The secondary projector window we created in THIS session.
+  /// We never rely on WindowController.getAll() to rediscover windows because
+  /// it can return stale handles from previous app runs.
+  WindowController? _secondaryWindow;
+
   ProjectionController(this._songRepository, this._bibleRepo, this.ref)
     : super(ProjectionState.initial()) {
     _loadSettings();
@@ -125,6 +130,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
   @override
   void dispose() {
     _windowsChangedSubscription?.cancel();
+    _secondaryWindow = null;
     super.dispose();
   }
 
@@ -364,32 +370,31 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     if (kIsWeb) return false;
     if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return false;
 
-    try {
-      final controllers = await WindowController.getAll();
-      final currentWindow = await WindowController.fromCurrentEngine();
-
-      // Try to reuse an existing secondary window.
-      for (final c in controllers) {
-        if (c.windowId != currentWindow.windowId) {
-          try {
-            // Validate the window is still alive by trying to show it.
-            // Stale handles from a previous session will throw here.
-            await c.show();
-            debugPrint('Reusing existing projector window: ${c.windowId}');
-            state = state.copyWith(isSecondaryWindowOpen: true);
-            _syncSecondaryWindow();
-            return true;
-          } catch (e) {
-            debugPrint('Existing window ${c.windowId} is stale: $e. Creating a new one.');
-            // Fall through to create a fresh window below.
-          }
-        }
+    // If we already have a tracked secondary window from this session,
+    // just show it and sync.
+    if (_secondaryWindow != null) {
+      try {
+        await _secondaryWindow!.show();
+        debugPrint('Showing existing projector window: ${_secondaryWindow!.windowId}');
+        state = state.copyWith(isSecondaryWindowOpen: true);
+        _syncSecondaryWindow();
+        return true;
+      } catch (e) {
+        debugPrint('Tracked secondary window is dead: $e. Will create a new one.');
+        _secondaryWindow = null;
       }
+    }
 
+    try {
+      // Always create a fresh window. We do NOT use WindowController.getAll()
+      // to find existing windows because it returns stale handles from
+      // previous app sessions whose channels are unregistered.
       final window = await WindowController.create(
         const WindowConfiguration(arguments: 'Projection Output'),
       );
       await window.show();
+      _secondaryWindow = window;
+      debugPrint('Created new projector window: ${window.windowId}');
       
       state = state.copyWith(isSecondaryWindowOpen: true);
       
@@ -455,6 +460,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
           }
         } else if (call.method == 'secondary_window_closed') {
           debugPrint('Secondary window reported closed.');
+          _secondaryWindow = null;
           setSecondaryWindowOpen(false);
         } else if (call.method == 'secondary_window_ready') {
           debugPrint('Secondary window reported ready. Syncing current slide...');
@@ -463,16 +469,13 @@ class ProjectionController extends StateNotifier<ProjectionState> {
           // On Linux, the secondary window can't close itself via window_manager
           // (it would crash), so it asks us to do it via WindowController.hide().
           debugPrint('Main window received request to close secondary window.');
-          try {
-            final allControllers = await WindowController.getAll();
-            final myId = controller.windowId;
-            for (final c in allControllers) {
-              if (c.windowId != myId) {
-                await c.hide();
-              }
+          if (_secondaryWindow != null) {
+            try {
+              await _secondaryWindow!.hide();
+            } catch (e) {
+              debugPrint('Failed to hide secondary window: $e');
             }
-          } catch (e) {
-            debugPrint('Failed to hide secondary window: $e');
+            _secondaryWindow = null;
           }
           setSecondaryWindowOpen(false);
         }
@@ -483,13 +486,13 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       // secondary GTK window). onWindowsChanged fires whenever any window is
       // created or destroyed, so we check if the secondary window is gone.
       _windowsChangedSubscription = onWindowsChanged.listen((_) async {
-        if (!state.isSecondaryWindowOpen) return;
+        if (!state.isSecondaryWindowOpen || _secondaryWindow == null) return;
         try {
           final allControllers = await WindowController.getAll();
-          final myId = controller.windowId;
-          final hasSecondary = allControllers.any((c) => c.windowId != myId);
-          if (!hasSecondary) {
+          final hasOurs = allControllers.any((c) => c.windowId == _secondaryWindow!.windowId);
+          if (!hasOurs) {
             debugPrint('Secondary window was natively closed. Updating state.');
+            _secondaryWindow = null;
             state = state.copyWith(isSecondaryWindowOpen: false);
           }
         } catch (_) {}
@@ -503,14 +506,12 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     _syncSecondaryWindow();
   }
 
-  /// Sends the current slide to all secondary windows.
-  /// Returns true if at least one secondary window was updated successfully.
+  /// Sends the current slide to the secondary projector window.
+  /// Returns true if the window was updated successfully.
   Future<bool> _syncSecondaryWindow() async {
     if (kIsWeb) return false;
     if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return false;
-
-    // OPTIMIZATION: If we know the secondary window is not open, do not query the OS window manager.
-    if (!state.isSecondaryWindowOpen) return false;
+    if (!state.isSecondaryWindowOpen || _secondaryWindow == null) return false;
 
     final slide = state.currentSlide;
     final text = slide?.text ?? '';
@@ -518,51 +519,21 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     final fontSize = state.fontSize;
     final isBible = state.isBibleMode;
 
-    debugPrint('Broadcasting slide update: "$text" label="$label" (Size: $fontSize, bible=$isBible)');
+    debugPrint('Syncing slide to window ${_secondaryWindow!.windowId}: "$label"');
 
     try {
-      final controllers = await WindowController.getAll();
-      final currentWindow = await WindowController.fromCurrentEngine();
-      
-      // OPTIMIZATION: Detect if the secondary window was closed and clean up state.
-      final targetControllers = controllers.where((c) => c.windowId != currentWindow.windowId).toList();
-      if (targetControllers.isEmpty) {
-        state = state.copyWith(isSecondaryWindowOpen: false);
-        return false;
-      }
-
-      var anySuccess = false;
-
-      for (final controller in targetControllers) {
-        debugPrint('Sending update to window ID: ${controller.windowId}');
-        try {
-          final result = await controller.invokeMethod('update_slide', {
-            'text': text,
-            'label': label,
-            'fontSize': fontSize,
-            'isBible': isBible,
-          });
-          debugPrint('Update successful for window ${controller.windowId}: $result');
-          anySuccess = true;
-        } catch (e) {
-          debugPrint('Update failed for window ${controller.windowId}: $e');
-          // If the channel is unregistered, this window handle is stale
-          // (leftover from a previous session). Don't keep retrying it.
-          if (e.toString().contains('CHANNEL_UNREGISTERED')) {
-            debugPrint('Window ${controller.windowId} is stale (CHANNEL_UNREGISTERED). Cleaning up.');
-          }
-        }
-      }
-
-      // If no secondary window was reachable, stop trying on future updates.
-      if (!anySuccess) {
-        debugPrint('All secondary windows unreachable. Marking as closed.');
-        state = state.copyWith(isSecondaryWindowOpen: false);
-      }
-
-      return anySuccess;
+      await _secondaryWindow!.invokeMethod('update_slide', {
+        'text': text,
+        'label': label,
+        'fontSize': fontSize,
+        'isBible': isBible,
+      });
+      return true;
     } catch (e) {
-      debugPrint('Error during secondary window sync: $e');
+      debugPrint('Sync failed for window ${_secondaryWindow!.windowId}: $e');
+      // Window is dead — stop trying.
+      _secondaryWindow = null;
+      state = state.copyWith(isSecondaryWindowOpen: false);
       return false;
     }
   }
