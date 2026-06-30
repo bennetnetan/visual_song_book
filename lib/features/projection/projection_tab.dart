@@ -74,7 +74,6 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
           appBar: AppBar(
             title: const Text('Projection Controls'),
             actions: [
-              _ProjectionSearchAnchor(notifier: notifier),
               IconButton(
                 icon: const Icon(Icons.open_in_new),
                 tooltip: 'Open Projector Output Window',
@@ -968,6 +967,12 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
             selected: {searchState.isBibleMode},
             onSelectionChanged: (value) {
               ref.read(projectionSearchProvider.notifier).toggleMode(value.first);
+              // Re-trigger search immediately (no debounce) so results switch
+              // the instant the user taps Bible or Song.
+              final currentText = _searchController.text;
+              if (currentText.isNotEmpty) {
+                ref.read(projectionSearchProvider.notifier).searchImmediate(currentText);
+              }
             },
             style: SegmentedButton.styleFrom(
               visualDensity: VisualDensity.compact,
@@ -1011,7 +1016,9 @@ class _SuggestionsList extends ConsumerWidget {
       );
     }
 
-    final query = controller.text;
+    // Use the provider's query (not the raw controller text) so that the
+    // empty-state check is always consistent with what was actually searched.
+    final query = searchState.query;
     if (query.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(32.0),

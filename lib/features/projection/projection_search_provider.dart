@@ -81,12 +81,9 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
   }
 
   /// Set the search mode (true = Bible, false = Song).
+  /// The caller is responsible for re-triggering search if needed.
   void toggleMode(bool isBible) {
     state = state.copyWith(isBibleMode: isBible);
-    // Re-run search with the current query in the new mode
-    if (state.query.isNotEmpty) {
-      _searchNow(state.query);
-    }
   }
 
   /// Called on every keystroke. Debounces 300 ms before executing.
@@ -107,6 +104,26 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
     _debounce = Timer(const Duration(milliseconds: 300), () {
       _searchNow(query);
     });
+  }
+
+  /// Same as [search] but fires immediately (no debounce).
+  /// Use this when context changes (e.g. mode toggle) and instant feedback
+  /// is important.
+  void searchImmediate(String query) {
+    _debounce?.cancel();
+    state = state.copyWith(query: query, error: () => null);
+    if (query.trim().isEmpty) {
+      state = state.copyWith(
+        bibleResults: [],
+        totalBibleCount: 0,
+        bibleOffset: 0,
+        exactMatch: () => null,
+        songResults: [],
+        isLoading: false,
+      );
+      return;
+    }
+    _searchNow(query);
   }
 
   Future<void> _searchNow(String query) async {
