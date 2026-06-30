@@ -429,8 +429,8 @@ class ProjectionController extends StateNotifier<ProjectionState> {
   }
 
   Future<void> _syncSecondaryWindowWithRetry() async {
-    for (var attempt = 0; attempt < 3; attempt++) {
-      await Future.delayed(Duration(milliseconds: 200 + attempt * 200));
+    for (var attempt = 0; attempt < 10; attempt++) {
+      await Future.delayed(const Duration(milliseconds: 300));
       if (await _syncSecondaryWindow()) {
         debugPrint('Secondary window synced successfully on attempt $attempt');
         break;

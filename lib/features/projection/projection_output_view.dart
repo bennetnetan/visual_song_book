@@ -95,17 +95,24 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
       return 'OK';
     });
 
-    // Notify main window that secondary window is ready to receive updates
-    try {
-      final controllers = await WindowController.getAll();
-      final currentWindow = await WindowController.fromCurrentEngine();
-      for (final c in controllers) {
-        if (c.windowId == currentWindow.windowId) continue;
-        await c.invokeMethod('secondary_window_ready');
-        debugPrint('Notified main window (ID: ${c.windowId}) that secondary window is ready.');
+    // Notify main window that secondary window is ready to receive updates.
+    // We retry a few times because immediately after window creation (or during
+    // hot restart), the plugin channels might not be fully registered yet,
+    // throwing MissingPluginException.
+    for (var attempt = 0; attempt < 10; attempt++) {
+      try {
+        final controllers = await WindowController.getAll();
+        final currentWindow = await WindowController.fromCurrentEngine();
+        for (final c in controllers) {
+          if (c.windowId == currentWindow.windowId) continue;
+          await c.invokeMethod('secondary_window_ready');
+          debugPrint('Notified main window (ID: ${c.windowId}) that secondary window is ready.');
+        }
+        break; // Success
+      } catch (e) {
+        debugPrint('Failed to send secondary_window_ready signal: $e');
+        await Future.delayed(const Duration(milliseconds: 300));
       }
-    } catch (e) {
-      debugPrint('Failed to send secondary_window_ready signal: $e');
     }
   }
 
