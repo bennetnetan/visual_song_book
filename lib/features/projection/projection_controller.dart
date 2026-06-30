@@ -368,21 +368,22 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       final controllers = await WindowController.getAll();
       final currentWindow = await WindowController.fromCurrentEngine();
 
-      WindowController? existingWindow;
+      // Try to reuse an existing secondary window.
       for (final c in controllers) {
         if (c.windowId != currentWindow.windowId) {
-          existingWindow = c;
-          break;
+          try {
+            // Validate the window is still alive by trying to show it.
+            // Stale handles from a previous session will throw here.
+            await c.show();
+            debugPrint('Reusing existing projector window: ${c.windowId}');
+            state = state.copyWith(isSecondaryWindowOpen: true);
+            _syncSecondaryWindow();
+            return true;
+          } catch (e) {
+            debugPrint('Existing window ${c.windowId} is stale: $e. Creating a new one.');
+            // Fall through to create a fresh window below.
+          }
         }
-      }
-
-      if (existingWindow != null) {
-        debugPrint('Found existing projector window with ID: ${existingWindow.windowId}. Reusing it.');
-        await existingWindow.show();
-
-        state = state.copyWith(isSecondaryWindowOpen: true);
-        _syncSecondaryWindow();
-        return true;
       }
 
       final window = await WindowController.create(
@@ -545,8 +546,20 @@ class ProjectionController extends StateNotifier<ProjectionState> {
           anySuccess = true;
         } catch (e) {
           debugPrint('Update failed for window ${controller.windowId}: $e');
+          // If the channel is unregistered, this window handle is stale
+          // (leftover from a previous session). Don't keep retrying it.
+          if (e.toString().contains('CHANNEL_UNREGISTERED')) {
+            debugPrint('Window ${controller.windowId} is stale (CHANNEL_UNREGISTERED). Cleaning up.');
+          }
         }
       }
+
+      // If no secondary window was reachable, stop trying on future updates.
+      if (!anySuccess) {
+        debugPrint('All secondary windows unreachable. Marking as closed.');
+        state = state.copyWith(isSecondaryWindowOpen: false);
+      }
+
       return anySuccess;
     } catch (e) {
       debugPrint('Error during secondary window sync: $e');
