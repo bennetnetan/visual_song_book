@@ -54,8 +54,10 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     if (!kIsWeb &&
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       _setupSecondaryWindowChannel();
-      windowManager.addListener(this);
-      windowManager.setPreventClose(true);
+      if (!Platform.isLinux) {
+        windowManager.addListener(this);
+        windowManager.setPreventClose(true);
+      }
     }
   }
 
@@ -120,7 +122,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
 
   @override
   void onWindowClose() async {
-    await _handleManualClose();
+    if (!Platform.isLinux) {
+      await _handleManualClose();
+    }
   }
 
   void _handleClose() {
@@ -132,15 +136,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     }
   }
 
-  Future<void> _handleManualClose() async {
-    if (_isClosing) return;
-    _isClosing = true;
-
-    try {
-      await windowManager.hide();
-    } catch (_) {}
-
-    // Notify main window that secondary window is closed (hidden)
+  void _notifyClosed() async {
     try {
       final controllers = await WindowController.getAll();
       final currentWindow = await WindowController.fromCurrentEngine();
@@ -149,6 +145,32 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
         await c.invokeMethod('secondary_window_closed');
       }
     } catch (_) {}
+  }
+
+  Future<void> _handleManualClose() async {
+    if (_isClosing) return;
+    _isClosing = true;
+
+    if (Platform.isLinux) {
+      // On Linux, calling windowManager.close() or hide() from the secondary
+      // window crashes the app because window_manager targets the main window's
+      // GTK handle. Instead, we ask the main window to hide us via IPC — the
+      // main window uses WindowController.hide() which is safe.
+      try {
+        final controllers = await WindowController.getAll();
+        final currentWindow = await WindowController.fromCurrentEngine();
+        for (final c in controllers) {
+          if (c.windowId == currentWindow.windowId) continue;
+          await c.invokeMethod('close_secondary_window');
+        }
+      } catch (_) {}
+    } else {
+      // On Windows/macOS, window_manager is scoped to this window correctly.
+      try {
+        await windowManager.hide();
+      } catch (_) {}
+      _notifyClosed();
+    }
   }
 
   @override
@@ -160,7 +182,12 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     }
     if (!kIsWeb &&
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-      windowManager.removeListener(this);
+      if (!Platform.isLinux) {
+        windowManager.removeListener(this);
+      }
+      if (_isSecondaryWindow) {
+        _notifyClosed();
+      }
     }
     super.dispose();
   }

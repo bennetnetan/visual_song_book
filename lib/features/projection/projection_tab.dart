@@ -933,7 +933,6 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final searchState = ref.watch(projectionSearchProvider);
 
     return SearchAnchor(
@@ -969,7 +968,6 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
             selected: {searchState.isBibleMode},
             onSelectionChanged: (value) {
               ref.read(projectionSearchProvider.notifier).toggleMode(value.first);
-              _searchController.clear();
             },
             style: SegmentedButton.styleFrom(
               visualDensity: VisualDensity.compact,
@@ -979,86 +977,130 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
         ),
       ],
       suggestionsBuilder: (context, controller) {
-        if (searchState.isLoading) {
-          return [
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32.0),
-                child: CircularProgressIndicator(),
-              ),
-            ),
-          ];
-        }
-
-        final query = _searchController.text;
-        if (query.isEmpty) {
-          return [
-            Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Center(
-                child: Text(
-                  searchState.isBibleMode ? 'Search Bible…' : 'Search songs…',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ),
-          ];
-        }
-
-        if (searchState.error != null) {
-          return [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Search failed: ${searchState.error}',
-                style: TextStyle(color: theme.colorScheme.error),
-              ),
-            ),
-          ];
-        }
-
-        if (searchState.isBibleMode) {
-          if (searchState.bibleResults.isEmpty) {
-            return [const ListTile(title: Text('No results found'))];
-          }
-          return searchState.bibleResults.map((v) => ListTile(
-                title: Text(v.reference, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(v.text, maxLines: 1, overflow: TextOverflow.ellipsis),
-                trailing: const Icon(Icons.present_to_all, size: 18),
-                onTap: () {
-                  widget.notifier.projectVerse(
-                    v.bookId,
-                    v.chapter,
-                    v.verse,
-                    v.bookName ?? '',
-                  );
-                  ref.read(setRepositoryProvider).recordBibleProjection(v.reference, v.text);
-                  ref.read(projectionSearchProvider.notifier).clear();
-                  controller.closeView(null);
-                },
-              ));
-        } else {
-          if (searchState.songResults.isEmpty) {
-            return [const ListTile(title: Text('No results found'))];
-          }
-          return searchState.songResults.map((s) => ListTile(
-                leading: CircleAvatar(
-                  radius: 14,
-                  child: Text('${s.songNum}', style: const TextStyle(fontSize: 10)),
-                ),
-                title: Text(s.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(s.key != null ? 'Key: ${s.key}' : ''),
-                trailing: const Icon(Icons.present_to_all, size: 18),
-                onTap: () {
-                  widget.notifier.setSong(s);
-                  ref.read(projectionSearchProvider.notifier).clear();
-                  controller.closeView(null);
-                },
-              ));
-        }
+        return [
+          _SuggestionsList(
+            controller: controller,
+            notifier: widget.notifier,
+          ),
+        ];
       },
     );
+  }
+}
+
+class _SuggestionsList extends ConsumerWidget {
+  final SearchController controller;
+  final ProjectionController notifier;
+
+  const _SuggestionsList({
+    required this.controller,
+    required this.notifier,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final searchState = ref.watch(projectionSearchProvider);
+    final theme = Theme.of(context);
+
+    if (searchState.isLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    final query = controller.text;
+    if (query.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Center(
+          child: Text(
+            searchState.isBibleMode ? 'Search Bible…' : 'Search songs…',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (searchState.error != null) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          'Search failed: ${searchState.error}',
+          style: TextStyle(color: theme.colorScheme.error),
+        ),
+      );
+    }
+
+    if (searchState.isBibleMode) {
+      final results = [
+        if (searchState.exactMatch != null) searchState.exactMatch!,
+        ...searchState.bibleResults,
+      ];
+      if (results.isEmpty) {
+        return const ListTile(title: Text('No results found'));
+      }
+      return ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: results.length,
+        itemBuilder: (context, index) {
+          final v = results[index];
+          final isExact = v == searchState.exactMatch;
+          return ListTile(
+            title: Text(
+              v.reference,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isExact ? theme.colorScheme.primary : null,
+              ),
+            ),
+            subtitle: Text(v.text, maxLines: 1, overflow: TextOverflow.ellipsis),
+            trailing: const Icon(Icons.present_to_all, size: 18),
+            onTap: () {
+              notifier.projectVerse(
+                v.bookId,
+                v.chapter,
+                v.verse,
+                v.bookName ?? '',
+              );
+              ref.read(setRepositoryProvider).recordBibleProjection(v.reference, v.text);
+              ref.read(projectionSearchProvider.notifier).clear();
+              controller.closeView(null);
+            },
+          );
+        },
+      );
+    } else {
+      if (searchState.songResults.isEmpty) {
+        return const ListTile(title: Text('No results found'));
+      }
+      return ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: searchState.songResults.length,
+        itemBuilder: (context, index) {
+          final s = searchState.songResults[index];
+          return ListTile(
+            leading: CircleAvatar(
+              radius: 14,
+              child: Text('${s.songNum}', style: const TextStyle(fontSize: 10)),
+            ),
+            title: Text(s.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text(s.key != null ? 'Key: ${s.key}' : ''),
+            trailing: const Icon(Icons.present_to_all, size: 18),
+            onTap: () {
+              notifier.setSong(s);
+              ref.read(projectionSearchProvider.notifier).clear();
+              controller.closeView(null);
+            },
+          );
+        },
+      );
+    }
   }
 }

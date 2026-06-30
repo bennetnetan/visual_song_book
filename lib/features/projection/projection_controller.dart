@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -113,11 +114,18 @@ class ProjectionController extends StateNotifier<ProjectionState> {
   final Ref ref;
   SharedPreferences? _prefs;
   bool _isLoadingChapter = false;
+  StreamSubscription<void>? _windowsChangedSubscription;
 
   ProjectionController(this._songRepository, this._bibleRepo, this.ref)
     : super(ProjectionState.initial()) {
     _loadSettings();
     _setupMainWindowHandler();
+  }
+
+  @override
+  void dispose() {
+    _windowsChangedSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadSettings() async {
@@ -450,8 +458,40 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         } else if (call.method == 'secondary_window_ready') {
           debugPrint('Secondary window reported ready. Syncing current slide...');
           _syncSecondaryWindow();
+        } else if (call.method == 'close_secondary_window') {
+          // On Linux, the secondary window can't close itself via window_manager
+          // (it would crash), so it asks us to do it via WindowController.hide().
+          debugPrint('Main window received request to close secondary window.');
+          try {
+            final allControllers = await WindowController.getAll();
+            final myId = controller.windowId;
+            for (final c in allControllers) {
+              if (c.windowId != myId) {
+                await c.hide();
+              }
+            }
+          } catch (e) {
+            debugPrint('Failed to hide secondary window: $e');
+          }
+          setSecondaryWindowOpen(false);
         }
         return 'OK';
+      });
+
+      // Also listen for native window close events (e.g. user presses X on the
+      // secondary GTK window). onWindowsChanged fires whenever any window is
+      // created or destroyed, so we check if the secondary window is gone.
+      _windowsChangedSubscription = onWindowsChanged.listen((_) async {
+        if (!state.isSecondaryWindowOpen) return;
+        try {
+          final allControllers = await WindowController.getAll();
+          final myId = controller.windowId;
+          final hasSecondary = allControllers.any((c) => c.windowId != myId);
+          if (!hasSecondary) {
+            debugPrint('Secondary window was natively closed. Updating state.');
+            state = state.copyWith(isSecondaryWindowOpen: false);
+          }
+        } catch (_) {}
       });
     } catch (e) {
       debugPrint('Failed to register main window IPC handler: $e');
