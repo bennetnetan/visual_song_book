@@ -927,7 +927,13 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
   }
 
   void _onQueryChanged() {
-    ref.read(projectionSearchProvider.notifier).search(_searchController.text);
+    final newText = _searchController.text;
+    // Skip if the query hasn't actually changed (e.g. mode toggle rebuild).
+    // This prevents a redundant debounced search from racing with
+    // switchModeAndSearch's immediate search.
+    final current = ref.read(projectionSearchProvider).query;
+    if (newText == current) return;
+    ref.read(projectionSearchProvider.notifier).search(newText);
   }
 
   @override
@@ -966,13 +972,12 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
             ],
             selected: {searchState.isBibleMode},
             onSelectionChanged: (value) {
-              ref.read(projectionSearchProvider.notifier).toggleMode(value.first);
-              // Re-trigger search immediately (no debounce) so results switch
-              // the instant the user taps Bible or Song.
-              final currentText = _searchController.text;
-              if (currentText.isNotEmpty) {
-                ref.read(projectionSearchProvider.notifier).searchImmediate(currentText);
-              }
+              // Single atomic call: flips mode, clears stale results, and
+              // starts the new search — no intermediate wrong-mode frames.
+              ref.read(projectionSearchProvider.notifier).switchModeAndSearch(
+                    value.first,
+                    _searchController.text,
+                  );
             },
             style: SegmentedButton.styleFrom(
               visualDensity: VisualDensity.compact,

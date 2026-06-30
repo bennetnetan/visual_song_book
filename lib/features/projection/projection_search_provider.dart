@@ -80,8 +80,27 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
     super.dispose();
   }
 
+  /// Atomically switch mode and start a new search.
+  ///
+  /// Unlike calling [toggleMode] + [searchImmediate] separately, this writes
+  /// state exactly ONCE before starting the async search, so the UI never
+  /// flashes stale results from the previous mode.
+  void switchModeAndSearch(bool isBible, String query) {
+    _debounce?.cancel();
+    final trimmed = query.trim();
+    // Single atomic state write: new mode + all results cleared + loading flag.
+    state = ProjectionSearchState(
+      query: query,
+      isBibleMode: isBible,
+      isLoading: trimmed.isNotEmpty,
+    );
+    if (trimmed.isNotEmpty) {
+      _searchNow(query);
+    }
+  }
+
   /// Set the search mode (true = Bible, false = Song).
-  /// The caller is responsible for re-triggering search if needed.
+  /// Prefer [switchModeAndSearch] when you also need to re-run the search.
   void toggleMode(bool isBible) {
     state = state.copyWith(isBibleMode: isBible);
   }
@@ -104,26 +123,6 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
     _debounce = Timer(const Duration(milliseconds: 300), () {
       _searchNow(query);
     });
-  }
-
-  /// Same as [search] but fires immediately (no debounce).
-  /// Use this when context changes (e.g. mode toggle) and instant feedback
-  /// is important.
-  void searchImmediate(String query) {
-    _debounce?.cancel();
-    state = state.copyWith(query: query, error: () => null);
-    if (query.trim().isEmpty) {
-      state = state.copyWith(
-        bibleResults: [],
-        totalBibleCount: 0,
-        bibleOffset: 0,
-        exactMatch: () => null,
-        songResults: [],
-        isLoading: false,
-      );
-      return;
-    }
-    _searchNow(query);
   }
 
   Future<void> _searchNow(String query) async {
