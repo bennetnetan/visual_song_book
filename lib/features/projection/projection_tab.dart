@@ -943,10 +943,39 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
     return SearchAnchor(
       searchController: _searchController,
       builder: (context, controller) {
-        return IconButton(
-          icon: const Icon(Icons.search),
-          tooltip: 'Search Songs or Bible',
+        final theme = Theme.of(context);
+        final isBible = searchState.isBibleMode;
+        // Use a distinct teal-like color for Bible (matching the preview overlay) 
+        // and the primary color for Songs.
+        final color = isBible ? const Color(0xFF00E5CC) : theme.colorScheme.primary;
+
+        return ActionChip(
           onPressed: () => controller.openView(),
+          avatar: Icon(
+            isBible ? Icons.menu_book : Icons.library_music,
+            size: 16,
+            color: color,
+          ),
+          label: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                isBible ? 'Search Bible' : 'Search Songs',
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(Icons.search, size: 14, color: color),
+            ],
+          ),
+          backgroundColor: color.withValues(alpha: 0.15),
+          side: BorderSide(color: color.withValues(alpha: 0.4)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          padding: EdgeInsets.zero,
+          tooltip: isBible ? 'Search Bible' : 'Search Songs',
         );
       },
       viewLeading: IconButton(
