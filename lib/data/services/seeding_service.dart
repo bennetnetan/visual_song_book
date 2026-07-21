@@ -29,11 +29,24 @@ class SeedingService {
   /// [_seedVersionKey] guard makes it a no-op after the first successful run.
   Future<void> seedIfNeeded() async {
     final prefs = await SharedPreferences.getInstance();
-    final seeded = prefs.getInt(_seedVersionKey) ?? 0;
+    int seeded = prefs.getInt(_seedVersionKey) ?? 0;
 
     if (seeded >= _currentSeedVersion) {
-      _log.fine('Bundled songbooks already seeded (version $seeded). Skipping.');
-      return;
+      // Double-check the database actually has songs. This catches the case
+      // where the DB file was recreated (e.g. after switching to a new storage
+      // path) while the SharedPreferences marker still says "seeded".
+      final count = await (db.select(db.songs)..where((t) => t.isActive.equals(true)))
+          .get()
+          .then((rows) => rows.length);
+      if (count > 0) {
+        _log.fine('Bundled songbooks already seeded (version $seeded). Skipping.');
+        return;
+      }
+      _log.warning(
+        'Seed marker v$seeded found but DB is empty. Re-seeding...',
+      );
+      // Reset the marker so the seeding logic below runs.
+      seeded = 0;
     }
 
     _log.info('First launch — seeding bundled songbooks (seed v$_currentSeedVersion)...');
