@@ -347,27 +347,30 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                     horizontal: 64.0,
                     vertical: 48.0,
                   ),
-                  child: Center(
-                    child: activeText.isNotEmpty
-                        ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              VerseText(
-                                text: activeText,
-                                key: ValueKey(slideKey),
-                                fontSize: activeFontSize,
-                              ),
-                              if (activeIsBible && activeLabel.isNotEmpty) ...[
-                                const SizedBox(height: 20),
-                                ReferenceLabel(
-                                  label: activeLabel,
-                                  fontSize: (activeFontSize * 0.45).clamp(20.0, 48.0),
+                  child: activeText.isNotEmpty
+                      ? Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Center(
+                                child: VerseText(
+                                  text: activeText,
+                                  key: ValueKey(slideKey),
+                                  fontSize: activeFontSize,
                                 ),
-                              ],
+                              ),
+                            ),
+                            if (activeIsBible && activeLabel.isNotEmpty) ...[
+                              const SizedBox(height: 20),
+                              ReferenceLabel(
+                                label: activeLabel,
+                                fontSize: (activeFontSize * 0.45).clamp(20.0, 48.0),
+                              ),
                             ],
-                          )
-                        : const Text(
+                          ],
+                        )
+                      : const Center(
+                          child: Text(
                             'Awaiting projection…',
                             style: TextStyle(
                               color: Colors.white24,
@@ -376,7 +379,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                               letterSpacing: 1.2,
                             ),
                           ),
-                  ),
+                        ),
                 ),
               ),
 

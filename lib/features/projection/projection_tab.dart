@@ -589,47 +589,50 @@ class _LivePreviewPanel extends StatelessWidget {
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Center(
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 250),
-                          child: Column(
-                            key: ValueKey('${state.currentSlideIndex}_${currentSlide?.label}'),
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                currentSlide?.text ?? '',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontFamily: 'Outfit',
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.3,
-                                  shadows: [
-                                    Shadow(
-                                      offset: Offset(1, 1),
-                                      blurRadius: 3,
-                                      color: Color.fromARGB(150, 0, 0, 0),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (state.isBibleMode && currentSlide != null) ...[
-                                const SizedBox(height: 12),
-                                Text(
-                                  currentSlide.label,
+                      padding: const EdgeInsets.all(12.0),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        child: Column(
+                          key: ValueKey('${state.currentSlideIndex}_${currentSlide?.label}'),
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Center(
+                                child: Text(
+                                  currentSlide?.text ?? '',
+                                  textAlign: TextAlign.center,
+                                  maxLines: 4,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Color(0xFF00E5CC),
                                     fontFamily: 'Outfit',
+                                    color: Colors.white,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w600,
+                                    height: 1.3,
+                                    shadows: [
+                                      Shadow(
+                                        offset: Offset(1, 1),
+                                        blurRadius: 3,
+                                        color: Color.fromARGB(150, 0, 0, 0),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
+                              ),
+                            ),
+                            if (state.isBibleMode && currentSlide != null) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                currentSlide.label,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Color(0xFF00E5CC),
+                                  fontFamily: 'Outfit',
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ],
-                          ),
+                          ],
                         ),
                       ),
                     ),
@@ -732,47 +735,50 @@ class _LivePreviewPanel extends StatelessWidget {
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Center(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 250),
-                            child: Column(
-                              key: ValueKey('${state.currentSlideIndex}_${currentSlide?.label}'),
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  currentSlide?.text ?? '',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontFamily: 'Outfit',
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                    height: 1.3,
-                                    shadows: [
-                                      Shadow(
-                                        offset: Offset(1, 1),
-                                        blurRadius: 3,
-                                        color: Color.fromARGB(150, 0, 0, 0),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                if (state.isBibleMode && currentSlide != null) ...[
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    currentSlide.label,
+                        padding: const EdgeInsets.all(16.0),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 250),
+                          child: Column(
+                            key: ValueKey('${state.currentSlideIndex}_${currentSlide?.label}'),
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Center(
+                                  child: Text(
+                                    currentSlide?.text ?? '',
+                                    textAlign: TextAlign.center,
+                                    maxLines: 5,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                      fontSize: 13,
-                                      color: Color(0xFF00E5CC),
                                       fontFamily: 'Outfit',
+                                      color: Colors.white,
+                                      fontSize: 15,
                                       fontWeight: FontWeight.w600,
+                                      height: 1.3,
+                                      shadows: [
+                                        Shadow(
+                                          offset: Offset(1, 1),
+                                          blurRadius: 3,
+                                          color: Color.fromARGB(150, 0, 0, 0),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ],
+                                ),
+                              ),
+                              if (state.isBibleMode && currentSlide != null) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  currentSlide.label,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF00E5CC),
+                                    fontFamily: 'Outfit',
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ],
-                            ),
+                            ],
                           ),
                         ),
                       ),
