@@ -1,3 +1,95 @@
 # Visual Song Book
 
-Documentation is in [`docs/song_book_plus/`](docs/song_book_plus/README.md).
+> A premium, cross-platform church hymnal management, KJV Bible reader, and live projection app built with Flutter.
+
+![Logo](assets/images/logo.png)
+
+---
+
+## Overview
+
+**Visual Song Book** is a desktop-first application for worship teams and AV operators. It provides songbook management, Bible reading with cross-references, song sets for service planning, and live projection to a secondary screen — all in one app.
+
+---
+
+## Features
+
+- **Song Management** — full CRUD with category filtering, verse/chorus parsing, and auto-numbering
+- **KJV Bible Reader** — full-text search, cross-references (344k entries), bookmarks
+- **Song Sets** — drag-to-reorder sets for services, assign musical keys, project entire sets
+- **Live Projection** — dedicated secondary window (desktop) or fullscreen mode (mobile), adjustable font size, slide transitions, auto-insert chorus
+- **Unified Search** — search Bible or songs directly from the projection tab with structured reference parsing
+- **History** — tracks projected songs, sets, and Bible passages
+- **Import** — legacy `.mdb` (via mdb-tools), `.vsbook` backup archives, bundled JSON songbooks
+- **Export** — set sharing (JSON), database backup (`.vsbook`)
+
+---
+
+## Project Structure
+
+```
+lib/
+├── core/
+│   ├── providers/          # Riverpod providers (database, importers, theme, state)
+│   ├── utils/              # Verse parser, app logger, highlighting
+│   └── widgets/            # Shared UI components (bible widgets, settings cards)
+├── data/
+│   ├── db/                 # Drift SQLite schema & migrations (songs, sets, bible)
+│   ├── importers/          # MDB, VSB, bundled JSON, .vsbook importers
+│   ├── models/             # Shared data models
+│   ├── repositories/       # SongRepository, SetRepository, BackupRepository
+│   └── services/           # AppStorage (unified data directory), SeedingService
+├── features/
+│   ├── bible/              # Bible reader tab (repository, search, UI)
+│   ├── history/            # History tab (Songs / Sets / Bible sub-tabs)
+│   ├── projection/         # Projection controller, output view, search provider
+│   ├── sets/               # Song sets (controller, tab, widgets)
+│   ├── settings/           # Settings tab (manage data, about, import)
+│   ├── song_editor/        # Song creation / editing view
+│   └── song_list/          # Main dashboard, song list, navigation sidebar
+├── routing/
+│   └── app_router.dart     # GoRouter config (main + projection window routes)
+├── main.dart               # App entry point, theme, window init, seeding
+└── ...platform configs     # android/, ios/, linux/, windows/, macos/, web/
+```
+
+**Stack**: Flutter + Dart · Riverpod (state) · Drift (SQLite ORM) · GoRouter (routing) · desktop_multi_window (IPC)
+
+---
+
+## Data Storage
+
+All app data is stored in a single unified directory:
+
+| Platform | Path |
+|---|---|
+| Linux / macOS / Windows | `~/.visual_song_book/` |
+| Android / iOS | `<app-docs>/VisualSongBook/` |
+
+Contents:
+- `songs_db.sqlite` — song library, sets, categories, history
+- `kjv_bible.sqlite` — KJV Bible text with cross-references
+
+---
+
+## Building
+
+```bash
+flutter pub get
+
+# Desktop (Linux)
+flutter build linux --release
+./scripts/package_appimage.sh          # → build/Visual_Song_Book-*.AppImage
+
+# Android per-ABI
+flutter build apk --split-per-abi --release
+
+# Run
+flutter run -d linux
+```
+
+---
+
+## Version
+
+Current: **v1.6.0** — see About → Changelog in the app for full history.
