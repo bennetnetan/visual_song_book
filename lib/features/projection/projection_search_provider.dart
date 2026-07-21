@@ -70,6 +70,7 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
   final BibleRepository _bibleRepo;
   final SongRepository _songRepo;
   Timer? _debounce;
+  int _activeRequestId = 0;
 
   ProjectionSearchController(this._bibleRepo, this._songRepo)
       : super(const ProjectionSearchState());
@@ -80,36 +81,21 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
     super.dispose();
   }
 
-  /// Atomically switch mode and start a new search.
-  ///
-  /// Unlike calling [toggleMode] + [searchImmediate] separately, this writes
-  /// state exactly ONCE before starting the async search, so the UI never
-  /// flashes stale results from the previous mode.
+  /// Atomically switch mode and start a new search with request cancellation.
   void switchModeAndSearch(bool isBible, String query) {
     _debounce?.cancel();
+    _activeRequestId++;
+    final requestId = _activeRequestId;
     final trimmed = query.trim();
-    // Single atomic state write: new mode + all results cleared + loading flag.
-    state = ProjectionSearchState(
+
+    state = state.copyWith(
       query: query,
       isBibleMode: isBible,
       isLoading: trimmed.isNotEmpty,
+      error: () => null,
     );
-    if (trimmed.isNotEmpty) {
-      _searchNow(query);
-    }
-  }
 
-  /// Set the search mode (true = Bible, false = Song).
-  /// Prefer [switchModeAndSearch] when you also need to re-run the search.
-  void toggleMode(bool isBible) {
-    state = state.copyWith(isBibleMode: isBible);
-  }
-
-  /// Called on every keystroke. Debounces 300 ms before executing.
-  void search(String query) {
-    state = state.copyWith(query: query, error: () => null);
-    _debounce?.cancel();
-    if (query.trim().isEmpty) {
+    if (trimmed.isEmpty) {
       state = state.copyWith(
         bibleResults: [],
         totalBibleCount: 0,
@@ -120,21 +106,54 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
       );
       return;
     }
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      _searchNow(query);
+
+    _debounce = Timer(const Duration(milliseconds: 150), () {
+      _searchNow(query, requestId);
     });
   }
 
-  Future<void> _searchNow(String query) async {
+  /// Set the search mode (true = Bible, false = Song).
+  void toggleMode(bool isBible) {
+    switchModeAndSearch(isBible, state.query);
+  }
+
+  /// Called on every keystroke. Debounces 250 ms before executing.
+  void search(String query) {
+    if (state.query == query) return;
+    state = state.copyWith(query: query, error: () => null);
+    _debounce?.cancel();
+
+    if (query.trim().isEmpty) {
+      _activeRequestId++;
+      state = state.copyWith(
+        bibleResults: [],
+        totalBibleCount: 0,
+        bibleOffset: 0,
+        exactMatch: () => null,
+        songResults: [],
+        isLoading: false,
+      );
+      return;
+    }
+
+    _activeRequestId++;
+    final requestId = _activeRequestId;
+    _debounce = Timer(const Duration(milliseconds: 250), () {
+      _searchNow(query, requestId);
+    });
+  }
+
+  Future<void> _searchNow(String query, int requestId) async {
+    if (requestId != _activeRequestId) return;
     state = state.copyWith(isLoading: true, error: () => null);
     try {
       if (state.isBibleMode) {
-        await _performBibleSearch(query);
+        await _performBibleSearch(query, requestId);
       } else {
-        await _performSongSearch(query);
+        await _performSongSearch(query, requestId);
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && requestId == _activeRequestId) {
         state = state.copyWith(
           isLoading: false,
           error: () => e.toString(),
@@ -143,20 +162,21 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
     }
   }
 
-  Future<void> _performBibleSearch(String query) async {
+  Future<void> _performBibleSearch(String query, int requestId) async {
     final normalized = normalizeSearchQuery(query);
-
-    // Reset bible-specific state and clear song results
-    state = state.copyWith(
-      bibleResults: [],
-      totalBibleCount: 0,
-      bibleOffset: 0,
-      exactMatch: () => null,
-      songResults: [],
-    );
+    if (requestId != _activeRequestId) return;
 
     if (normalized.isEmpty) {
-      state = state.copyWith(isLoading: false);
+      if (mounted && requestId == _activeRequestId) {
+        state = state.copyWith(
+          bibleResults: [],
+          totalBibleCount: 0,
+          bibleOffset: 0,
+          exactMatch: () => null,
+          songResults: [],
+          isLoading: false,
+        );
+      }
       return;
     }
 
@@ -166,28 +186,29 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
     if (ref != null) {
       exact = await _bibleRepo.getVerseByRef(ref.bookId, ref.chapter, ref.verse);
     }
-
-    if (exact != null && mounted) {
-      state = state.copyWith(exactMatch: () => exact);
-    }
+    if (requestId != _activeRequestId) return;
 
     // Full-text search
     final total = await _bibleRepo.countSearchResults(normalized);
+    if (requestId != _activeRequestId) return;
+
     final results = await _bibleRepo.searchVersesPaginated(normalized, 10, 0);
-    if (!mounted) return;
+    if (!mounted || requestId != _activeRequestId) return;
+
     final filtered = results.where((v) => v.id != exact?.id).toList();
     state = state.copyWith(
       bibleResults: filtered,
       totalBibleCount: total,
       bibleOffset: filtered.length,
+      exactMatch: () => exact,
       songResults: [],
       isLoading: false,
     );
   }
 
-  Future<void> _performSongSearch(String query) async {
+  Future<void> _performSongSearch(String query, int requestId) async {
     final results = await _songRepo.searchSongs(query);
-    if (mounted) {
+    if (mounted && requestId == _activeRequestId) {
       state = state.copyWith(
         songResults: results,
         bibleResults: [],

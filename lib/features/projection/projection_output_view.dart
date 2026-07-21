@@ -340,7 +340,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                 ),
               ),
 
-              // Centered slide text for all modes
+              // Centered slide text + Bible reference 20px below text (above lower thirds)
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -349,10 +349,25 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                   ),
                   child: Center(
                     child: activeText.isNotEmpty
-                        ? VerseText(
-                            text: activeText,
-                            key: ValueKey(slideKey),
-                            fontSize: activeFontSize,
+                        ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: VerseText(
+                                  text: activeText,
+                                  key: ValueKey(slideKey),
+                                  fontSize: activeFontSize,
+                                ),
+                              ),
+                              if (activeIsBible && activeLabel.isNotEmpty) ...[
+                                const SizedBox(height: 20),
+                                ReferenceLabel(
+                                  label: activeLabel,
+                                  fontSize: (activeFontSize * 0.45).clamp(20.0, 48.0),
+                                ),
+                              ],
+                            ],
                           )
                         : const Text(
                             'Awaiting projection…',
@@ -366,22 +381,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                   ),
                 ),
               ),
-
-              // Bible verse reference overlay pinned at bottom of the main projection screen
-              if (activeIsBible && activeLabel.isNotEmpty)
-                Positioned(
-                  bottom: 24,
-                  left: 32,
-                  right: 32,
-                  child: SafeArea(
-                    child: Center(
-                      child: ReferenceLabel(
-                        label: activeLabel,
-                        fontSize: (activeFontSize * 0.45).clamp(20.0, 48.0),
-                      ),
-                    ),
-                  ),
-                ),
 
               // Close button — subtle, only shows on hover
               Positioned(
