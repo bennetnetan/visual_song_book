@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:logging/logging.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
+import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/routing/app_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:screen_retriever/screen_retriever.dart';
@@ -12,6 +14,11 @@ import 'package:window_manager/window_manager.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialise logging — ALL levels in debug, WARNING+ in release.
+  AppLogger.init(level: kReleaseMode ? Level.WARNING : Level.ALL);
+  final log = AppLogger.get('Main');
+  log.info('App starting (args: $args)');
 
   if (args.isNotEmpty &&
       (args.first == 'multi_window' || args.first == 'Projection Output')) {
