@@ -1274,44 +1274,44 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
 
   @override
   Widget build(BuildContext context) {
-    final searchState = ref.watch(projectionSearchProvider);
-
     return SearchAnchor(
       searchController: _searchController,
       builder: (context, controller) {
-        final theme = Theme.of(context);
-        final isBible = searchState.isBibleMode;
-        // Use a distinct teal-like color for Bible (matching the preview overlay) 
-        // and the primary color for Songs.
-        final color = isBible ? const Color(0xFF00E5CC) : theme.colorScheme.primary;
+        return Consumer(
+          builder: (context, ref, child) {
+            final isBible = ref.watch(projectionSearchProvider.select((s) => s.isBibleMode));
+            final theme = Theme.of(context);
+            final color = isBible ? const Color(0xFF00E5CC) : theme.colorScheme.primary;
 
-        return ActionChip(
-          onPressed: () => controller.openView(),
-          avatar: Icon(
-            isBible ? Icons.menu_book : Icons.library_music,
-            size: 16,
-            color: color,
-          ),
-          label: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                isBible ? 'Search Bible' : 'Search Songs',
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
+            return ActionChip(
+              onPressed: () => controller.openView(),
+              avatar: Icon(
+                isBible ? Icons.menu_book : Icons.library_music,
+                size: 16,
+                color: color,
               ),
-              const SizedBox(width: 4),
-              Icon(Icons.search, size: 14, color: color),
-            ],
-          ),
-          backgroundColor: color.withValues(alpha: 0.15),
-          side: BorderSide(color: color.withValues(alpha: 0.4)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          padding: EdgeInsets.zero,
-          tooltip: isBible ? 'Search Bible' : 'Search Songs',
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    isBible ? 'Search Bible' : 'Search Songs',
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.search, size: 14, color: color),
+                ],
+              ),
+              backgroundColor: color.withValues(alpha: 0.15),
+              side: BorderSide(color: color.withValues(alpha: 0.4)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              padding: EdgeInsets.zero,
+              tooltip: isBible ? 'Search Bible' : 'Search Songs',
+            );
+          },
         );
       },
       viewLeading: IconButton(
@@ -1324,12 +1324,17 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
       viewTrailing: [
         Padding(
           padding: const EdgeInsets.only(right: 8.0),
-          child: _SearchModeToggle(
-            isBibleMode: searchState.isBibleMode,
-            onToggle: (isBible) {
-              ref.read(projectionSearchProvider.notifier).switchModeAndSearch(
-                isBible,
-                _searchController.text,
+          child: Consumer(
+            builder: (context, ref, child) {
+              final isBibleMode = ref.watch(projectionSearchProvider.select((s) => s.isBibleMode));
+              return _SearchModeToggle(
+                isBibleMode: isBibleMode,
+                onToggle: (isBible) {
+                  ref.read(projectionSearchProvider.notifier).switchModeAndSearch(
+                    isBible,
+                    _searchController.text,
+                  );
+                },
               );
             },
           ),
