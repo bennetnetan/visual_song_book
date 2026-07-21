@@ -49,10 +49,15 @@ class HighlightedText extends StatelessWidget {
 /// Animated verse text with slide-up/fade transition and auto-fit to container size.
 class VerseText extends StatelessWidget {
   final String text;
+  final String? referenceLabel;
   final double fontSize;
 
-  const VerseText({required this.text, super.key, required this.fontSize});
-
+  const VerseText({
+    required this.text,
+    this.referenceLabel,
+    super.key,
+    this.fontSize = 40.0,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -107,29 +112,44 @@ class VerseText extends StatelessWidget {
             );
           },
           child: text.isNotEmpty
-              ? Text(
-                  text,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Outfit',
-                    color: Colors.white,
-                    fontSize: finalFontSize,
-                    fontWeight: FontWeight.w600,
-                    height: 1.35,
-                    letterSpacing: 0.3,
-                    shadows: [
-                      Shadow(
-                        offset: const Offset(0, 2),
-                        blurRadius: 12,
-                        color: Colors.black.withValues(alpha: 0.8),
+              ? Column(
+                  key: ValueKey('verse_$text'),
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      text,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        color: Colors.white,
+                        fontSize: finalFontSize,
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
+                        letterSpacing: 0.3,
+                        shadows: [
+                          Shadow(
+                            offset: const Offset(0, 2),
+                            blurRadius: 12,
+                            color: Colors.black.withValues(alpha: 0.8),
+                          ),
+                          Shadow(
+                            offset: const Offset(0, 0),
+                            blurRadius: 30,
+                            color: const Color(0xFF00E5CC).withValues(alpha: 0.12),
+                          ),
+                        ],
                       ),
-                      Shadow(
-                        offset: const Offset(0, 0),
-                        blurRadius: 30,
-                        color: const Color(0xFF00E5CC).withValues(alpha: 0.12),
+                    ),
+                    if (referenceLabel != null && referenceLabel!.isNotEmpty) ...[
+                      const SizedBox(height: 20),
+                      ReferenceLabel(
+                        label: referenceLabel!,
+                        fontSize: (finalFontSize * 0.45).clamp(20.0, 48.0),
                       ),
                     ],
-                  ),
+                  ],
                 )
               : const SizedBox.shrink(),
         );

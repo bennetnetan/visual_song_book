@@ -81,7 +81,7 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
     super.dispose();
   }
 
-  /// Atomically switch mode and start a new search with request cancellation.
+  /// Atomically switch mode and start a new search instantly (0ms delay).
   void switchModeAndSearch(bool isBible, String query) {
     _debounce?.cancel();
     _activeRequestId++;
@@ -107,9 +107,8 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
       return;
     }
 
-    _debounce = Timer(const Duration(milliseconds: 150), () {
-      _searchNow(query, requestId);
-    });
+    // Instant 0ms execution for mode toggles!
+    _searchNow(query, requestId);
   }
 
   /// Set the search mode (true = Bible, false = Song).

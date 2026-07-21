@@ -941,7 +941,7 @@ class _SetNavigatorPanel extends ConsumerStatefulWidget {
 }
 
 class _SetNavigatorPanelState extends ConsumerState<_SetNavigatorPanel> {
-  bool _expanded = true;
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {

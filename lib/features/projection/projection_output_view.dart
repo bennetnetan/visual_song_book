@@ -340,7 +340,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                 ),
               ),
 
-              // Centered slide text + Bible reference 20px below text (above lower thirds)
+              // Centered slide text + Bible reference tightly attached 20px below
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -349,35 +349,13 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                   ),
                   child: Center(
                     child: activeText.isNotEmpty
-                        ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: VerseText(
-                                  text: activeText,
-                                  key: ValueKey(slideKey),
-                                  fontSize: activeFontSize,
-                                ),
-                              ),
-                              if (activeIsBible && activeLabel.isNotEmpty) ...[
-                                const SizedBox(height: 20),
-                                ReferenceLabel(
-                                  label: activeLabel,
-                                  fontSize: (activeFontSize * 0.45).clamp(20.0, 48.0),
-                                ),
-                              ],
-                            ],
+                        ? VerseText(
+                            text: activeText,
+                            referenceLabel: activeIsBible ? activeLabel : null,
+                            key: ValueKey(slideKey),
+                            fontSize: activeFontSize,
                           )
-                        : const Text(
-                            'Awaiting projection…',
-                            style: TextStyle(
-                              color: Colors.white24,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w300,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
+                        : const SizedBox.shrink(),
                   ),
                 ),
               ),
