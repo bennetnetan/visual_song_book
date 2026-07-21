@@ -29,34 +29,23 @@ class ProjectionTab extends ConsumerStatefulWidget {
 }
 
 class _ProjectionTabState extends ConsumerState<ProjectionTab> {
-  HardwareKeyboard? _keyboard;
-  bool _shiftPressed = false;
+  late final FocusNode _projectionFocus;
 
   @override
   void initState() {
     super.initState();
-    _keyboard = HardwareKeyboard.instance;
-    _keyboard!.addHandler(_handleHardwareKey);
+    _projectionFocus = FocusNode(debugLabel: 'ProjectionControlsFocus');
   }
 
   @override
   void dispose() {
-    _keyboard?.removeHandler(_handleHardwareKey);
+    _projectionFocus.dispose();
     super.dispose();
   }
 
-  bool _handleHardwareKey(KeyEvent event) {
+  KeyEventResult _handleProjectionKeys(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
-      return false;
-    }
-
-    // Don't steal keys when a text field is being edited.
-    final focused = FocusManager.instance.primaryFocus;
-    if (focused != null && focused.context != null) {
-      final widget = focused.context!.widget;
-      if (widget is EditableText || widget is TextField || widget is TextFormField) {
-        return false;
-      }
+      return KeyEventResult.ignored;
     }
 
     final notifier = ref.read(projectionControllerProvider.notifier);
@@ -66,17 +55,17 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
       case LogicalKeyboardKey.pageDown:
       case LogicalKeyboardKey.space:
         notifier.nextSlide();
-        return true;
+        return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowLeft:
       case LogicalKeyboardKey.arrowUp:
       case LogicalKeyboardKey.pageUp:
         notifier.prevSlide();
-        return true;
+        return KeyEventResult.handled;
       case LogicalKeyboardKey.escape:
         notifier.clearSong();
-        return true;
+        return KeyEventResult.handled;
       default:
-        return false;
+        return KeyEventResult.ignored;
     }
   }
 
@@ -106,7 +95,14 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
               ),
             ],
           ),
-          body: !state.hasContent
+          body: Focus(
+            focusNode: _projectionFocus,
+            autofocus: true,
+            onKeyEvent: _handleProjectionKeys,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () => _projectionFocus.requestFocus(),
+              child: !state.hasContent
               ? _EmptyProjectionState(
                   onGoSongs: () {
                     ref.read(activeDashboardTabProvider.notifier).state = 0;
@@ -165,10 +161,12 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
                                   ),
                                 ],
                               ),
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
               ),
+            ),
+          ),
     );
   }
 }
