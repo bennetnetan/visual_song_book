@@ -12,6 +12,12 @@ import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
 import 'package:visual_song_book/features/sets/sets_tab.dart';
 
+/// Persists the set-navigator collapsed/expanded state across widget-tree rebuilds
+/// (the panel moves between large-screen Row and small-screen Column, which would
+/// otherwise reset local widget state and reopen the panel on every rebuild).
+final _setNavigatorExpandedProvider = StateProvider<bool>((ref) => false);
+
+
 class ProjectionTab extends ConsumerStatefulWidget {
   final bool isLargeScreen;
 
@@ -941,11 +947,13 @@ class _SetNavigatorPanel extends ConsumerStatefulWidget {
 }
 
 class _SetNavigatorPanelState extends ConsumerState<_SetNavigatorPanel> {
-  bool _expanded = false;
+  // Expanded state is now in _setNavigatorExpandedProvider so it survives
+  // widget-tree moves (large ↔ small screen layout changes).
 
   @override
   Widget build(BuildContext context) {
     final setsState = ref.watch(setsControllerProvider);
+    final bool isExpanded = ref.watch(_setNavigatorExpandedProvider);
     final theme = Theme.of(context);
 
     // Only show when a set is selected and has items
@@ -978,7 +986,7 @@ class _SetNavigatorPanelState extends ConsumerState<_SetNavigatorPanel> {
           // Header bar
           InkWell(
             borderRadius: BorderRadius.circular(16),
-            onTap: () => setState(() => _expanded = !_expanded),
+            onTap: () => ref.read(_setNavigatorExpandedProvider.notifier).state = !isExpanded,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
@@ -1018,7 +1026,7 @@ class _SetNavigatorPanelState extends ConsumerState<_SetNavigatorPanel> {
                   ),
                   const SizedBox(width: 6),
                   Icon(
-                    _expanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
+                    isExpanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
                     size: 16,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -1028,7 +1036,7 @@ class _SetNavigatorPanelState extends ConsumerState<_SetNavigatorPanel> {
           ),
 
           // Song list
-          if (_expanded)
+          if (isExpanded)
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 200),
               child: ListView.builder(
@@ -1352,7 +1360,7 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
   }
 }
 
-class _SuggestionsList extends ConsumerWidget {
+class _SuggestionsList extends ConsumerStatefulWidget {
   final SearchController controller;
   final ProjectionController notifier;
 
@@ -1362,9 +1370,110 @@ class _SuggestionsList extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_SuggestionsList> createState() => _SuggestionsListState();
+}
+
+class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
+  int _selectedIndex = 0;
+  final ScrollController _scrollController = ScrollController();
+  final FocusNode _focusNode = FocusNode(debugLabel: 'SearchSuggestionsFocus');
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  /// Scrolls so the selected item is visible (item height ≈ 80 logical px).
+  void _scrollToSelected(int index) {
+    const itemHeight = 80.0;
+    final offset = index * itemHeight;
+    _scrollController.animateTo(
+      offset.clamp(0.0, _scrollController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOut,
+    );
+  }
+
+  /// Projects the item at [index] and closes the search view.
+  void _pickItem(int index, ProjectionSearchState searchState) {
+    final searchRef = ref.read(projectionSearchProvider.notifier);
+    if (searchState.isBibleMode) {
+      final results = [
+        if (searchState.exactMatch != null) searchState.exactMatch!,
+        ...searchState.bibleResults,
+      ];
+      if (index >= results.length) return;
+      final v = results[index];
+      widget.notifier.projectVerse(
+        v.bookId, v.chapter, v.verse, v.bookName ?? '',
+      );
+      ref.read(setRepositoryProvider).recordBibleProjection(v.reference, v.text);
+    } else {
+      final songs = searchState.songResults;
+      if (index >= songs.length) return;
+      widget.notifier.setSong(songs[index]);
+    }
+    searchRef.clear();
+    widget.controller.closeView(null);
+  }
+
+  KeyEventResult _handleKey(KeyEvent event, ProjectionSearchState searchState) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    final int totalItems = searchState.isBibleMode
+        ? (searchState.exactMatch != null ? 1 : 0) + searchState.bibleResults.length
+        : searchState.songResults.length;
+
+    if (totalItems == 0) return KeyEventResult.ignored;
+
+    final key = event.logicalKey;
+
+    if (key == LogicalKeyboardKey.arrowDown ||
+        key == LogicalKeyboardKey.arrowRight) {
+      final next = (_selectedIndex + 1).clamp(0, totalItems - 1);
+      if (next != _selectedIndex) {
+        setState(() => _selectedIndex = next);
+        _scrollToSelected(next);
+      }
+      return KeyEventResult.handled; // Consume – do NOT propagate to projection
+    }
+
+    if (key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowLeft) {
+      final prev = (_selectedIndex - 1).clamp(0, totalItems - 1);
+      if (prev != _selectedIndex) {
+        setState(() => _selectedIndex = prev);
+        _scrollToSelected(prev);
+      }
+      return KeyEventResult.handled;
+    }
+
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter) {
+      _pickItem(_selectedIndex, searchState);
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final searchState = ref.watch(projectionSearchProvider);
     final theme = Theme.of(context);
+
+    // Reset selection when results change so Enter always picks the first item.
+    ref.listen(projectionSearchProvider, (prev, next) {
+      if (prev?.bibleResults != next.bibleResults ||
+          prev?.songResults != next.songResults ||
+          prev?.exactMatch != next.exactMatch) {
+        if (mounted) setState(() => _selectedIndex = 0);
+      }
+    });
 
     if (searchState.isLoading) {
       return const Center(
@@ -1375,8 +1484,6 @@ class _SuggestionsList extends ConsumerWidget {
       );
     }
 
-    // Use the provider's query (not the raw controller text) so that the
-    // empty-state check is always consistent with what was actually searched.
     final query = searchState.query;
     if (query.isEmpty) {
       return Padding(
@@ -1402,221 +1509,286 @@ class _SuggestionsList extends ConsumerWidget {
       );
     }
 
+    Widget list;
+
     if (searchState.isBibleMode) {
       final results = [
         if (searchState.exactMatch != null) searchState.exactMatch!,
         ...searchState.bibleResults,
       ];
       if (results.isEmpty) {
-        return const ListTile(title: Text('No results found'));
-      }
-      return ListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: results.length,
-        itemBuilder: (context, index) {
-          final v = results[index];
-          final isExact = v == searchState.exactMatch;
-          return Card(
-            elevation: 0,
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(
-                color: isExact 
-                    ? theme.colorScheme.primary.withValues(alpha: 0.5) 
-                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-                width: isExact ? 1.5 : 1,
-              ),
-            ),
-            color: isExact ? theme.colorScheme.primaryContainer.withValues(alpha: 0.15) : null,
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: (isExact ? theme.colorScheme.primary : const Color(0xFF00E5CC)).withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.menu_book,
-                  size: 16,
-                  color: isExact ? theme.colorScheme.primary : const Color(0xFF00E5CC),
+        list = const ListTile(title: Text('No results found'));
+      } else {
+        list = ListView.builder(
+          controller: _scrollController,
+          shrinkWrap: true,
+          physics: const ClampingScrollPhysics(),
+          itemCount: results.length,
+          itemBuilder: (context, index) {
+            final v = results[index];
+            final isExact = v == searchState.exactMatch;
+            final isSelected = index == _selectedIndex;
+            return Card(
+              elevation: 0,
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: isSelected
+                      ? theme.colorScheme.primary.withValues(alpha: 0.8)
+                      : isExact
+                          ? theme.colorScheme.primary.withValues(alpha: 0.5)
+                          : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                  width: isSelected ? 2.0 : (isExact ? 1.5 : 1),
                 ),
               ),
-              title: HighlightedText(
-                text: v.reference,
-                query: query,
-                style: TextStyle(
-                  fontFamily: 'Outfit',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: theme.colorScheme.onSurface,
+              color: isSelected
+                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.30)
+                  : isExact
+                      ? theme.colorScheme.primaryContainer.withValues(alpha: 0.15)
+                      : null,
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: (isExact ? theme.colorScheme.primary : const Color(0xFF00E5CC)).withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.menu_book,
+                    size: 16,
+                    color: isExact ? theme.colorScheme.primary : const Color(0xFF00E5CC),
+                  ),
                 ),
-                highlightStyle: TextStyle(
-                  fontFamily: 'Outfit',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: theme.colorScheme.primary,
-                  backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                ),
-              ),
-              subtitle: Padding(
-                padding: const EdgeInsets.only(top: 4.0),
-                child: HighlightedText(
-                  text: v.text,
+                title: HighlightedText(
+                  text: v.reference,
                   query: query,
                   style: TextStyle(
-                    fontSize: 12,
-                    color: theme.colorScheme.onSurfaceVariant,
+                    fontFamily: 'Outfit',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: theme.colorScheme.onSurface,
                   ),
                   highlightStyle: TextStyle(
-                    fontSize: 12,
-                    color: theme.colorScheme.primary,
+                    fontFamily: 'Outfit',
                     fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: theme.colorScheme.primary,
                     backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
                   ),
                 ),
-              ),
-              trailing: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.present_to_all,
-                  size: 16,
-                  color: theme.colorScheme.onSecondaryContainer,
-                ),
-              ),
-              onTap: () {
-                notifier.projectVerse(
-                  v.bookId,
-                  v.chapter,
-                  v.verse,
-                  v.bookName ?? '',
-                );
-                ref.read(setRepositoryProvider).recordBibleProjection(v.reference, v.text);
-                ref.read(projectionSearchProvider.notifier).clear();
-                controller.closeView(null);
-              },
-            ),
-          );
-        },
-      );
-    } else {
-      if (searchState.songResults.isEmpty) {
-        return const ListTile(title: Text('No results found'));
-      }
-      return ListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: searchState.songResults.length,
-        itemBuilder: (context, index) {
-          final s = searchState.songResults[index];
-          return Card(
-            elevation: 0,
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-              ),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              leading: Container(
-                width: 36,
-                height: 36,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  '#${s.songNum}',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 4.0),
+                  child: HighlightedText(
+                    text: v.text,
+                    query: query,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    highlightStyle: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                      backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                    ),
                   ),
                 ),
-              ),
-              title: HighlightedText(
-                text: s.title,
-                query: query,
-                style: TextStyle(
-                  fontFamily: 'Outfit',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: theme.colorScheme.onSurface,
-                ),
-                highlightStyle: TextStyle(
-                  fontFamily: 'Outfit',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: theme.colorScheme.primary,
-                  backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                ),
-              ),
-              subtitle: Padding(
-                padding: const EdgeInsets.only(top: 4.0),
-                child: Row(
-                  children: [
-                    if (s.key != null && s.key!.isNotEmpty) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                trailing: isSelected
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(4),
+                          color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                          ),
                         ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.keyboard_return, size: 12,
+                                color: theme.colorScheme.primary),
+                            const SizedBox(width: 3),
+                            Text('Enter', style: TextStyle(
+                              fontSize: 10,
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            )),
+                          ],
+                        ),
+                      )
+                    : Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.present_to_all,
+                          size: 16,
+                          color: theme.colorScheme.onSecondaryContainer,
+                        ),
+                      ),
+                onTap: () => _pickItem(index, searchState),
+              ),
+            );
+          },
+        );
+      }
+    } else {
+      if (searchState.songResults.isEmpty) {
+        list = const ListTile(title: Text('No results found'));
+      } else {
+        list = ListView.builder(
+          controller: _scrollController,
+          shrinkWrap: true,
+          physics: const ClampingScrollPhysics(),
+          itemCount: searchState.songResults.length,
+          itemBuilder: (context, index) {
+            final s = searchState.songResults[index];
+            final isSelected = index == _selectedIndex;
+            return Card(
+              elevation: 0,
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: isSelected
+                      ? theme.colorScheme.primary.withValues(alpha: 0.8)
+                      : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                  width: isSelected ? 2.0 : 1.0,
+                ),
+              ),
+              color: isSelected
+                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.25)
+                  : null,
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                leading: Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '#${s.songNum}',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+                title: HighlightedText(
+                  text: s.title,
+                  query: query,
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  highlightStyle: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: theme.colorScheme.primary,
+                    backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                  ),
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 4.0),
+                  child: Row(
+                    children: [
+                      if (s.key != null && s.key!.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Key: ${s.key}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      Expanded(
                         child: Text(
-                          'Key: ${s.key}',
+                          s.body.replaceAll('\n', ' '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurfaceVariant,
+                            fontSize: 11,
+                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
                     ],
-                    Expanded(
-                      child: Text(
-                        s.body.replaceAll('\n', ' '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                  ),
+                ),
+                trailing: isSelected
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.keyboard_return, size: 12,
+                                color: theme.colorScheme.primary),
+                            const SizedBox(width: 3),
+                            Text('Enter', style: TextStyle(
+                              fontSize: 10,
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            )),
+                          ],
+                        ),
+                      )
+                    : Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.present_to_all,
+                          size: 16,
+                          color: theme.colorScheme.onSecondaryContainer,
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                onTap: () => _pickItem(index, searchState),
               ),
-              trailing: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.present_to_all,
-                  size: 16,
-                  color: theme.colorScheme.onSecondaryContainer,
-                ),
-              ),
-              onTap: () {
-                notifier.setSong(s);
-                ref.read(projectionSearchProvider.notifier).clear();
-                controller.closeView(null);
-              },
-            ),
-          );
-        },
-      );
+            );
+          },
+        );
+      }
     }
+
+    // Wrap the list in a Focus widget that intercepts arrow-key navigation
+    // and Enter-to-project — events are consumed here and never reach the
+    // projection screen's Focus node (the SearchAnchor overlay is a separate
+    // route on top of the main view).
+    return Focus(
+      focusNode: _focusNode,
+      autofocus: true,
+      onKeyEvent: (node, event) => _handleKey(event, searchState),
+      child: list,
+    );
   }
 }
