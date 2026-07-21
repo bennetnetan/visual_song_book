@@ -593,43 +593,46 @@ class _LivePreviewPanel extends StatelessWidget {
                       child: Center(
                         child: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 250),
-                          child: Text(
-                            currentSlide?.text ?? '',
-                            key: ValueKey(
-                                '${state.currentSlideIndex}_${currentSlide?.label}'),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontFamily: 'Outfit',
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              height: 1.3,
-                              shadows: [
-                                Shadow(
-                                  offset: Offset(1, 1),
-                                  blurRadius: 3,
-                                  color: Color.fromARGB(150, 0, 0, 0),
+                          child: Column(
+                            key: ValueKey('${state.currentSlideIndex}_${currentSlide?.label}'),
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                currentSlide?.text ?? '',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontFamily: 'Outfit',
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.3,
+                                  shadows: [
+                                    Shadow(
+                                      offset: Offset(1, 1),
+                                      blurRadius: 3,
+                                      color: Color.fromARGB(150, 0, 0, 0),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (state.isBibleMode && currentSlide != null) ...[
+                                const SizedBox(height: 12),
+                                Text(
+                                  currentSlide.label,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF00E5CC),
+                                    fontFamily: 'Outfit',
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ],
-                            ),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                    if (state.isBibleMode && currentSlide != null)
-                      Positioned(
-                        bottom: 6,
-                        right: 8,
-                        child: Text(
-                          currentSlide.label,
-                          style: const TextStyle(
-                            fontSize: 7,
-                            color: Color(0xFF00E5CC),
-                            fontFamily: 'Outfit',
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -733,44 +736,46 @@ class _LivePreviewPanel extends StatelessWidget {
                         child: Center(
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 250),
-                            child: Text(
-                              currentSlide?.text ?? '',
-                              key: ValueKey(
-                                  '${state.currentSlideIndex}_${currentSlide?.label}'),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontFamily: 'Outfit',
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                height: 1.3,
-                                shadows: [
-                                  Shadow(
-                                    offset: Offset(1, 1),
-                                    blurRadius: 3,
-                                    color: Color.fromARGB(150, 0, 0, 0),
+                            child: Column(
+                              key: ValueKey('${state.currentSlideIndex}_${currentSlide?.label}'),
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  currentSlide?.text ?? '',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontFamily: 'Outfit',
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.3,
+                                    shadows: [
+                                      Shadow(
+                                        offset: Offset(1, 1),
+                                        blurRadius: 3,
+                                        color: Color.fromARGB(150, 0, 0, 0),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (state.isBibleMode && currentSlide != null) ...[
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    currentSlide.label,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF00E5CC),
+                                      fontFamily: 'Outfit',
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ],
-                              ),
+                              ],
                             ),
                           ),
                         ),
                       ),
-                      // Scripture reference overlay at bottom-right of preview
-                      if (state.isBibleMode && currentSlide != null)
-                        Positioned(
-                          bottom: 6,
-                          right: 8,
-                          child: Text(
-                            currentSlide.label,
-                            style: const TextStyle(
-                              fontSize: 7,
-                              color: Color(0xFF00E5CC),
-                              fontFamily: 'Outfit',
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -1258,11 +1263,6 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
 
   void _onQueryChanged() {
     final newText = _searchController.text;
-    // Skip if the query hasn't actually changed (e.g. mode toggle rebuild).
-    // This prevents a redundant debounced search from racing with
-    // switchModeAndSearch's immediate search.
-    final current = ref.read(projectionSearchProvider).query;
-    if (newText == current) return;
     ref.read(projectionSearchProvider.notifier).search(newText);
   }
 

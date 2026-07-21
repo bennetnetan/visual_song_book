@@ -146,12 +146,13 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
   Future<void> _performBibleSearch(String query) async {
     final normalized = normalizeSearchQuery(query);
 
-    // Reset bible-specific state
+    // Reset bible-specific state and clear song results
     state = state.copyWith(
       bibleResults: [],
       totalBibleCount: 0,
       bibleOffset: 0,
       exactMatch: () => null,
+      songResults: [],
     );
 
     if (normalized.isEmpty) {
@@ -179,6 +180,7 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
       bibleResults: filtered,
       totalBibleCount: total,
       bibleOffset: filtered.length,
+      songResults: [],
       isLoading: false,
     );
   }
@@ -188,6 +190,9 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
     if (mounted) {
       state = state.copyWith(
         songResults: results,
+        bibleResults: [],
+        totalBibleCount: 0,
+        exactMatch: () => null,
         isLoading: false,
       );
     }
@@ -228,10 +233,10 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
     }
   }
 
-  /// Clear all search state.
+  /// Clear active search query and results while preserving current isBibleMode.
   void clear() {
     _debounce?.cancel();
-    state = const ProjectionSearchState();
+    state = ProjectionSearchState(isBibleMode: state.isBibleMode);
   }
 }
 
