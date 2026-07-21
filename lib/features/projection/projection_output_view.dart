@@ -331,33 +331,19 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
               // Centered slide text for all modes (Bible, song, secondary window)
               SafeArea(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 64.0,
-                      vertical: 48.0,
+                    padding: EdgeInsets.only(
+                      left: 64.0,
+                      right: 64.0,
+                      top: 48.0,
+                      // Reserve bottom space for the reference label when in Bible mode
+                      bottom: activeIsBible && activeLabel.isNotEmpty ? 96.0 : 48.0,
                     ),
                     child: Center(
                       child: activeText.isNotEmpty
-                          ? Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Expanded(
-                                  child: Center(
-                                    child: VerseText(
-                                      text: activeText,
-                                      key: ValueKey(slideKey),
-                                      fontSize: activeFontSize,
-                                    ),
-                                  ),
-                                ),
-                                if (activeIsBible && activeLabel.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 24),
-                                    child: ReferenceLabel(
-                                      label: activeLabel,
-                                      fontSize: (activeFontSize * 0.45).clamp(20.0, 48.0),
-                                    ),
-                                  ),
-                              ],
+                          ? VerseText(
+                              text: activeText,
+                              key: ValueKey(slideKey),
+                              fontSize: activeFontSize,
                             )
                           : const Text(
                               'Awaiting projection…',
@@ -368,6 +354,33 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                                 letterSpacing: 1.2,
                               ),
                             ),
+                    ),
+                  ),
+                ),
+
+              // Bible reference label — pinned at the bottom, well below verse text
+              if (activeIsBible && activeLabel.isNotEmpty)
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: SafeArea(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 48),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.0),
+                            Colors.black.withValues(alpha: 0.7),
+                          ],
+                        ),
+                      ),
+                      child: ReferenceLabel(
+                        label: activeLabel,
+                        fontSize: (activeFontSize * 0.45).clamp(20.0, 48.0),
+                      ),
                     ),
                   ),
                 ),

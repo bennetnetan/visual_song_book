@@ -192,7 +192,8 @@ class SetsController extends StateNotifier<SetsState> {
       final song = state.availableSongs.where((s) => s.id == item.songId).firstOrNull;
       if (song != null) {
         final numberText = song.songNum > 0 ? ' (#${song.songNum})' : '';
-        buffer.writeln('${i + 1}. ${song.title}$numberText');
+        final keyText = item.key != null && item.key!.isNotEmpty ? ' [Key: ${item.key}]' : '';
+        buffer.writeln('${i + 1}. ${song.title}$numberText$keyText');
       }
     }
 
