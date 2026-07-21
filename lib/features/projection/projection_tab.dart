@@ -29,24 +29,36 @@ class ProjectionTab extends ConsumerStatefulWidget {
 }
 
 class _ProjectionTabState extends ConsumerState<ProjectionTab> {
-  late final FocusNode _focusNode;
+  HardwareKeyboard? _keyboard;
+  bool _shiftPressed = false;
 
   @override
   void initState() {
     super.initState();
-    _focusNode = FocusNode(debugLabel: 'ProjectionTabFocus');
+    _keyboard = HardwareKeyboard.instance;
+    _keyboard!.addHandler(_handleHardwareKey);
   }
 
   @override
   void dispose() {
-    _focusNode.dispose();
+    _keyboard?.removeHandler(_handleHardwareKey);
     super.dispose();
   }
 
-  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+  bool _handleHardwareKey(KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
-      return KeyEventResult.ignored;
+      return false;
     }
+
+    // Don't steal keys when a text field is being edited.
+    final focused = FocusManager.instance.primaryFocus;
+    if (focused != null && focused.context != null) {
+      final widget = focused.context!.widget;
+      if (widget is EditableText || widget is TextField || widget is TextFormField) {
+        return false;
+      }
+    }
+
     final notifier = ref.read(projectionControllerProvider.notifier);
     switch (event.logicalKey) {
       case LogicalKeyboardKey.arrowRight:
@@ -54,17 +66,17 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
       case LogicalKeyboardKey.pageDown:
       case LogicalKeyboardKey.space:
         notifier.nextSlide();
-        return KeyEventResult.handled;
+        return true;
       case LogicalKeyboardKey.arrowLeft:
       case LogicalKeyboardKey.arrowUp:
       case LogicalKeyboardKey.pageUp:
         notifier.prevSlide();
-        return KeyEventResult.handled;
+        return true;
       case LogicalKeyboardKey.escape:
         notifier.clearSong();
-        return KeyEventResult.handled;
+        return true;
       default:
-        return KeyEventResult.ignored;
+        return false;
     }
   }
 
@@ -73,14 +85,8 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
     final state = ref.watch(projectionControllerProvider);
     final notifier = ref.read(projectionControllerProvider.notifier);
 
-    return Focus(
-      focusNode: _focusNode,
-      autofocus: true,
-      onKeyEvent: _handleKeyEvent,
-      child: GestureDetector(
-        onTap: () => _focusNode.requestFocus(),
-        child: Scaffold(
-          appBar: AppBar(
+    return Scaffold(
+        appBar: AppBar(
             title: const Text('Projection Controls'),
             actions: [
               IconButton(
@@ -159,12 +165,10 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
                                   ),
                                 ],
                               ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-        ),
-      ),
+              ),
     );
   }
 }
