@@ -88,6 +88,13 @@ class SetRepository {
         .get();
   }
 
+  Stream<List<SongSetItem>> watchSetItems(int setId) {
+    return (db.select(db.songSetItems)
+          ..where((t) => t.setId.equals(setId))
+          ..orderBy([(t) => OrderingTerm.asc(t.position)]))
+        .watch();
+  }
+
   Future<void> addSongToSet(int setId, int songId, int position, {String? key}) async {
     await db
         .into(db.songSetItems)

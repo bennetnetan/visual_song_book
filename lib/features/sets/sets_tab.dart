@@ -3,11 +3,14 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
+import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/sets/sets_controller.dart';
 import 'package:visual_song_book/features/sets/widgets/set_list.dart';
 import 'package:visual_song_book/features/sets/widgets/set_detail.dart';
+
+final _log = AppLogger.get('SetsTab');
 
 final setsControllerProvider = StateNotifierProvider<SetsController, SetsState>(
   (ref) {
@@ -281,7 +284,19 @@ class SetsTab extends ConsumerWidget {
     SetsController notifier,
     WidgetRef ref,
   ) {
-    final currentSet = notifier.selectedSet!;
+    // Guard against the startup race: selectedSetId may be set (e.g. restored
+    // from prefs) while state.sets is still loading from the DB. In that case
+    // selectedSet resolves to null and the previous ! would crash. Show a
+    // spinner until the sets list catches up.
+    final currentSet = notifier.selectedSet;
+    if (currentSet == null) {
+      _log.warning(
+        '_buildSetDetail: selectedSetId=${state.selectedSetId} but '
+        'selectedSet resolved to null (sets not yet loaded). '
+        'Showing loader.',
+      );
+      return const Center(child: CircularProgressIndicator());
+    }
     return SetDetail(
       setObj: currentSet,
       items: state.setItems,

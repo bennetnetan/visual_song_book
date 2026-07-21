@@ -2,11 +2,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/core/utils/debug_logger.dart';
 import 'package:visual_song_book/core/utils/uuid_generator.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/repositories/set_repository.dart';
 import 'package:visual_song_book/data/repositories/song_repository.dart';
+
+final _log = AppLogger.get('SetsController');
 
 class SetsState {
   final List<SongSet> sets;
@@ -49,6 +52,8 @@ class SetsController extends StateNotifier<SetsState> {
   final SetRepository _repo;
   final SongRepository _songRepo;
   StreamSubscription<List<SongSet>>? _setsSub;
+  StreamSubscription<List<Song>>? _songsSub;
+  StreamSubscription<List<SongSetItem>>? _itemsSub;
 
   SetsController(this._repo, this._songRepo) : super(SetsState.initial()) {
     _init();
@@ -56,21 +61,52 @@ class SetsController extends StateNotifier<SetsState> {
 
   void _init() {
     _setsSub = _repo.watchAllSets().listen((sets) {
+      _log.fine('Sets stream update: ${sets.length} set(s). '
+          'selectedSetId=${state.selectedSetId}');
+      
+      // Strict check: if state.selectedSetId is no longer present in DB sets list, clear stale selection
+      final bool hasSelectedSet = state.selectedSetId != null && sets.any((s) => s.id == state.selectedSetId);
+      if (state.selectedSetId != null && !hasSelectedSet) {
+        _log.warning(
+          'selectedSetId=${state.selectedSetId} no longer exists in DB sets. Clearing stale selection.',
+        );
+        clearSelection();
+      }
+
       state = state.copyWith(sets: sets, isLoading: false);
     });
-    _songRepo.watchAllSongs().listen((songs) {
+
+    _songsSub = _songRepo.watchAllSongs().listen((songs) {
+      _log.fine('Songs stream update: ${songs.length} song(s).');
       state = state.copyWith(availableSongs: songs);
     });
   }
 
   void selectSet(int setId) {
+    _log.info('selectSet($setId)');
+    
+    // Strict check: Ensure setId exists in sets list before setting
+    final exists = state.sets.any((s) => s.id == setId);
+    if (!exists && state.sets.isNotEmpty) {
+      _log.warning('Attempted to select set $setId which does not exist in loaded DB sets.');
+      clearSelection();
+      return;
+    }
+
     state = state.copyWith(selectedSetId: () => setId);
-    _repo.getSetItems(setId).then((items) {
-      if (mounted) state = state.copyWith(setItems: items);
+    _itemsSub?.cancel();
+    _itemsSub = _repo.watchSetItems(setId).listen((items) {
+      _log.fine('Set items updated reactively for set $setId: ${items.length} item(s).');
+      if (mounted && state.selectedSetId == setId) {
+        state = state.copyWith(setItems: items);
+      }
     });
   }
 
   void clearSelection() {
+    _log.info('clearSelection (was ${state.selectedSetId})');
+    _itemsSub?.cancel();
+    _itemsSub = null;
     state = state.copyWith(selectedSetId: () => null, setItems: []);
   }
 
@@ -85,23 +121,15 @@ class SetsController extends StateNotifier<SetsState> {
 
   Future<void> renameSet(int setId, String newName) async {
     await _repo.updateSet(setId, name: newName);
-    // Refresh sets list & details
-    if (state.selectedSetId == setId) {
-      selectSet(setId);
-    }
   }
 
   Future<void> addSongToSet(int setId, int songId, {String? key}) async {
     final currentCount = state.setItems.length;
     await _repo.addSongToSet(setId, songId, currentCount, key: key);
-    final items = await _repo.getSetItems(setId);
-    if (mounted) state = state.copyWith(setItems: items);
   }
 
   Future<void> updateSongKeyInSet(int setId, int songId, String? key) async {
     await _repo.updateSetItemKey(setId, songId, key);
-    final items = await _repo.getSetItems(setId);
-    if (mounted) state = state.copyWith(setItems: items);
   }
 
   Future<List<String>> getLastUsedKeysForSong(int songId) async {
@@ -114,8 +142,6 @@ class SetsController extends StateNotifier<SetsState> {
 
   Future<void> removeSongFromSet(int setId, int songId) async {
     await _repo.removeSongFromSet(setId, songId);
-    final items = await _repo.getSetItems(setId);
-    if (mounted) state = state.copyWith(setItems: items);
   }
 
   Future<void> reorderSongs(int setId, int oldIndex, int newIndex) async {
@@ -126,9 +152,6 @@ class SetsController extends StateNotifier<SetsState> {
 
     final songIds = list.map((i) => i.songId).toList();
     await _repo.reorderSetItems(setId, songIds);
-
-    final items = await _repo.getSetItems(setId);
-    if (mounted) state = state.copyWith(setItems: items);
   }
 
   // === Share/Export Logic ===
@@ -306,6 +329,8 @@ class SetsController extends StateNotifier<SetsState> {
   @override
   void dispose() {
     _setsSub?.cancel();
+    _songsSub?.cancel();
+    _itemsSub?.cancel();
     super.dispose();
   }
 }
