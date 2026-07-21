@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
+import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/features/bible/bible_controller.dart';
 import 'package:visual_song_book/features/bible/bible_repository.dart';
@@ -866,51 +867,6 @@ class _ResultCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class HighlightedText extends StatelessWidget {
-  final String text;
-  final String query;
-  final TextStyle style;
-  final TextStyle highlightStyle;
-
-  const HighlightedText({
-    super.key,
-    required this.text,
-    required this.query,
-    required this.style,
-    required this.highlightStyle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (query.isEmpty) return Text(text, style: style);
-
-    final List<TextSpan> spans = [];
-    final String lowerText = text.toLowerCase();
-    final String lowerQuery = query.toLowerCase();
-
-    int start = 0;
-    int indexOfQuery;
-
-    while ((indexOfQuery = lowerText.indexOf(lowerQuery, start)) != -1) {
-      if (indexOfQuery > start) {
-        spans.add(TextSpan(text: text.substring(start, indexOfQuery), style: style));
-      }
-      spans.add(TextSpan(text: text.substring(indexOfQuery, indexOfQuery + query.length), style: highlightStyle));
-      start = indexOfQuery + query.length;
-    }
-
-    if (start < text.length) {
-      spans.add(TextSpan(text: text.substring(start), style: style));
-    }
-
-    return RichText(
-      text: TextSpan(children: spans),
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
     );
   }
 }

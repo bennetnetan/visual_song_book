@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:visual_song_book/core/utils/debug_logger.dart';
 import 'package:visual_song_book/core/utils/uuid_generator.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/repositories/set_repository.dart';
@@ -90,11 +91,25 @@ class SetsController extends StateNotifier<SetsState> {
     }
   }
 
-  Future<void> addSongToSet(int setId, int songId) async {
+  Future<void> addSongToSet(int setId, int songId, {String? key}) async {
     final currentCount = state.setItems.length;
-    await _repo.addSongToSet(setId, songId, currentCount);
+    await _repo.addSongToSet(setId, songId, currentCount, key: key);
     final items = await _repo.getSetItems(setId);
     if (mounted) state = state.copyWith(setItems: items);
+  }
+
+  Future<void> updateSongKeyInSet(int setId, int songId, String? key) async {
+    await _repo.updateSetItemKey(setId, songId, key);
+    final items = await _repo.getSetItems(setId);
+    if (mounted) state = state.copyWith(setItems: items);
+  }
+
+  Future<List<String>> getLastUsedKeysForSong(int songId) async {
+    return _repo.getLastUsedKeysForSong(songId);
+  }
+
+  Future<List<String>> getTopUsedKeysForSong(int songId) async {
+    return _repo.getTopUsedKeysForSong(songId);
   }
 
   Future<void> removeSongFromSet(int setId, int songId) async {
@@ -131,6 +146,7 @@ class SetsController extends StateNotifier<SetsState> {
         itemsListJson.add({
           'position': item.position,
           'notes': item.notes,
+          'key': item.key,
           'song': {
             'title': song.title,
             'body': song.body,
@@ -221,6 +237,7 @@ class SetsController extends StateNotifier<SetsState> {
       for (var i = 0; i < items.length; i++) {
         final item = items[i];
         final pos = item['position'] as int? ?? i;
+        final itemKey = item['key'] as String?;
         final songData = item['song'] as Map<String, dynamic>?;
         if (songData == null) continue;
 
@@ -240,13 +257,13 @@ class SetsController extends StateNotifier<SetsState> {
         );
 
         // Add the resolved song to the newly created set
-        await _repo.addSongToSet(newSet.id, matchedSongId, pos);
+        await _repo.addSongToSet(newSet.id, matchedSongId, pos, key: itemKey);
       }
       
       // Select the newly imported set in the UI
       selectSet(newSet.id);
     } catch (e) {
-      print('Error importing set: $e');
+      DebugLogger.error('Error importing set', error: e);
       rethrow;
     }
   }

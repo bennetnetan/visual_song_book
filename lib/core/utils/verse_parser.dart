@@ -25,6 +25,19 @@ class VerseParser {
         // It's a chorus! Strip the first line and use the rest as text.
         final text = lines.skip(1).join('\n').trim();
         verses.add(Verse(label: 'C', text: text, order: i + 1));
+      } else if (RegExp(r'^(VERSE\s*\d+|V\d+)(:)?$').hasMatch(firstLine) || firstLine == 'VERSE') {
+        // It's a regular verse with a header. Strip the first line and use the rest as text.
+        final text = lines.skip(1).join('\n').trim();
+        final numberMatch = RegExp(r'\d+').firstMatch(firstLine);
+        final numVal = numberMatch != null ? int.parse(numberMatch.group(0)!) : verseCounter;
+        verses.add(
+          Verse(label: 'V$numVal', text: text, order: i + 1),
+        );
+        if (numberMatch == null) {
+          verseCounter++;
+        } else {
+          verseCounter = numVal + 1;
+        }
       } else {
         // It's a regular verse.
         verses.add(

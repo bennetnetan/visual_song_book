@@ -88,7 +88,7 @@ class SetRepository {
         .get();
   }
 
-  Future<void> addSongToSet(int setId, int songId, int position) async {
+  Future<void> addSongToSet(int setId, int songId, int position, {String? key}) async {
     await db
         .into(db.songSetItems)
         .insert(
@@ -96,8 +96,57 @@ class SetRepository {
             setId: setId,
             songId: songId,
             position: position,
+            key: Value(key),
           ),
         );
+  }
+
+  Future<void> updateSetItemKey(int setId, int songId, String? key) async {
+    await (db.update(db.songSetItems)
+          ..where((t) => t.setId.equals(setId) & t.songId.equals(songId)))
+        .write(
+      SongSetItemsCompanion(
+        key: Value(key),
+      ),
+    );
+  }
+
+  Future<List<String>> getLastUsedKeysForSong(int songId, {int limit = 3}) async {
+    final query = db.select(db.songSetItems).join([
+      innerJoin(db.songSets, db.songSets.id.equalsExp(db.songSetItems.setId)),
+    ])
+      ..where(db.songSetItems.songId.equals(songId) & db.songSetItems.key.isNotNull())
+      ..orderBy([OrderingTerm.desc(db.songSets.createdAt)]);
+
+    final rows = await query.get();
+    final keys = <String>[];
+    for (final row in rows) {
+      final key = row.readTable(db.songSetItems).key;
+      if (key != null && !keys.contains(key)) {
+        keys.add(key);
+        if (keys.length >= limit) break;
+      }
+    }
+    return keys;
+  }
+
+  Future<List<String>> getTopUsedKeysForSong(int songId, {int limit = 3}) async {
+    final items = await (db.select(db.songSetItems)
+          ..where((t) => t.songId.equals(songId) & t.key.isNotNull()))
+        .get();
+
+    final freq = <String, int>{};
+    for (final item in items) {
+      final key = item.key;
+      if (key != null) {
+        freq[key] = (freq[key] ?? 0) + 1;
+      }
+    }
+
+    final sortedKeys = freq.keys.toList()
+      ..sort((a, b) => freq[b]!.compareTo(freq[a]!));
+
+    return sortedKeys.take(limit).toList();
   }
 
   Future<void> removeSongFromSet(int setId, int songId) async {

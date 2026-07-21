@@ -7,6 +7,7 @@ import 'package:desktop_multi_window/desktop_multi_window.dart';
 
 import 'package:go_router/go_router.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 
 class ProjectionOutputView extends ConsumerStatefulWidget {
@@ -341,7 +342,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                               children: [
                                 Expanded(
                                   child: Center(
-                                    child: _VerseText(
+                                    child: VerseText(
                                       text: activeText,
                                       key: ValueKey(slideKey),
                                       fontSize: activeFontSize,
@@ -351,7 +352,10 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                                 if (activeIsBible && activeLabel.isNotEmpty)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 24),
-                                    child: _ReferenceLabel(label: activeLabel),
+                                    child: ReferenceLabel(
+                                      label: activeLabel,
+                                      fontSize: (activeFontSize * 0.45).clamp(20.0, 48.0),
+                                    ),
                                   ),
                               ],
                             )
@@ -709,157 +713,6 @@ class _SlideTextTimelineState extends State<_SlideTextTimeline> {
   }
 }
 
-
-/// Animated verse text with slide-up/fade transition and auto-fit to container size.
-class _VerseText extends StatelessWidget {
-  final String text;
-  final double fontSize;
-
-  const _VerseText({required this.text, super.key, required this.fontSize});
-
-  double _calculateDefaultFontSize(String text, Size size) {
-    if (text.isEmpty) return 40.0;
-
-    // Available bounds inside padding
-    final double availWidth = (size.width - 24).clamp(100.0, 10000.0);
-    final double availHeight = (size.height - 24).clamp(100.0, 10000.0);
-
-    // Estimate line count and max characters per line if we wrap text
-    final List<String> paragraphs = text.split('\n');
-    int totalEstimatedLines = 0;
-    int maxCharsPerLine = 0;
-
-    // We assume standard wrapping occurs at around 45 characters per line on a typical presentation screen
-    const int wrapThreshold = 45;
-
-    for (final paragraph in paragraphs) {
-      final trimmed = paragraph.trim();
-      if (trimmed.isEmpty) continue;
-
-      if (trimmed.length <= wrapThreshold) {
-        totalEstimatedLines += 1;
-        if (trimmed.length > maxCharsPerLine) {
-          maxCharsPerLine = trimmed.length;
-        }
-      } else {
-        // Estimate how many wrapped lines this paragraph will create
-        final int wrappedCount = (trimmed.length / wrapThreshold).ceil();
-        totalEstimatedLines += wrappedCount;
-        maxCharsPerLine = wrapThreshold;
-      }
-    }
-
-    if (totalEstimatedLines == 0) totalEstimatedLines = 1;
-    if (maxCharsPerLine == 0) maxCharsPerLine = 10;
-
-    // Calculate max font size based on lines height
-    // Outfit font height is approx 1.35. Let's use 1.45 for layout safety
-    final double sizeByHeight = availHeight / (totalEstimatedLines * 1.45);
-
-    // Calculate max font size based on characters width in longest line
-    // Outfit width is approx 0.55 * fontSize
-    final double sizeByWidth = availWidth / (maxCharsPerLine * 0.55);
-
-    // Get the limiting constraint
-    double baseSize = sizeByHeight < sizeByWidth ? sizeByHeight : sizeByWidth;
-
-    // Clamp to a reasonable baseline range
-    return baseSize.clamp(20.0, 100.0);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final Size size = Size(constraints.maxWidth, constraints.maxHeight);
-        
-        // Calculate the base fitted size
-        final double baseFontSize = _calculateDefaultFontSize(text, size);
-        
-        // Treat 40.0 as the baseline setting. Scale factor is (fontSize / 40.0)
-        final double scaleFactor = fontSize / 40.0;
-        final double finalFontSize = (baseFontSize * scaleFactor).clamp(14.0, 180.0);
-
-        return AnimatedSwitcher(
-          duration: const Duration(milliseconds: 350),
-          switchInCurve: Curves.easeInOut,
-          switchOutCurve: Curves.easeInOut,
-          transitionBuilder: (child, animation) {
-            return FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.04),
-                  end: Offset.zero,
-                ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
-                child: child,
-              ),
-            );
-          },
-          child: text.isNotEmpty
-              ? Text(
-                  text,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Outfit',
-                    color: Colors.white,
-                    fontSize: finalFontSize,
-                    fontWeight: FontWeight.w600,
-                    height: 1.35,
-                    letterSpacing: 0.3,
-                    shadows: [
-                      Shadow(
-                        offset: const Offset(0, 2),
-                        blurRadius: 12,
-                        color: Colors.black.withValues(alpha: 0.8),
-                      ),
-                      Shadow(
-                        offset: const Offset(0, 0),
-                        blurRadius: 30,
-                        color: const Color(0xFF00E5CC).withValues(alpha: 0.12),
-                      ),
-                    ],
-                  ),
-                )
-              : const SizedBox.shrink(),
-        );
-      },
-    );
-  }
-}
-
-/// Teal-coloured reference label shown below a Bible verse.
-class _ReferenceLabel extends StatelessWidget {
-  final String label;
-
-  const _ReferenceLabel({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
-      child: Text(
-        label,
-        key: ValueKey('ref_$label'),
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontFamily: 'Outfit',
-          fontSize: 22,
-          fontWeight: FontWeight.w500,
-          color: const Color(0xFF00E5CC).withValues(alpha: 0.85),
-          letterSpacing: 0.5,
-          shadows: [
-            Shadow(
-              offset: const Offset(0, 1),
-              blurRadius: 8,
-              color: Colors.black.withValues(alpha: 0.6),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 /// Scrollable chapter reference panel with auto-center and edge fades.
 

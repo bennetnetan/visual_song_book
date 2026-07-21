@@ -67,6 +67,7 @@ class SongSetItems extends Table {
   IntColumn get songId => integer().references(Songs, #id)();
   IntColumn get position => integer()();
   TextColumn get notes => text().nullable()();
+  TextColumn get key => text().nullable().withLength(max: 100)();
 }
 
 class SetHistory extends Table {
@@ -116,7 +117,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -136,6 +137,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 5) {
         await m.addColumn(songSets, songSets.uuid);
+      }
+      if (from < 6) {
+        await m.addColumn(songSetItems, songSetItems.key);
       }
     },
   );

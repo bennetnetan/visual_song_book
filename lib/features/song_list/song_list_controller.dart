@@ -70,6 +70,7 @@ class SongListController extends StateNotifier<SongListState> {
   final SongRepository _repository;
   StreamSubscription<List<Category>>? _categoriesSub;
   StreamSubscription<List<Song>>? _songsSub;
+  StreamSubscription<List<Song>>? _dbChangesSub;
   Timer? _debounceTimer;
 
   SongListController(this._repository) : super(SongListState.initial()) {
@@ -138,6 +139,13 @@ class SongListController extends StateNotifier<SongListState> {
         state = state.copyWith(error: err.toString());
       },
     );
+
+    // Watch all songs to refresh search queries when database changes
+    _dbChangesSub = _repository.watchSongs().listen((_) {
+      if (state.query.isNotEmpty) {
+        fetchSongs();
+      }
+    });
   }
 
   /// Sets the search query with a short debounce to avoid querying SQLite on every keystroke
@@ -253,6 +261,7 @@ class SongListController extends StateNotifier<SongListState> {
   void dispose() {
     _categoriesSub?.cancel();
     _songsSub?.cancel();
+    _dbChangesSub?.cancel();
     _debounceTimer?.cancel();
     super.dispose();
   }

@@ -9,7 +9,7 @@ class SetDetail extends ConsumerStatefulWidget {
   final List<SongSetItem> items;
   final List<Song> availableSongs;
   final int selectedSetId;
-  final ValueChanged<int> onAddSong;
+  final void Function(int songId, {String? key}) onAddSong;
   final ValueChanged<int> onRemoveSong;
   final VoidCallback onProject;
   final VoidCallback onShareJson;
@@ -75,6 +75,203 @@ class _SetDetailState extends ConsumerState<SetDetail> {
               }
             },
             child: const Text('Rename'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddSongKeyDialog(Song song) async {
+    final notifier = ref.read(setsControllerProvider.notifier);
+    final topKeys = await notifier.getTopUsedKeysForSong(song.id);
+    final lastKeys = await notifier.getLastUsedKeysForSong(song.id);
+
+    if (!mounted) return;
+
+    final textCtrl = TextEditingController(text: song.key ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Add "${song.title}" to Set'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: textCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Key (e.g., C, G, Eb, F#m)',
+                  hintText: 'Enter musical key',
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: 16),
+              if (song.key != null && song.key!.isNotEmpty) ...[
+                Text('Original Song Key:', style: Theme.of(ctx).textTheme.labelMedium),
+                const SizedBox(height: 6),
+                ActionChip(
+                  label: Text(song.key!),
+                  onPressed: () {
+                    textCtrl.text = song.key!;
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (topKeys.isNotEmpty) ...[
+                Text('Top Keys Used in Sets:', style: Theme.of(ctx).textTheme.labelMedium),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  children: topKeys.map((k) => ActionChip(
+                    label: Text(k),
+                    onPressed: () {
+                      textCtrl.text = k;
+                    },
+                  )).toList(),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (lastKeys.isNotEmpty) ...[
+                Text('Last Keys Used in Sets:', style: Theme.of(ctx).textTheme.labelMedium),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  children: lastKeys.map((k) => ActionChip(
+                    label: Text(k),
+                    backgroundColor: Theme.of(ctx).colorScheme.secondaryContainer,
+                    onPressed: () {
+                      textCtrl.text = k;
+                    },
+                  )).toList(),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              widget.onAddSong(song.id, key: null);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Add Unset'),
+          ),
+          TextButton(
+            onPressed: () {
+              final selectedKey = textCtrl.text.trim();
+              widget.onAddSong(
+                song.id,
+                key: selectedKey.isNotEmpty ? selectedKey : null,
+              );
+              Navigator.pop(ctx);
+            },
+            child: const Text('Add to Set'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showKeySelectorDialog(SongSetItem item, Song song) async {
+    final notifier = ref.read(setsControllerProvider.notifier);
+    final topKeys = await notifier.getTopUsedKeysForSong(item.songId);
+    final lastKeys = await notifier.getLastUsedKeysForSong(item.songId);
+
+    if (!mounted) return;
+
+    final textCtrl = TextEditingController(text: item.key ?? song.key ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Set Key for "${song.title}"'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: textCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Key (e.g., C, G, Eb, F#m)',
+                  hintText: 'Enter musical key',
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: 16),
+              if (song.key != null && song.key!.isNotEmpty) ...[
+                Text('Original Song Key:', style: Theme.of(ctx).textTheme.labelMedium),
+                const SizedBox(height: 6),
+                ActionChip(
+                  label: Text(song.key!),
+                  onPressed: () {
+                    textCtrl.text = song.key!;
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (topKeys.isNotEmpty) ...[
+                Text('Top Keys Used in Sets:', style: Theme.of(ctx).textTheme.labelMedium),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  children: topKeys.map((k) => ActionChip(
+                    label: Text(k),
+                    onPressed: () {
+                      textCtrl.text = k;
+                    },
+                  )).toList(),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (lastKeys.isNotEmpty) ...[
+                Text('Last Keys Used in Sets:', style: Theme.of(ctx).textTheme.labelMedium),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  children: lastKeys.map((k) => ActionChip(
+                    label: Text(k),
+                    backgroundColor: Theme.of(ctx).colorScheme.secondaryContainer,
+                    onPressed: () {
+                      textCtrl.text = k;
+                    },
+                  )).toList(),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              notifier.updateSongKeyInSet(widget.selectedSetId, item.songId, null);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Clear Key', style: TextStyle(color: Colors.red)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final newKey = textCtrl.text.trim();
+              notifier.updateSongKeyInSet(
+                widget.selectedSetId,
+                item.songId,
+                newKey.isNotEmpty ? newKey : null,
+              );
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -327,9 +524,119 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                         ),
                         subtitle: song != null
-                            ? Text(
-                                'Song ${song.songNum}',
-                                style: const TextStyle(fontSize: 11),
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Song ${song.songNum}',
+                                        style: const TextStyle(fontSize: 11),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      InkWell(
+                                        onTap: () => _showKeySelectorDialog(item, song),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: item.key != null && item.key!.isNotEmpty
+                                                ? theme.colorScheme.primaryContainer
+                                                : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: item.key == null || item.key!.isEmpty
+                                                ? Border.all(
+                                                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                                  )
+                                                : null,
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                item.key != null && item.key!.isNotEmpty
+                                                    ? 'Key: ${item.key}'
+                                                    : 'Key: Unset',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: item.key != null && item.key!.isNotEmpty
+                                                      ? FontWeight.bold
+                                                      : FontWeight.normal,
+                                                  color: item.key != null && item.key!.isNotEmpty
+                                                      ? theme.colorScheme.onPrimaryContainer
+                                                      : theme.colorScheme.onSurfaceVariant,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 2),
+                                              Icon(
+                                                Icons.edit,
+                                                size: 8,
+                                                color: item.key != null && item.key!.isNotEmpty
+                                                    ? theme.colorScheme.onPrimaryContainer
+                                                    : theme.colorScheme.onSurfaceVariant,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (item.key == null || item.key!.isEmpty)
+                                    FutureBuilder<List<List<String>>>(
+                                      future: Future.wait([
+                                        ref.read(setsControllerProvider.notifier).getTopUsedKeysForSong(item.songId),
+                                        ref.read(setsControllerProvider.notifier).getLastUsedKeysForSong(item.songId),
+                                      ]),
+                                      builder: (context, snapshot) {
+                                        if (!snapshot.hasData) return const SizedBox.shrink();
+                                        final top = snapshot.data![0];
+                                        final last = snapshot.data![1];
+                                        final suggestions = <String>{...top, ...last}.take(3).toList();
+                                        if (suggestions.isEmpty) return const SizedBox.shrink();
+
+                                        return Padding(
+                                          padding: const EdgeInsets.only(top: 4.0),
+                                          child: Row(
+                                            children: [
+                                              Text(
+                                                'Suggestions: ',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                                ),
+                                              ),
+                                              Wrap(
+                                                spacing: 4,
+                                                children: suggestions.map((k) => InkWell(
+                                                  onTap: () {
+                                                    ref.read(setsControllerProvider.notifier).updateSongKeyInSet(
+                                                      widget.selectedSetId,
+                                                      item.songId,
+                                                      k,
+                                                    );
+                                                  },
+                                                  child: Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
+                                                      borderRadius: BorderRadius.circular(4),
+                                                    ),
+                                                    child: Text(
+                                                      k,
+                                                      style: TextStyle(
+                                                        fontSize: 10,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: theme.colorScheme.primary,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                )).toList(),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                ],
                               )
                             : null,
                         trailing: IconButton(
@@ -437,7 +744,7 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                                   Icons.add_circle_outline,
                                   size: 18,
                                 ),
-                                onPressed: () => widget.onAddSong(song.id),
+                                onPressed: () => _showAddSongKeyDialog(song),
                               ),
                       ),
                     );

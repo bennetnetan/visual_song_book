@@ -211,7 +211,7 @@ class SetsTab extends ConsumerWidget {
       items: state.setItems,
       availableSongs: state.availableSongs,
       selectedSetId: state.selectedSetId!,
-      onAddSong: (songId) => notifier.addSongToSet(state.selectedSetId!, songId),
+      onAddSong: (songId, {key}) => notifier.addSongToSet(state.selectedSetId!, songId, key: key),
       onRemoveSong: (songId) => notifier.removeSongFromSet(state.selectedSetId!, songId),
       onRename: (newName) => notifier.renameSet(state.selectedSetId!, newName),
       onShareJson: () => _handleShareJson(context, ref, state.selectedSetId!, currentSet.name),

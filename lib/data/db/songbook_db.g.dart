@@ -2019,8 +2019,25 @@ class $SongSetItemsTable extends SongSetItems
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
   @override
-  List<GeneratedColumn> get $columns => [id, setId, songId, position, notes];
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+    'key',
+    aliasedName,
+    true,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 100),
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    setId,
+    songId,
+    position,
+    notes,
+    key,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2066,6 +2083,12 @@ class $SongSetItemsTable extends SongSetItems
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
       );
     }
+    if (data.containsKey('key')) {
+      context.handle(
+        _keyMeta,
+        key.isAcceptableOrUnknown(data['key']!, _keyMeta),
+      );
+    }
     return context;
   }
 
@@ -2095,6 +2118,10 @@ class $SongSetItemsTable extends SongSetItems
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
       ),
+      key: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}key'],
+      ),
     );
   }
 
@@ -2110,12 +2137,14 @@ class SongSetItem extends DataClass implements Insertable<SongSetItem> {
   final int songId;
   final int position;
   final String? notes;
+  final String? key;
   const SongSetItem({
     required this.id,
     required this.setId,
     required this.songId,
     required this.position,
     this.notes,
+    this.key,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2126,6 +2155,9 @@ class SongSetItem extends DataClass implements Insertable<SongSetItem> {
     map['position'] = Variable<int>(position);
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || key != null) {
+      map['key'] = Variable<String>(key);
     }
     return map;
   }
@@ -2139,6 +2171,7 @@ class SongSetItem extends DataClass implements Insertable<SongSetItem> {
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      key: key == null && nullToAbsent ? const Value.absent() : Value(key),
     );
   }
 
@@ -2153,6 +2186,7 @@ class SongSetItem extends DataClass implements Insertable<SongSetItem> {
       songId: serializer.fromJson<int>(json['songId']),
       position: serializer.fromJson<int>(json['position']),
       notes: serializer.fromJson<String?>(json['notes']),
+      key: serializer.fromJson<String?>(json['key']),
     );
   }
   @override
@@ -2164,6 +2198,7 @@ class SongSetItem extends DataClass implements Insertable<SongSetItem> {
       'songId': serializer.toJson<int>(songId),
       'position': serializer.toJson<int>(position),
       'notes': serializer.toJson<String?>(notes),
+      'key': serializer.toJson<String?>(key),
     };
   }
 
@@ -2173,12 +2208,14 @@ class SongSetItem extends DataClass implements Insertable<SongSetItem> {
     int? songId,
     int? position,
     Value<String?> notes = const Value.absent(),
+    Value<String?> key = const Value.absent(),
   }) => SongSetItem(
     id: id ?? this.id,
     setId: setId ?? this.setId,
     songId: songId ?? this.songId,
     position: position ?? this.position,
     notes: notes.present ? notes.value : this.notes,
+    key: key.present ? key.value : this.key,
   );
   SongSetItem copyWithCompanion(SongSetItemsCompanion data) {
     return SongSetItem(
@@ -2187,6 +2224,7 @@ class SongSetItem extends DataClass implements Insertable<SongSetItem> {
       songId: data.songId.present ? data.songId.value : this.songId,
       position: data.position.present ? data.position.value : this.position,
       notes: data.notes.present ? data.notes.value : this.notes,
+      key: data.key.present ? data.key.value : this.key,
     );
   }
 
@@ -2197,13 +2235,14 @@ class SongSetItem extends DataClass implements Insertable<SongSetItem> {
           ..write('setId: $setId, ')
           ..write('songId: $songId, ')
           ..write('position: $position, ')
-          ..write('notes: $notes')
+          ..write('notes: $notes, ')
+          ..write('key: $key')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, setId, songId, position, notes);
+  int get hashCode => Object.hash(id, setId, songId, position, notes, key);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2212,7 +2251,8 @@ class SongSetItem extends DataClass implements Insertable<SongSetItem> {
           other.setId == this.setId &&
           other.songId == this.songId &&
           other.position == this.position &&
-          other.notes == this.notes);
+          other.notes == this.notes &&
+          other.key == this.key);
 }
 
 class SongSetItemsCompanion extends UpdateCompanion<SongSetItem> {
@@ -2221,12 +2261,14 @@ class SongSetItemsCompanion extends UpdateCompanion<SongSetItem> {
   final Value<int> songId;
   final Value<int> position;
   final Value<String?> notes;
+  final Value<String?> key;
   const SongSetItemsCompanion({
     this.id = const Value.absent(),
     this.setId = const Value.absent(),
     this.songId = const Value.absent(),
     this.position = const Value.absent(),
     this.notes = const Value.absent(),
+    this.key = const Value.absent(),
   });
   SongSetItemsCompanion.insert({
     this.id = const Value.absent(),
@@ -2234,6 +2276,7 @@ class SongSetItemsCompanion extends UpdateCompanion<SongSetItem> {
     required int songId,
     required int position,
     this.notes = const Value.absent(),
+    this.key = const Value.absent(),
   }) : setId = Value(setId),
        songId = Value(songId),
        position = Value(position);
@@ -2243,6 +2286,7 @@ class SongSetItemsCompanion extends UpdateCompanion<SongSetItem> {
     Expression<int>? songId,
     Expression<int>? position,
     Expression<String>? notes,
+    Expression<String>? key,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2250,6 +2294,7 @@ class SongSetItemsCompanion extends UpdateCompanion<SongSetItem> {
       if (songId != null) 'song_id': songId,
       if (position != null) 'position': position,
       if (notes != null) 'notes': notes,
+      if (key != null) 'key': key,
     });
   }
 
@@ -2259,6 +2304,7 @@ class SongSetItemsCompanion extends UpdateCompanion<SongSetItem> {
     Value<int>? songId,
     Value<int>? position,
     Value<String?>? notes,
+    Value<String?>? key,
   }) {
     return SongSetItemsCompanion(
       id: id ?? this.id,
@@ -2266,6 +2312,7 @@ class SongSetItemsCompanion extends UpdateCompanion<SongSetItem> {
       songId: songId ?? this.songId,
       position: position ?? this.position,
       notes: notes ?? this.notes,
+      key: key ?? this.key,
     );
   }
 
@@ -2287,6 +2334,9 @@ class SongSetItemsCompanion extends UpdateCompanion<SongSetItem> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
+    }
     return map;
   }
 
@@ -2297,7 +2347,8 @@ class SongSetItemsCompanion extends UpdateCompanion<SongSetItem> {
           ..write('setId: $setId, ')
           ..write('songId: $songId, ')
           ..write('position: $position, ')
-          ..write('notes: $notes')
+          ..write('notes: $notes, ')
+          ..write('key: $key')
           ..write(')'))
         .toString();
   }
@@ -5198,6 +5249,7 @@ typedef $$SongSetItemsTableCreateCompanionBuilder =
       required int songId,
       required int position,
       Value<String?> notes,
+      Value<String?> key,
     });
 typedef $$SongSetItemsTableUpdateCompanionBuilder =
     SongSetItemsCompanion Function({
@@ -5206,6 +5258,7 @@ typedef $$SongSetItemsTableUpdateCompanionBuilder =
       Value<int> songId,
       Value<int> position,
       Value<String?> notes,
+      Value<String?> key,
     });
 
 final class $$SongSetItemsTableReferences
@@ -5269,6 +5322,11 @@ class $$SongSetItemsTableFilterComposer
 
   ColumnFilters<String> get notes => $composableBuilder(
     column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get key => $composableBuilder(
+    column: $table.key,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5343,6 +5401,11 @@ class $$SongSetItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get key => $composableBuilder(
+    column: $table.key,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$SongSetsTableOrderingComposer get setId {
     final $$SongSetsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -5407,6 +5470,9 @@ class $$SongSetItemsTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => column);
 
   $$SongSetsTableAnnotationComposer get setId {
     final $$SongSetsTableAnnotationComposer composer = $composerBuilder(
@@ -5488,12 +5554,14 @@ class $$SongSetItemsTableTableManager
                 Value<int> songId = const Value.absent(),
                 Value<int> position = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> key = const Value.absent(),
               }) => SongSetItemsCompanion(
                 id: id,
                 setId: setId,
                 songId: songId,
                 position: position,
                 notes: notes,
+                key: key,
               ),
           createCompanionCallback:
               ({
@@ -5502,12 +5570,14 @@ class $$SongSetItemsTableTableManager
                 required int songId,
                 required int position,
                 Value<String?> notes = const Value.absent(),
+                Value<String?> key = const Value.absent(),
               }) => SongSetItemsCompanion.insert(
                 id: id,
                 setId: setId,
                 songId: songId,
                 position: position,
                 notes: notes,
+                key: key,
               ),
           withReferenceMapper: (p0) => p0
               .map(
