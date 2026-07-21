@@ -143,10 +143,16 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
   }
 
   Future<void> _searchNow(String query, int requestId) async {
+    // Bail immediately if superseded before we even start.
     if (requestId != _activeRequestId) return;
-    state = state.copyWith(isLoading: true, error: () => null);
+
+    // Only mark loading if we are still the active request.
+    if (mounted) state = state.copyWith(isLoading: true, error: () => null);
+
     try {
-      if (state.isBibleMode) {
+      // Capture the mode at the moment this search begins.
+      final isBible = state.isBibleMode;
+      if (isBible) {
         await _performBibleSearch(query, requestId);
       } else {
         await _performSongSearch(query, requestId);
@@ -157,7 +163,16 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
           isLoading: false,
           error: () => e.toString(),
         );
+      } else if (mounted && state.isLoading && requestId != _activeRequestId) {
+        // A newer request is running — don't clear its loading state.
       }
+    }
+
+    // Safety net: if we're the stale request and isLoading is still true
+    // (because a later request hasn't finished yet), leave it alone.
+    // If we're still the active request and isLoading is stuck, clear it.
+    if (mounted && requestId == _activeRequestId && state.isLoading) {
+      state = state.copyWith(isLoading: false);
     }
   }
 
