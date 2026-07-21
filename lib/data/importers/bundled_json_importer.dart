@@ -93,13 +93,17 @@ class BundledJsonImporter implements SongbookImporter {
         );
       }
 
-      // Snapshot existing songs to detect duplicates
-      final preExisting = await (db.select(db.songs)
-            ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
-          .get();
-      final preExistingKeys = preExisting
-          .map((s) => '${s.songNum}|${s.title.toLowerCase().trim()}')
+      // Snapshot existing songs to detect duplicates.
+      // Keyed by title (lowercase, trimmed) so cross-book duplicates with
+      // different song numbers are still caught. Also updated during insertion
+      // to handle within-file duplicate titles.
+      final preExistingTitles = (await (db.select(db.songs)
+                  ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
+              .get())
+          .map((s) => s.title.toLowerCase().trim())
           .toSet();
+
+      final seenThisBatch = <String>{};
 
       // Insert data
       await db.transaction(() async {
@@ -108,11 +112,13 @@ class BundledJsonImporter implements SongbookImporter {
         }
 
         for (final song in songCompanions) {
-          final key =
-              '${song.songNum.value}|${song.title.value.toLowerCase().trim()}';
-          if (!preExistingKeys.contains(key)) {
-            await db.into(db.songs).insert(song);
-          }
+          final titleKey = song.title.value.toLowerCase().trim();
+          // Skip if already in DB from a previous seed
+          if (preExistingTitles.contains(titleKey)) continue;
+          // Skip if already inserted earlier in this same batch
+          if (!seenThisBatch.add(titleKey)) continue;
+
+          await db.into(db.songs).insert(song);
         }
       });
 
@@ -120,9 +126,8 @@ class BundledJsonImporter implements SongbookImporter {
       final newSongTitles = <String>[];
       int alreadyExisted = 0;
       for (final companion in songCompanions) {
-        final key =
-            '${companion.songNum.value}|${companion.title.value.toLowerCase().trim()}';
-        if (preExistingKeys.contains(key)) {
+        final titleKey = companion.title.value.toLowerCase().trim();
+        if (preExistingTitles.contains(titleKey) || !seenThisBatch.contains(titleKey)) {
           alreadyExisted++;
         } else {
           newSongTitles.add(companion.title.value);
