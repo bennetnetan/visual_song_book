@@ -1378,8 +1378,12 @@ class _SuggestionsList extends ConsumerStatefulWidget {
 
 class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
   int _selectedIndex = 0;
+  final Map<int, GlobalKey> _itemKeys = {};
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode(debugLabel: 'SearchSuggestionsFocus');
+
+  GlobalKey _itemKey(int index) =>
+      _itemKeys.putIfAbsent(index, () => GlobalKey(debugLabel: 'result_$index'));
 
   // ── Nav-ready dwell timer ─────────────────────────────────────────────────
   // After the user stops typing for [_navReadyDelay], navigation mode
@@ -1408,13 +1412,12 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
     });
   }
 
-  /// Scrolls so the selected item is visible (item height ≈ 80 logical px).
+  /// Scrolls so the selected item is visible.
   void _scrollToSelected(int index) {
-    if (!_scrollController.hasClients) return;
-    const itemHeight = 80.0;
-    final offset = index * itemHeight;
-    _scrollController.animateTo(
-      offset.clamp(0.0, _scrollController.position.maxScrollExtent),
+    final key = _itemKeys[index];
+    if (key?.currentContext == null) return;
+    Scrollable.ensureVisible(
+      key!.currentContext!,
       duration: const Duration(milliseconds: 150),
       curve: Curves.easeOut,
     );
@@ -1570,6 +1573,7 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
             final isExact = v == searchState.exactMatch;
             final isSelected = index == _selectedIndex;
             return Card(
+              key: _itemKey(index),
               elevation: 0,
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               shape: RoundedRectangleBorder(
@@ -1691,6 +1695,7 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
             final s = searchState.songResults[index];
             final isSelected = index == _selectedIndex;
             return Card(
+              key: _itemKey(index),
               elevation: 0,
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               shape: RoundedRectangleBorder(
@@ -1832,7 +1837,6 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          list,
           // Subtle nav-ready indicator — fades in once dwell timer fires,
           // fades out instantly when the user resumes typing.
           AnimatedOpacity(
@@ -1858,6 +1862,7 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
               ),
             ),
           ),
+          list,
         ],
       ),
     );

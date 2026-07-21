@@ -367,6 +367,15 @@ class ChangelogCard extends StatelessWidget {
           ),
           SizedBox(height: 16),
           _ChangelogEntry(
+            version: 'v1.6.0+2',
+            date: '2026-07-21',
+            changes: [
+              'Keyboard-scrolled search items now stay visible — replaced fixed-height scroll math with Scrollable.ensureVisible',
+              'Keyboard navigation hint moved above search results so it is always visible, not hidden below the list',
+            ],
+          ),
+          SizedBox(height: 16),
+          _ChangelogEntry(
             version: 'v1.5.0',
             date: '2026-07-21',
             changes: [
@@ -564,7 +573,7 @@ class AboutCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Chip(
                   label: Text(
-                    'v1.6.0',
+                    'v1.6.0+2',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
