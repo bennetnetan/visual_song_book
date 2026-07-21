@@ -1164,7 +1164,7 @@ class _SearchModeToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bibleColor = const Color(0xFF00E5CC);
+    const bibleColor = Color(0xFF00E5CC);
     final songColor = theme.colorScheme.primary;
 
     return Row(

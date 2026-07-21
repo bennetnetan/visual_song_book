@@ -365,7 +365,7 @@ class ChangelogCard extends StatelessWidget {
               'AppImage OS bar icon — icons embedded in hicolor theme paths with correct StartupWMClass',
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           _ChangelogEntry(
             version: 'v1.5.0',
             date: '2026-07-21',
@@ -383,7 +383,7 @@ class ChangelogCard extends StatelessWidget {
               'Linux AppImage with embedded logo and AppDir integration',
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           _ChangelogEntry(
             version: 'v1.4.2',
             date: '2026-06-26',

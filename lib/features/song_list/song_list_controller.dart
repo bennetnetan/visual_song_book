@@ -130,8 +130,9 @@ class SongListController extends StateNotifier<SongListState> {
   /// Sets the selected category
   void selectCategory(int? categoryId, {bool uncategorizedOnly = false}) {
     if (state.selectedCategoryId == categoryId &&
-        state.showUncategorizedOnly == uncategorizedOnly)
+        state.showUncategorizedOnly == uncategorizedOnly) {
       return;
+    }
     state = state.copyWith(
       selectedCategoryId: categoryId,
       showUncategorizedOnly: uncategorizedOnly,
@@ -215,8 +216,9 @@ class SongListController extends StateNotifier<SongListState> {
         break;
       case SongSortMode.byKey:
         list.sort((a, b) {
-          if (a.key == null && b.key == null)
+          if (a.key == null && b.key == null) {
             return a.songNum.compareTo(b.songNum);
+          }
           if (a.key == null) return 1;
           if (b.key == null) return -1;
           return a.key!.compareTo(b.key!);

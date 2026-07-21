@@ -47,10 +47,11 @@ class BibleDatabase {
   }
 
   Database get db {
-    if (_db == null)
+    if (_db == null) {
       throw StateError(
         'BibleDatabase not initialized. Call ensureInitialized() first.',
       );
+    }
     return _db!;
   }
 

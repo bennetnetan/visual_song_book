@@ -683,7 +683,7 @@ class _SearchResultsView extends ConsumerWidget {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          Icon(Icons.touch_app, size: 14, color: Colors.white38),
+                          const Icon(Icons.touch_app, size: 14, color: Colors.white38),
                           const SizedBox(width: 6),
                           Text(
                             'Tap to navigate',
@@ -891,7 +891,7 @@ class _RightSidebar extends ConsumerWidget {
           children: [
             // Cross-References section
             if (state.activeVerse != null) ...[
-              _SidebarLabel(title: 'Cross-References'),
+              const _SidebarLabel(title: 'Cross-References'),
               const SizedBox(height: 16),
               if (state.isLoadingCrossReferences)
                 const Center(child: CircularProgressIndicator())
@@ -937,7 +937,7 @@ class _RightSidebar extends ConsumerWidget {
             ],
 
             // Bookmarks section
-            _SidebarLabel(title: 'Bookmarks'),
+            const _SidebarLabel(title: 'Bookmarks'),
             const SizedBox(height: 16),
             FutureBuilder<List<BibleBookmark>>(
               future: setRepo.getBookmarks(),
