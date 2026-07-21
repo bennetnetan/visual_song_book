@@ -15,7 +15,7 @@ import 'package:visual_song_book/features/settings/settings_tab.dart';
 import 'package:visual_song_book/features/song_list/songs_tab.dart';
 
 final selectedSongIdProvider = StateProvider<int?>((ref) => null);
-final isSidebarExpandedProvider = StateProvider<bool>((ref) => true);
+final isSidebarExpandedProvider = StateProvider<bool>((ref) => false);
 
 class MainDashboardPage extends ConsumerWidget {
   const MainDashboardPage({super.key});
