@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -1378,15 +1379,36 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode(debugLabel: 'SearchSuggestionsFocus');
 
+  // ── Nav-ready dwell timer ─────────────────────────────────────────────────
+  // After the user stops typing for [_navReadyDelay], navigation mode
+  // activates: Up/Down/Left/Right scroll the results list, Enter projects the
+  // highlighted item. The moment any character is typed the query changes,
+  // which resets the timer and exits nav mode so typing continues normally.
+  static const Duration _navReadyDelay = Duration(milliseconds: 100);
+  bool _navReady = false;
+  Timer? _navReadyTimer;
+
   @override
   void dispose() {
+    _navReadyTimer?.cancel();
     _scrollController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
+  /// Called whenever the search query changes (user typed a character).
+  /// Resets nav mode and restarts the dwell timer.
+  void _resetNavReady() {
+    _navReadyTimer?.cancel();
+    if (_navReady) setState(() => _navReady = false);
+    _navReadyTimer = Timer(_navReadyDelay, () {
+      if (mounted) setState(() => _navReady = true);
+    });
+  }
+
   /// Scrolls so the selected item is visible (item height ≈ 80 logical px).
   void _scrollToSelected(int index) {
+    if (!_scrollController.hasClients) return;
     const itemHeight = 80.0;
     final offset = index * itemHeight;
     _scrollController.animateTo(
@@ -1424,13 +1446,17 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
       return KeyEventResult.ignored;
     }
 
+    final key = event.logicalKey;
+
+    // ── If nav mode is not yet active, pass everything through so the text
+    // field can handle cursor movement and character input normally. ──────────
+    if (!_navReady) return KeyEventResult.ignored;
+
     final int totalItems = searchState.isBibleMode
         ? (searchState.exactMatch != null ? 1 : 0) + searchState.bibleResults.length
         : searchState.songResults.length;
 
     if (totalItems == 0) return KeyEventResult.ignored;
-
-    final key = event.logicalKey;
 
     if (key == LogicalKeyboardKey.arrowDown ||
         key == LogicalKeyboardKey.arrowRight) {
@@ -1439,7 +1465,8 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
         setState(() => _selectedIndex = next);
         _scrollToSelected(next);
       }
-      return KeyEventResult.handled; // Consume – do NOT propagate to projection
+      // Consume — do NOT propagate to the projection screen.
+      return KeyEventResult.handled;
     }
 
     if (key == LogicalKeyboardKey.arrowUp ||
@@ -1458,6 +1485,9 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
       return KeyEventResult.handled;
     }
 
+    // Any other key (printable characters, backspace, etc.) is ignored so it
+    // bubbles to the text field — typing continues as normal and will trigger
+    // the query-change listener which resets nav mode.
     return KeyEventResult.ignored;
   }
 
@@ -1466,7 +1496,16 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
     final searchState = ref.watch(projectionSearchProvider);
     final theme = Theme.of(context);
 
-    // Reset selection when results change so Enter always picks the first item.
+    // When the query changes (user typed) → reset nav-ready dwell timer.
+    // Nav mode re-activates 100 ms after the last keystroke.
+    ref.listen(
+      projectionSearchProvider.select((s) => s.query),
+      (prev, next) {
+        if (prev != next) _resetNavReady();
+      },
+    );
+
+    // When results change → reset selection to first item.
     ref.listen(projectionSearchProvider, (prev, next) {
       if (prev?.bibleResults != next.bibleResults ||
           prev?.songResults != next.songResults ||
@@ -1788,7 +1827,38 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
       focusNode: _focusNode,
       autofocus: true,
       onKeyEvent: (node, event) => _handleKey(event, searchState),
-      child: list,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          list,
+          // Subtle nav-ready indicator — fades in once dwell timer fires,
+          // fades out instantly when the user resumes typing.
+          AnimatedOpacity(
+            opacity: _navReady && !searchState.isLoading && searchState.query.isNotEmpty ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 200),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.keyboard, size: 12,
+                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                  const SizedBox(width: 6),
+                  Text(
+                    '↑ ↓ navigate  ·  ↵ project',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
+
   }
 }
