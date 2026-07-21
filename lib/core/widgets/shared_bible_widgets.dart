@@ -53,44 +53,6 @@ class VerseText extends StatelessWidget {
 
   const VerseText({required this.text, super.key, required this.fontSize});
 
-  double _calculateDefaultFontSize(String text, Size size) {
-    if (text.isEmpty) return 40.0;
-
-    final double availWidth = (size.width - 24).clamp(100.0, 10000.0);
-    final double availHeight = (size.height - 24).clamp(100.0, 10000.0);
-
-    final List<String> paragraphs = text.split('\n');
-    int totalEstimatedLines = 0;
-    int maxCharsPerLine = 0;
-
-    const int wrapThreshold = 45;
-
-    for (final paragraph in paragraphs) {
-      final trimmed = paragraph.trim();
-      if (trimmed.isEmpty) continue;
-
-      if (trimmed.length <= wrapThreshold) {
-        totalEstimatedLines += 1;
-        if (trimmed.length > maxCharsPerLine) {
-          maxCharsPerLine = trimmed.length;
-        }
-      } else {
-        final int wrappedCount = (trimmed.length / wrapThreshold).ceil();
-        totalEstimatedLines += wrappedCount;
-        maxCharsPerLine = wrapThreshold;
-      }
-    }
-
-    if (totalEstimatedLines == 0) totalEstimatedLines = 1;
-    if (maxCharsPerLine == 0) maxCharsPerLine = 10;
-
-    final double sizeByHeight = availHeight / (totalEstimatedLines * 1.45);
-    final double sizeByWidth = availWidth / (maxCharsPerLine * 0.55);
-
-    double baseSize = sizeByHeight < sizeByWidth ? sizeByHeight : sizeByWidth;
-
-    return baseSize.clamp(20.0, 100.0);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,10 +60,35 @@ class VerseText extends StatelessWidget {
       builder: (context, constraints) {
         final Size size = Size(constraints.maxWidth, constraints.maxHeight);
 
-        final double baseFontSize = _calculateDefaultFontSize(text, size);
+        // Use the user's chosen font size directly as a base.
+        // Multiply by 1.35 to map to an appropriate presentation size (e.g. 40 -> 54px).
+        double targetSize = fontSize * 1.35;
 
-        final double scaleFactor = fontSize / 40.0;
-        final double finalFontSize = (baseFontSize * scaleFactor).clamp(14.0, 180.0);
+        // Count estimated wrapped lines to check for height overflow
+        final double availHeight = (size.height - 48).clamp(100.0, 10000.0);
+        final List<String> paragraphs = text.split('\n');
+        int totalLines = 0;
+        const int wrapThreshold = 45;
+
+        for (final paragraph in paragraphs) {
+          final trimmed = paragraph.trim();
+          if (trimmed.isEmpty) continue;
+          if (trimmed.length <= wrapThreshold) {
+            totalLines += 1;
+          } else {
+            totalLines += (trimmed.length / wrapThreshold).ceil();
+          }
+        }
+        if (totalLines == 0) totalLines = 1;
+
+        // Calculate height needed at targetSize
+        final double heightNeeded = totalLines * targetSize * 1.45;
+        if (heightNeeded > availHeight) {
+          // Scale down to fit the available height
+          targetSize = availHeight / (totalLines * 1.45);
+        }
+
+        final double finalFontSize = targetSize.clamp(18.0, 180.0);
 
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 350),

@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/projection/projection_search_provider.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
+import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
 
 class ProjectionTab extends ConsumerStatefulWidget {
   final bool isLargeScreen;
@@ -1092,27 +1093,91 @@ class _SuggestionsList extends ConsumerWidget {
         itemBuilder: (context, index) {
           final v = results[index];
           final isExact = v == searchState.exactMatch;
-          return ListTile(
-            title: Text(
-              v.reference,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isExact ? theme.colorScheme.primary : null,
+          return Card(
+            elevation: 0,
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: isExact 
+                    ? theme.colorScheme.primary.withValues(alpha: 0.5) 
+                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                width: isExact ? 1.5 : 1,
               ),
             ),
-            subtitle: Text(v.text, maxLines: 1, overflow: TextOverflow.ellipsis),
-            trailing: const Icon(Icons.present_to_all, size: 18),
-            onTap: () {
-              notifier.projectVerse(
-                v.bookId,
-                v.chapter,
-                v.verse,
-                v.bookName ?? '',
-              );
-              ref.read(setRepositoryProvider).recordBibleProjection(v.reference, v.text);
-              ref.read(projectionSearchProvider.notifier).clear();
-              controller.closeView(null);
-            },
+            color: isExact ? theme.colorScheme.primaryContainer.withValues(alpha: 0.15) : null,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: (isExact ? theme.colorScheme.primary : const Color(0xFF00E5CC)).withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.menu_book,
+                  size: 16,
+                  color: isExact ? theme.colorScheme.primary : const Color(0xFF00E5CC),
+                ),
+              ),
+              title: HighlightedText(
+                text: v.reference,
+                query: query,
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: theme.colorScheme.onSurface,
+                ),
+                highlightStyle: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: theme.colorScheme.primary,
+                  backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                ),
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: HighlightedText(
+                  text: v.text,
+                  query: query,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  highlightStyle: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                    backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                  ),
+                ),
+              ),
+              trailing: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.present_to_all,
+                  size: 16,
+                  color: theme.colorScheme.onSecondaryContainer,
+                ),
+              ),
+              onTap: () {
+                notifier.projectVerse(
+                  v.bookId,
+                  v.chapter,
+                  v.verse,
+                  v.bookName ?? '',
+                );
+                ref.read(setRepositoryProvider).recordBibleProjection(v.reference, v.text);
+                ref.read(projectionSearchProvider.notifier).clear();
+                controller.closeView(null);
+              },
+            ),
           );
         },
       );
@@ -1126,19 +1191,105 @@ class _SuggestionsList extends ConsumerWidget {
         itemCount: searchState.songResults.length,
         itemBuilder: (context, index) {
           final s = searchState.songResults[index];
-          return ListTile(
-            leading: CircleAvatar(
-              radius: 14,
-              child: Text('${s.songNum}', style: const TextStyle(fontSize: 10)),
+          return Card(
+            elevation: 0,
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+              ),
             ),
-            title: Text(s.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(s.key != null ? 'Key: ${s.key}' : ''),
-            trailing: const Icon(Icons.present_to_all, size: 18),
-            onTap: () {
-              notifier.setSong(s);
-              ref.read(projectionSearchProvider.notifier).clear();
-              controller.closeView(null);
-            },
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              leading: Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '#${s.songNum}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+              title: HighlightedText(
+                text: s.title,
+                query: query,
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: theme.colorScheme.onSurface,
+                ),
+                highlightStyle: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: theme.colorScheme.primary,
+                  backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                ),
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Row(
+                  children: [
+                    if (s.key != null && s.key!.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Key: ${s.key}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Expanded(
+                      child: Text(
+                        s.body.replaceAll('\n', ' '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              trailing: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.present_to_all,
+                  size: 16,
+                  color: theme.colorScheme.onSecondaryContainer,
+                ),
+              ),
+              onTap: () {
+                notifier.setSong(s);
+                ref.read(projectionSearchProvider.notifier).clear();
+                controller.closeView(null);
+              },
+            ),
           );
         },
       );

@@ -23,31 +23,107 @@ class SetsTab extends ConsumerWidget {
   const SetsTab({super.key, required this.isLargeScreen});
 
   Future<void> _handleImport(BuildContext context, WidgetRef ref) async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['json', 'vsbset'],
-      );
-      if (result != null && result.files.single.path != null) {
-        final path = result.files.single.path!;
-        final file = File(path);
-        final content = await file.readAsString();
-
-        await ref.read(setsControllerProvider.notifier).importSetFromJson(content);
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Set list imported successfully!')),
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error importing set list: $e')),
-        );
-      }
-    }
+    final textCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Import Set List'),
+        content: SizedBox(
+          width: 500,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  try {
+                    final result = await FilePicker.platform.pickFiles(
+                      type: FileType.custom,
+                      allowedExtensions: ['json', 'vsbset'],
+                    );
+                    if (result != null && result.files.single.path != null) {
+                      final path = result.files.single.path!;
+                      final file = File(path);
+                      final content = await file.readAsString();
+                      await ref.read(setsControllerProvider.notifier).importSetFromJson(content);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Set list imported successfully!')),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error importing set list: $e')),
+                      );
+                    }
+                  }
+                },
+                icon: const Icon(Icons.file_open_outlined),
+                label: const Text('Choose File (.json, .vsbset)'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Row(
+                children: [
+                  Expanded(child: Divider()),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Text('OR', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  ),
+                  Expanded(child: Divider()),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: textCtrl,
+                maxLines: 8,
+                decoration: const InputDecoration(
+                  labelText: 'Paste Set Format (JSON)',
+                  hintText: '{\n  "name": "...",\n  "items": [...]\n}',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
+                ),
+                style: const TextStyle(fontFamily: 'RobotoMono', fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final pasted = textCtrl.text.trim();
+              if (pasted.isEmpty) return;
+              Navigator.pop(ctx);
+              try {
+                await ref.read(setsControllerProvider.notifier).importSetFromJson(pasted);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Set list imported successfully!')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error importing set list: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Import Text'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _handleShareJson(
