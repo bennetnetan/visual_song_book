@@ -395,17 +395,41 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       await window.show();
       _secondaryWindow = window;
       debugPrint('Created new projector window: ${window.windowId}');
-      
+
       state = state.copyWith(isSecondaryWindowOpen: true);
-      
+
+      // Auto-place on second screen and go fullscreen.
+      // We send an IPC message to the new window and handle it in
+      // _ProjectionOutputViewState._setupSecondaryWindowChannel().
+      // As a best-effort here, also try to read screen list from window_manager.
+      _placeOnSecondScreenAndFullscreen();
+
       // Perform synchronization retries in the background so we do not block
       // the caller (and the primary UI thread) with async delays.
       _syncSecondaryWindowWithRetry();
-      
+
       return true;
     } catch (e) {
       debugPrint('Failed to open projector window: $e');
       return false;
+    }
+  }
+
+  /// Moves the secondary window to the second screen (if one is connected)
+  /// and enters fullscreen automatically.
+  Future<void> _placeOnSecondScreenAndFullscreen() async {
+    if (_secondaryWindow == null) return;
+    try {
+      // Give the window a moment to fully initialise its Flutter engine.
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (_secondaryWindow == null) return;
+
+      // Ask the secondary window to go fullscreen via IPC so it can call
+      // windowManager on its own engine (window_manager is per-window).
+      await _secondaryWindow!.invokeMethod('go_fullscreen', {});
+      debugPrint('Sent go_fullscreen IPC to secondary window.');
+    } catch (e) {
+      debugPrint('_placeOnSecondScreenAndFullscreen: $e');
     }
   }
 

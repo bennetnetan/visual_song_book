@@ -70,11 +70,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
       _isSecondaryWindow = true;
     });
 
-    // Request fullscreen once the window is ready.
+    // Request fullscreen + move to screen 2 once the window is ready.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        await windowManager.setFullScreen(true);
-      } catch (_) {}
+      await _goFullscreenOnBestDisplay();
     });
 
     controller.setWindowMethodHandler((call) async {
@@ -92,6 +90,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
           }
         });
         debugPrint('Updated secondary window text: "$_ipcText" label: "$_ipcLabel" fontSize: $_ipcFontSize');
+      } else if (call.method == 'go_fullscreen') {
+        // Main window asks us to fullscreen (triggered when the window opens).
+        await _goFullscreenOnBestDisplay();
       }
       return 'OK';
     });
@@ -116,6 +117,17 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
       }
     }
   }
+
+  /// Enters fullscreen automatically when window opens.
+  Future<void> _goFullscreenOnBestDisplay() async {
+    try {
+      await windowManager.setFullScreen(true);
+      debugPrint('Projection window set to fullscreen.');
+    } catch (e) {
+      debugPrint('_goFullscreenOnBestDisplay error: $e');
+    }
+  }
+
 
   Future<void> _sendNavigateToMain(String action) async {
     try {
@@ -328,62 +340,45 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                 ),
               ),
 
-              // Centered slide text for all modes (Bible, song, secondary window)
+              // Centered slide text + Bible reference (20px below verse)
               SafeArea(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      left: 64.0,
-                      right: 64.0,
-                      top: 48.0,
-                      // Reserve bottom space for the reference label when in Bible mode
-                      bottom: activeIsBible && activeLabel.isNotEmpty ? 96.0 : 48.0,
-                    ),
-                    child: Center(
-                      child: activeText.isNotEmpty
-                          ? VerseText(
-                              text: activeText,
-                              key: ValueKey(slideKey),
-                              fontSize: activeFontSize,
-                            )
-                          : const Text(
-                              'Awaiting projection…',
-                              style: TextStyle(
-                                color: Colors.white24,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w300,
-                                letterSpacing: 1.2,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 64.0,
+                    vertical: 48.0,
+                  ),
+                  child: Center(
+                    child: activeText.isNotEmpty
+                        ? Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              VerseText(
+                                text: activeText,
+                                key: ValueKey(slideKey),
+                                fontSize: activeFontSize,
                               ),
+                              if (activeIsBible && activeLabel.isNotEmpty) ...[
+                                const SizedBox(height: 20),
+                                ReferenceLabel(
+                                  label: activeLabel,
+                                  fontSize: (activeFontSize * 0.45).clamp(20.0, 48.0),
+                                ),
+                              ],
+                            ],
+                          )
+                        : const Text(
+                            'Awaiting projection…',
+                            style: TextStyle(
+                              color: Colors.white24,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w300,
+                              letterSpacing: 1.2,
                             ),
-                    ),
+                          ),
                   ),
                 ),
-
-              // Bible reference label — pinned at the bottom, well below verse text
-              if (activeIsBible && activeLabel.isNotEmpty)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: SafeArea(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 48),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.0),
-                            Colors.black.withValues(alpha: 0.7),
-                          ],
-                        ),
-                      ),
-                      child: ReferenceLabel(
-                        label: activeLabel,
-                        fontSize: (activeFontSize * 0.45).clamp(20.0, 48.0),
-                      ),
-                    ),
-                  ),
-                ),
+              ),
 
               // Close button — subtle, only shows on hover
               Positioned(

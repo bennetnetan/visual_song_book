@@ -296,7 +296,8 @@ class _ProjectionHeader extends StatelessWidget {
             children: [
               Text(
                 state.contentTitle ??
-                    (state.currentSong?.title ?? 'Untitled'),
+                    state.currentSong?.title ??
+                    (state.slides.isNotEmpty ? state.slides.first.label : 'Untitled'),
                 style: const TextStyle(
                     fontSize: 20, fontWeight: FontWeight.bold),
                 maxLines: 1,
@@ -304,7 +305,7 @@ class _ProjectionHeader extends StatelessWidget {
               ),
               if (!isBible && state.currentSong != null)
                 Text(
-                  'Song ${state.currentSong!.songNum} • Key: ${state.currentSong!.key ?? 'None'}',
+                  'Song #${state.currentSong!.songNum} • Key: ${state.currentSong!.key ?? 'None'}',
                   style: const TextStyle(color: Colors.grey, fontSize: 13),
                 ),
               if (isBible)
@@ -1130,6 +1131,102 @@ class _SetNavigatorPanelState extends ConsumerState<_SetNavigatorPanel> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Search mode toggle — Bible / Song chips (replaces SegmentedButton to avoid
+// rebuild loops inside SearchAnchor.viewTrailing)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SearchModeToggle extends StatelessWidget {
+  final bool isBibleMode;
+  final ValueChanged<bool> onToggle;
+
+  const _SearchModeToggle({required this.isBibleMode, required this.onToggle});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bibleColor = const Color(0xFF00E5CC);
+    final songColor = theme.colorScheme.primary;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _ModeChip(
+          label: 'Bible',
+          icon: Icons.menu_book,
+          isSelected: isBibleMode,
+          selectedColor: bibleColor,
+          onTap: () { if (!isBibleMode) onToggle(true); },
+        ),
+        const SizedBox(width: 6),
+        _ModeChip(
+          label: 'Song',
+          icon: Icons.library_music,
+          isSelected: !isBibleMode,
+          selectedColor: songColor,
+          onTap: () { if (isBibleMode) onToggle(false); },
+        ),
+      ],
+    );
+  }
+}
+
+class _ModeChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final Color selectedColor;
+  final VoidCallback onTap;
+
+  const _ModeChip({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.selectedColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? selectedColor.withValues(alpha: 0.18)
+              : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? selectedColor.withValues(alpha: 0.7)
+                : theme.colorScheme.outline.withValues(alpha: 0.3),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13,
+                color: isSelected ? selectedColor : theme.colorScheme.onSurfaceVariant),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? selectedColor : theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Quick Search Anchor — global search with toggle (Bible / Songs)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1221,30 +1318,14 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
       viewTrailing: [
         Padding(
           padding: const EdgeInsets.only(right: 8.0),
-          child: SegmentedButton<bool>(
-            segments: const [
-              ButtonSegment(
-                value: true,
-                label: Text('Bible', style: TextStyle(fontSize: 12)),
-              ),
-              ButtonSegment(
-                value: false,
-                label: Text('Song', style: TextStyle(fontSize: 12)),
-              ),
-            ],
-            selected: {searchState.isBibleMode},
-            onSelectionChanged: (value) {
-              // Single atomic call: flips mode, clears stale results, and
-              // starts the new search — no intermediate wrong-mode frames.
+          child: _SearchModeToggle(
+            isBibleMode: searchState.isBibleMode,
+            onToggle: (isBible) {
               ref.read(projectionSearchProvider.notifier).switchModeAndSearch(
-                    value.first,
-                    _searchController.text,
-                  );
+                isBible,
+                _searchController.text,
+              );
             },
-            style: SegmentedButton.styleFrom(
-              visualDensity: VisualDensity.compact,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
           ),
         ),
       ],
