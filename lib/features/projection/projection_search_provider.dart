@@ -8,6 +8,34 @@ import 'package:visual_song_book/features/bible/bible_repository.dart';
 import 'package:visual_song_book/features/bible/bible_search_utils.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Cache entry types
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Cached result set for a single Bible query.
+class _BibleCacheEntry {
+  final List<BibleVerse> results;
+  final int total;
+  final BibleVerse? exactMatch;
+
+  const _BibleCacheEntry({
+    required this.results,
+    required this.total,
+    this.exactMatch,
+  });
+}
+
+/// Cached result set for a single Song query.
+class _SongCacheEntry {
+  final List<Song> results;
+
+  const _SongCacheEntry({required this.results});
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Search state
+// ─────────────────────────────────────────────────────────────────────────────
+
 /// Search state for the projection view (Bible + Song unified).
 class ProjectionSearchState {
   final String query;
@@ -61,16 +89,39 @@ class ProjectionSearchState {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Controller
+// ─────────────────────────────────────────────────────────────────────────────
+
 /// Controller for the unified projection search.
 ///
-/// Handles both Bible and Song searches with a 300 ms debounce.
-/// Bible mode supports structured reference parsing ("Gen 1:1")
-/// and paginated results.
+/// ### Result caching
+/// Results for both Bible and Song modes are cached separately, keyed by the
+/// normalised query string. When the user switches between Bible and Song mode
+/// with the **same query**, cached results are restored instantly — no loading
+/// spinner, no database round-trip. Cache entries are evicted whenever the
+/// query string changes (a new debounce cycle starts), so stale data is never
+/// shown for a different query.
+///
+/// ### Debounce & request cancellation
+/// Keystrokes are debounced 250 ms before executing. Mode toggles bypass the
+/// debounce entirely. An `_activeRequestId` counter ensures that only the most
+/// recent async search can commit its results to state.
 class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
   final BibleRepository _bibleRepo;
   final SongRepository _songRepo;
   Timer? _debounce;
   int _activeRequestId = 0;
+
+  // Dual-mode result cache — each keyed by normalised query string.
+  // Entries survive mode switches so going back to a mode with the same
+  // query string never triggers a redundant DB call.
+  final Map<String, _BibleCacheEntry> _bibleCache = {};
+  final Map<String, _SongCacheEntry> _songCache = {};
+
+  /// Maximum number of distinct query strings to keep in each cache.
+  /// Oldest entries are evicted first (insertion-order Map).
+  static const int _maxCacheSize = 20;
 
   ProjectionSearchController(this._bibleRepo, this._songRepo)
       : super(const ProjectionSearchState());
@@ -81,17 +132,19 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
     super.dispose();
   }
 
-  /// Atomically switch mode and start a new search instantly (0ms delay).
+  // ── Public API ─────────────────────────────────────────────────────────────
+
+  /// Atomically switch mode and restore from cache or fetch instantly (0 ms).
   void switchModeAndSearch(bool isBible, String query) {
     _debounce?.cancel();
     _activeRequestId++;
     final requestId = _activeRequestId;
     final trimmed = query.trim();
 
+    // Update mode immediately so UI reflects the switch right away.
     state = state.copyWith(
       query: query,
       isBibleMode: isBible,
-      isLoading: trimmed.isNotEmpty,
       error: () => null,
     );
 
@@ -107,18 +160,54 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
       return;
     }
 
-    // Instant 0ms execution for mode toggles!
+    // ── Cache hit: restore results instantly, no loading state ──────────────
+    final cacheKey = _cacheKey(trimmed, isBible);
+    if (isBible) {
+      final hit = _bibleCache[cacheKey];
+      if (hit != null) {
+        state = state.copyWith(
+          bibleResults: hit.results,
+          totalBibleCount: hit.total,
+          bibleOffset: hit.results.length,
+          exactMatch: () => hit.exactMatch,
+          songResults: [],
+          isLoading: false,
+        );
+        return; // ← instant, no async work needed
+      }
+    } else {
+      final hit = _songCache[cacheKey];
+      if (hit != null) {
+        state = state.copyWith(
+          songResults: hit.results,
+          bibleResults: [],
+          totalBibleCount: 0,
+          exactMatch: () => null,
+          isLoading: false,
+        );
+        return; // ← instant, no async work needed
+      }
+    }
+
+    // ── Cache miss: fetch from DB ────────────────────────────────────────────
+    state = state.copyWith(isLoading: true);
     _searchNow(query, requestId);
   }
 
-  /// Set the search mode (true = Bible, false = Song).
+  /// Convenience alias — switch mode using the current query.
   void toggleMode(bool isBible) {
     switchModeAndSearch(isBible, state.query);
   }
 
   /// Called on every keystroke. Debounces 250 ms before executing.
+  /// Invalidates the cache for the old query when the query string changes.
   void search(String query) {
     if (state.query == query) return;
+
+    // Evict cache entries for the previous query — they are no longer relevant
+    // to the text the user is currently typing.
+    _evictQuery(state.query.trim());
+
     state = state.copyWith(query: query, error: () => null);
     _debounce?.cancel();
 
@@ -137,20 +226,50 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
 
     _activeRequestId++;
     final requestId = _activeRequestId;
+    state = state.copyWith(isLoading: true);
     _debounce = Timer(const Duration(milliseconds: 250), () {
       _searchNow(query, requestId);
     });
+  }
+
+  /// Clear active search query and results while preserving current isBibleMode.
+  void clear() {
+    _debounce?.cancel();
+    // Keep the cache — clearing the view doesn't mean the results are stale.
+    state = ProjectionSearchState(isBibleMode: state.isBibleMode);
+  }
+
+  // ── Internal helpers ───────────────────────────────────────────────────────
+
+  /// Normalised cache key: lower-cased trimmed query, mode-agnostic.
+  /// We key on query only (not mode) so both caches share the same key space
+  /// and lookups don't need to include the mode flag.
+  String _cacheKey(String trimmed, bool isBible) {
+    // Include mode in the key so bible and song caches are independent.
+    return '${isBible ? 'b' : 's'}:${trimmed.toLowerCase()}';
+  }
+
+  /// Remove both Bible and Song cache entries for [trimmed] query.
+  void _evictQuery(String trimmed) {
+    if (trimmed.isEmpty) return;
+    _bibleCache.remove(_cacheKey(trimmed, true));
+    _songCache.remove(_cacheKey(trimmed, false));
+  }
+
+  /// Evict the oldest entry if the cache exceeds [_maxCacheSize].
+  void _trimCache<V>(Map<String, V> cache) {
+    while (cache.length > _maxCacheSize) {
+      cache.remove(cache.keys.first);
+    }
   }
 
   Future<void> _searchNow(String query, int requestId) async {
     // Bail immediately if superseded before we even start.
     if (requestId != _activeRequestId) return;
 
-    // Only mark loading if we are still the active request.
-    if (mounted) state = state.copyWith(isLoading: true, error: () => null);
-
     try {
-      // Capture the mode at the moment this search begins.
+      // Capture the mode at the moment this search begins — state.isBibleMode
+      // could change between await points if the user switches modes again.
       final isBible = state.isBibleMode;
       if (isBible) {
         await _performBibleSearch(query, requestId);
@@ -163,14 +282,11 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
           isLoading: false,
           error: () => e.toString(),
         );
-      } else if (mounted && state.isLoading && requestId != _activeRequestId) {
-        // A newer request is running — don't clear its loading state.
       }
     }
 
-    // Safety net: if we're the stale request and isLoading is still true
-    // (because a later request hasn't finished yet), leave it alone.
-    // If we're still the active request and isLoading is stuck, clear it.
+    // Safety net: if we are still the active request but isLoading is stuck
+    // true (sub-method bailed via a guard and forgot to clear), force-clear.
     if (mounted && requestId == _activeRequestId && state.isLoading) {
       state = state.copyWith(isLoading: false);
     }
@@ -210,6 +326,16 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
     if (!mounted || requestId != _activeRequestId) return;
 
     final filtered = results.where((v) => v.id != exact?.id).toList();
+
+    // ── Write to cache ───────────────────────────────────────────────────────
+    final key = _cacheKey(query.trim(), true);
+    _bibleCache[key] = _BibleCacheEntry(
+      results: filtered,
+      total: total,
+      exactMatch: exact,
+    );
+    _trimCache(_bibleCache);
+
     state = state.copyWith(
       bibleResults: filtered,
       totalBibleCount: total,
@@ -222,18 +348,25 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
 
   Future<void> _performSongSearch(String query, int requestId) async {
     final results = await _songRepo.searchSongs(query);
-    if (mounted && requestId == _activeRequestId) {
-      state = state.copyWith(
-        songResults: results,
-        bibleResults: [],
-        totalBibleCount: 0,
-        exactMatch: () => null,
-        isLoading: false,
-      );
-    }
+    if (!mounted || requestId != _activeRequestId) return;
+
+    // ── Write to cache ───────────────────────────────────────────────────────
+    final key = _cacheKey(query.trim(), false);
+    _songCache[key] = _SongCacheEntry(results: results);
+    _trimCache(_songCache);
+
+    state = state.copyWith(
+      songResults: results,
+      bibleResults: [],
+      totalBibleCount: 0,
+      exactMatch: () => null,
+      isLoading: false,
+    );
   }
 
   /// Load the next page of Bible results (10 more).
+  /// Also updates the cached entry so further mode switches include the
+  /// additional pages.
   Future<void> loadMoreBible() async {
     if (state.isLoading) return;
     final normalized = normalizeSearchQuery(state.query);
@@ -253,8 +386,19 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
         state = state.copyWith(isLoading: false);
         return;
       }
+
+      final combined = [...state.bibleResults, ...filtered];
+
+      // ── Update cache with the enlarged result list ───────────────────────
+      final key = _cacheKey(state.query.trim(), true);
+      _bibleCache[key] = _BibleCacheEntry(
+        results: combined,
+        total: state.totalBibleCount,
+        exactMatch: exact,
+      );
+
       state = state.copyWith(
-        bibleResults: [...state.bibleResults, ...filtered],
+        bibleResults: combined,
         bibleOffset: state.bibleOffset + filtered.length,
         isLoading: false,
       );
@@ -266,12 +410,6 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
         );
       }
     }
-  }
-
-  /// Clear active search query and results while preserving current isBibleMode.
-  void clear() {
-    _debounce?.cancel();
-    state = ProjectionSearchState(isBibleMode: state.isBibleMode);
   }
 }
 
