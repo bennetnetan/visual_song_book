@@ -75,56 +75,24 @@ class SongListController extends StateNotifier<SongListState> {
 
   SongListController(this._repository) : super(SongListState.initial()) {
     _init();
-    checkAndImportDefaultSongbooks();
   }
 
-  /// Automatically imports bundled default songbooks on first launch (empty DB).
-  /// Uses pre-exported JSON files from Flutter assets — works on ALL platforms
-  /// (Android, iOS, desktop, web) without needing any external tools.
-  Future<void> checkAndImportDefaultSongbooks({bool force = false}) async {
+  /// Re-imports the bundled songbooks (useful for debugging / manual re-seed).
+  Future<void> reimportBundledSongbooks() async {
     try {
-      // Only run when the database is completely empty, unless forced
-      if (!force) {
-        final songs = await _repository.getSongs();
-        if (songs.isNotEmpty) return;
-      }
-
-      const bundledBooks = [
-        {
-          'asset': 'assets/songbooks/data/full_song_book.json',
-          'name': 'Full Song Book',
-        },
-        {
-          'asset': 'assets/songbooks/data/injili_song_book.json',
-          'name': 'Injili Song Book',
-        },
-      ];
-
+      state = state.copyWith(isLoading: true, error: null);
       final importer = BundledJsonImporter(_repository.db);
-
-      state = state.copyWith(
-        isLoading: true,
-        error: 'Loading default song books...',
-      );
-
-      int totalImported = 0;
-
-      for (final book in bundledBooks) {
-        try {
-          final result = await importer.importFromAsset(
-            book['asset']!,
-            bookName: book['name']!,
-          );
-          if (result.success) totalImported += result.songsAdded;
-        } catch (_) {
-          // Skip individual books that fail — don't abort the whole process
-        }
+      const bundledBooks = [
+        ('assets/songbooks/data/full_song_book.json', 'Full Song Book'),
+        ('assets/songbooks/data/injili_song_book.json', 'Injili Song Book'),
+      ];
+      for (final (asset, name) in bundledBooks) {
+        await importer.importFromAsset(asset, bookName: name);
       }
-
-      state = state.copyWith(isLoading: false, error: null);
-      if (totalImported > 0) fetchSongs();
+      state = state.copyWith(isLoading: false);
+      fetchSongs();
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: null);
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 

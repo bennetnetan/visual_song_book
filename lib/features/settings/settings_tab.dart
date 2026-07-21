@@ -96,7 +96,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     try {
       await ref
           .read(songListControllerProvider.notifier)
-          .checkAndImportDefaultSongbooks(force: true);
+          .reimportBundledSongbooks();
       scaffoldMessenger.showSnackBar(
         const SnackBar(
           content: Text('Bundled songbooks imported successfully.'),

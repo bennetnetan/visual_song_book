@@ -39,24 +39,17 @@ class BundledJsonImporter implements SongbookImporter {
       final jsonString = await rootBundle.loadString(assetPath);
       final Map<String, dynamic> data = json.decode(jsonString) as Map<String, dynamic>;
 
-      final List<dynamic> categoriesJson = data['categories'] as List<dynamic>? ?? [];
       final List<dynamic> songsJson = data['songs'] as List<dynamic>? ?? [];
 
       if (songsJson.isEmpty) {
         return ImportResult.failure('JSON file contains no songs.');
       }
 
-      // Build category companions
-      final categoryCompanions = <CategoriesCompanion>[];
-      for (final item in categoriesJson) {
-        final id = item['id'] as int?;
-        final name = item['name'] as String?;
-        if (id != null && name != null && name.isNotEmpty) {
-          categoryCompanions.add(
-            CategoriesCompanion.insert(id: Value(id), name: name),
-          );
-        }
-      }
+      // Determine book-level category id (1 = Full Song Book, 2 = Injili Song Book)
+      final int bookCategoryId = bookName == 'Injili Song Book' ? 2 : 1;
+      await db.into(db.categories).insertOnConflictUpdate(
+        CategoriesCompanion.insert(id: Value(bookCategoryId), name: bookName),
+      );
 
       // Build song companions
       final songCompanions = <SongsCompanion>[];
@@ -71,7 +64,6 @@ class BundledJsonImporter implements SongbookImporter {
         final author = item['author'] as String?;
         final copyright = item['copyright'] as String?;
         final search = item['search'] as String?;
-        final categoryId = item['category_id'] as int?;
 
         songCompanions.add(
           SongsCompanion.insert(
@@ -83,9 +75,7 @@ class BundledJsonImporter implements SongbookImporter {
             search: Value(search),
             copyright: Value(copyright),
             author: Value(author),
-            categoryId: categoryId != null
-                ? Value(categoryId)
-                : const Value<int?>.absent(),
+            categoryId: Value(bookCategoryId),
             sourceSongId: Value(songNum),
             sourcePath: Value(bookName),
             sourceFormat: const Value('bundled_json'),
@@ -107,10 +97,6 @@ class BundledJsonImporter implements SongbookImporter {
 
       // Insert data
       await db.transaction(() async {
-        for (final category in categoryCompanions) {
-          await db.into(db.categories).insertOnConflictUpdate(category);
-        }
-
         for (final song in songCompanions) {
           final titleKey = song.title.value.toLowerCase().trim();
           // Skip if already in DB from a previous seed
@@ -136,7 +122,7 @@ class BundledJsonImporter implements SongbookImporter {
 
       return ImportResult.success(
         songs: songCompanions.length,
-        categories: categoryCompanions.length,
+        categories: 1,
         added: newSongTitles.length,
         alreadyExisted: alreadyExisted,
         newTitles: newSongTitles,
