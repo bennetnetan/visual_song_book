@@ -1,19 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:archive/archive.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+import 'package:visual_song_book/data/services/app_storage.dart';
 
 class BackupRepository {
   /// Locates the active SQLite database file on disk.
   Future<File> _getDatabaseFile() async {
-    final Directory directory;
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      directory = await getApplicationSupportDirectory();
-    } else {
-      directory = await getApplicationDocumentsDirectory();
-    }
-    return File(p.join(directory.path, 'songs_db.sqlite'));
+    final dbPath = await getAppStorageFilePath('songs_db.sqlite');
+    return File(dbPath);
   }
 
   /// Exports the current database to a [.vsbook] archive file at the specified [targetPath]

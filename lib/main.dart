@@ -7,6 +7,7 @@ import 'package:logging/logging.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
+import 'package:visual_song_book/data/services/app_storage.dart';
 import 'package:visual_song_book/routing/app_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:screen_retriever/screen_retriever.dart';
@@ -19,6 +20,9 @@ void main(List<String> args) async {
   AppLogger.init(level: kReleaseMode ? Level.WARNING : Level.ALL);
   final log = AppLogger.get('Main');
   log.info('App starting (args: $args)');
+
+  // Pre-warm the unified app storage path so LazyDatabase resolves instantly.
+  getAppStoragePath(); // fire-and-forget — result is cached for all subsequent calls
 
   if (args.isNotEmpty &&
       (args.first == 'multi_window' || args.first == 'Projection Output')) {

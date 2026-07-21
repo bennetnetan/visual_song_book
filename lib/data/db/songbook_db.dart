@@ -1,6 +1,7 @@
+import 'dart:io';
 import 'package:drift/drift.dart';
-import 'package:drift_flutter/drift_flutter.dart';
 import 'package:drift/native.dart';
+import 'package:visual_song_book/data/services/app_storage.dart';
 
 part 'songbook_db.g.dart';
 
@@ -146,7 +147,8 @@ class AppDatabase extends _$AppDatabase {
 }
 
 QueryExecutor _openConnection() {
-  // driftDatabase automatically selects the right path on all platforms
-  // (App Support directory on desktop, App Documents directory on mobile)
-  return driftDatabase(name: 'songs_db');
+  return LazyDatabase(() async {
+    final dbPath = await getAppStorageFilePath('songs_db.sqlite');
+    return NativeDatabase(File(dbPath));
+  });
 }

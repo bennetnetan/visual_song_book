@@ -1,8 +1,7 @@
 import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
+import 'package:visual_song_book/data/services/app_storage.dart';
 
 class BibleDatabase {
   Database? _db;
@@ -10,8 +9,7 @@ class BibleDatabase {
   Future<void> ensureInitialized() async {
     if (_db != null) return;
 
-    final appDir = await getApplicationDocumentsDirectory();
-    final dbPath = p.join(appDir.path, 'kjv_bible.sqlite');
+    final dbPath = await getAppStorageFilePath('kjv_bible.sqlite');
 
     final file = File(dbPath);
     bool shouldCopy = false;
