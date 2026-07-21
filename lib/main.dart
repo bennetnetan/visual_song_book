@@ -80,7 +80,17 @@ void main(List<String> args) async {
     });
   }
 
-  runApp(const ProviderScope(child: MyApp()));
+  runApp(
+    ProviderScope(
+      overrides: [
+        // Wire SeedingService with the app database so first-launch seeding works.
+        seedingServiceProvider.overrideWith(
+          (ref) => SeedingService(ref.watch(databaseProvider)),
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends ConsumerWidget {
@@ -91,6 +101,12 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+
+    // Trigger bundled-songbook seeding on every cold start.
+    // SeedingService is a no-op after the first successful seed.
+    if (!isProjectionWindow) {
+      ref.watch(appSeedProvider);
+    }
 
     return MaterialApp.router(
       title: 'Visual Song Book',

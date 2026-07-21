@@ -9,6 +9,10 @@ import 'package:visual_song_book/data/repositories/set_repository.dart';
 import 'package:visual_song_book/data/repositories/song_repository.dart';
 import 'package:visual_song_book/features/bible/bible_repository.dart';
 
+// Re-export so app only needs to import app_providers.dart for seeding.
+export 'package:visual_song_book/data/services/seeding_service.dart'
+    show seedingServiceProvider, appSeedProvider, SeedingService;
+
 // Database Provider (hot-swappable when restoring backups)
 final databaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -57,4 +61,3 @@ final importersProvider = Provider<List<SongbookImporter>>((ref) {
 
 // Provider to identify if the current process is the secondary projection window
 final isProjectionWindowProvider = Provider<bool>((ref) => false);
-

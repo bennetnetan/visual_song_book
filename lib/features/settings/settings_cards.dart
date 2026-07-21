@@ -354,6 +354,24 @@ class ChangelogCard extends StatelessWidget {
           ),
           SizedBox(height: 24),
           _ChangelogEntry(
+            version: 'v1.5.0',
+            date: '2026-07-21',
+            changes: [
+              'First-launch seeding — Full Song Book & Injili Song Book pre-loaded automatically on fresh install',
+              'Centralized AppLogger powered by Dart logging package (structured, level-aware, IDE-friendly)',
+              'SetsTab null-check crash fixed — graceful loading indicator when DB resolves before sets list',
+              'Strict DB staleness checks — stale selectedSetId auto-cleared when set is deleted externally',
+              'Reactive set-items stream — SongSetItems now watched live, eliminating stale-data races',
+              '100ms nav-ready dwell timer in search — type to search, pause to navigate with arrow keys',
+              'Enter to project highlighted result from search without touching the mouse',
+              'Subtle animated keyboard-hint indicator fades in when nav mode is active in search results',
+              'Linux window title fixed to "Visual Song Book" with app logo embedded in GTK titlebar',
+              'Android per-ABI release APKs (armeabi-v7a, arm64-v8a, x86_64)',
+              'Linux AppImage with embedded logo and AppDir integration',
+            ],
+          ),
+          const SizedBox(height: 16),
+          _ChangelogEntry(
             version: 'v1.4.2',
             date: '2026-06-26',
             changes: [
@@ -533,7 +551,7 @@ class AboutCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Chip(
                   label: Text(
-                    'v1.4.2',
+                    'v1.5.0',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
