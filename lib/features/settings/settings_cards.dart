@@ -354,6 +354,18 @@ class ChangelogCard extends StatelessWidget {
           ),
           SizedBox(height: 24),
           _ChangelogEntry(
+            version: 'v1.6.0',
+            date: '2026-07-21',
+            changes: [
+              'Categories simplified — Full Song Book & Injili Song Book replace the dozens of individual imported categories',
+              'Unified storage directory — all app data consolidated in ~/.visual_song_book/',
+              'Cross-book duplicates eliminated — seeded songs deduplicated by title alone',
+              'Sidebar starts minimized — NavigationRail collapsed by default on launch',
+              'Seed marker hardened — verifies DB actually has songs before trusting SharedPreferences marker',
+            ],
+          ),
+          const SizedBox(height: 16),
+          _ChangelogEntry(
             version: 'v1.5.0',
             date: '2026-07-21',
             changes: [
@@ -551,7 +563,7 @@ class AboutCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Chip(
                   label: Text(
-                    'v1.5.0',
+                    'v1.6.0',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
