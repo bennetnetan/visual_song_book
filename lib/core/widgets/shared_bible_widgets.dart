@@ -99,6 +99,19 @@ class VerseText extends StatelessWidget {
           duration: const Duration(milliseconds: 350),
           switchInCurve: Curves.easeInOut,
           switchOutCurve: Curves.easeInOut,
+          // Override the default Stack layout builder so the child is NOT given
+          // tight constraints equal to the full parent height. Using Align lets
+          // the Column measure its own intrinsic size (text + 20px + reference)
+          // and sit centred — keeping the reference exactly 20px below the text.
+          layoutBuilder: (currentChild, previousChildren) {
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                ...previousChildren,
+                if (currentChild != null) currentChild,
+              ],
+            );
+          },
           transitionBuilder: (child, animation) {
             return FadeTransition(
               opacity: animation,
@@ -112,44 +125,49 @@ class VerseText extends StatelessWidget {
             );
           },
           child: text.isNotEmpty
-              ? Column(
+              ? UnconstrainedBox(
                   key: ValueKey('verse_$text'),
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      text,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Outfit',
-                        color: Colors.white,
-                        fontSize: finalFontSize,
-                        fontWeight: FontWeight.w600,
-                        height: 1.35,
-                        letterSpacing: 0.3,
-                        shadows: [
-                          Shadow(
-                            offset: const Offset(0, 2),
-                            blurRadius: 12,
-                            color: Colors.black.withValues(alpha: 0.8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      ConstrainedBox(
+                        // Re-apply the width constraint so text wraps correctly
+                        constraints: BoxConstraints(maxWidth: size.width),
+                        child: Text(
+                          text,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'Outfit',
+                            color: Colors.white,
+                            fontSize: finalFontSize,
+                            fontWeight: FontWeight.w600,
+                            height: 1.35,
+                            letterSpacing: 0.3,
+                            shadows: [
+                              Shadow(
+                                offset: const Offset(0, 2),
+                                blurRadius: 12,
+                                color: Colors.black.withValues(alpha: 0.8),
+                              ),
+                              Shadow(
+                                offset: const Offset(0, 0),
+                                blurRadius: 30,
+                                color: const Color(0xFF00E5CC).withValues(alpha: 0.12),
+                              ),
+                            ],
                           ),
-                          Shadow(
-                            offset: const Offset(0, 0),
-                            blurRadius: 30,
-                            color: const Color(0xFF00E5CC).withValues(alpha: 0.12),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                    if (referenceLabel != null && referenceLabel!.isNotEmpty) ...[
-                      const SizedBox(height: 20),
-                      ReferenceLabel(
-                        label: referenceLabel!,
-                        fontSize: (finalFontSize * 0.45).clamp(20.0, 48.0),
-                      ),
+                      if (referenceLabel != null && referenceLabel!.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        ReferenceLabel(
+                          label: referenceLabel!,
+                          fontSize: (finalFontSize * 0.45).clamp(20.0, 48.0),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 )
               : const SizedBox.shrink(),
         );
