@@ -362,6 +362,7 @@ class ChangelogCard extends StatelessWidget {
               'Cross-book duplicates eliminated — seeded songs deduplicated by title alone',
               'Sidebar starts minimized — NavigationRail collapsed by default on launch',
               'Seed marker hardened — verifies DB actually has songs before trusting SharedPreferences marker',
+              'AppImage OS bar icon — icons embedded in hicolor theme paths with correct StartupWMClass',
             ],
           ),
           const SizedBox(height: 16),
