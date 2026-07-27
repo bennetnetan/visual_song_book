@@ -8,7 +8,7 @@ final _log = AppLogger.get('AppStorage');
 String? _cachedAppStoragePath;
 
 /// Returns the single unified directory for all app data.
-/// On desktop: `~/.visual_song_book/`
+/// On desktop: `.visual_song_book/` under the user's home directory
 /// On mobile: `<app-docs>/VisualSongBook/`
 Future<String> getAppStoragePath() async {
   if (_cachedAppStoragePath != null) return _cachedAppStoragePath!;
@@ -16,7 +16,7 @@ Future<String> getAppStoragePath() async {
   final Directory baseDir;
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     final home =
-        Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? '/tmp';
+        Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? Platform.environment['TEMP'] ?? Platform.environment['TMP'];
     baseDir = Directory(p.join(home, '.visual_song_book'));
   } else {
     final docs = await getApplicationDocumentsDirectory();

@@ -16,7 +16,7 @@ class MdbToolsImporter implements SongbookImporter {
   bool canImport(ImportSource source) {
     // Only supported on desktop platforms where we can run processes
     // and if the file path is provided and ends with .mdb or .vsb.
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    if (Platform.isLinux || Platform.isMacOS) {
       if (source.type == ImportSourceType.file && source.filePath != null) {
         final path = source.filePath!.toLowerCase();
         return path.endsWith('.mdb') || path.endsWith('.vsb');

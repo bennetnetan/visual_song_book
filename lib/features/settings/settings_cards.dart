@@ -358,7 +358,7 @@ class ChangelogCard extends StatelessWidget {
             date: '2026-07-21',
             changes: [
               'Categories simplified — Full Song Book & Injili Song Book replace the dozens of individual imported categories',
-              'Unified storage directory — all app data consolidated in ~/.visual_song_book/',
+              'Unified storage directory — all app data consolidated in .visual_song_book/',
               'Cross-book duplicates eliminated — seeded songs deduplicated by title alone',
               'Sidebar starts minimized — NavigationRail collapsed by default on launch',
               'Seed marker hardened — verifies DB actually has songs before trusting SharedPreferences marker',
