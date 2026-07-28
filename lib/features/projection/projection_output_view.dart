@@ -29,6 +29,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
   late final FocusNode _focusNode;
   bool _isClosing = false;
   bool _isHovering = false;
+  int _originalWindowStyle = 0;
 
   double _baseFontSize = 40.0;
   bool _pinchActive = false;
@@ -118,21 +119,23 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     }
   }
 
-  /// Enters fullscreen automatically when window opens.
+  /// Enters borderless fullscreen automatically when window opens.
   Future<void> _goFullscreenOnBestDisplay() async {
     if (Platform.isWindows) {
-      // window_manager is not registered in secondary desktop_multi_window
-      // engines. Use Win32 APIs directly to maximize the window.
-      await maximizeCurrentWindow();
-      debugPrint('Projection window maximized via Win32 API.');
+      // Use Win32 APIs to enter true borderless fullscreen:
+      // strip title bar + resize to full monitor.
+      _originalWindowStyle = await enterBorderlessFullscreenCurrentWindow();
+      if (_originalWindowStyle != 0) {
+        debugPrint('Projection window entered borderless fullscreen via Win32 API.');
+      } else {
+        // Fallback to maximized if borderless fullscreen failed
+        await maximizeCurrentWindow();
+        debugPrint('Projection window maximized (borderless fullscreen failed).');
+      }
     } else {
       // On Linux/macOS, window_manager may or may not work in secondary
       // engines. Try it as best-effort.
       try {
-        // ignore: deprecated_member_use
-        // windowManager.setFullScreen is not available without the plugin.
-        // On Linux the secondary window is already created at 1280x720 which
-        // is a reasonable size.
         debugPrint('Projection window: fullscreen not available on this platform in secondary engine.');
       } catch (e) {
         debugPrint('_goFullscreenOnBestDisplay error: $e');
@@ -182,6 +185,12 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     if (_isClosing) return;
     _isClosing = true;
 
+    // Restore window style before closing so the hide/cleanup is clean
+    if (_originalWindowStyle != 0) {
+      exitBorderlessFullscreenCurrentWindow(_originalWindowStyle);
+      _originalWindowStyle = 0;
+    }
+
     // window_manager is not registered in desktop_multi_window secondary
     // engines on any platform. Always use IPC to ask the main window to
     // close/hide us, since the main window's WindowController can access
@@ -203,10 +212,13 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     }
+    // Restore window style if we were in borderless fullscreen
+    if (_originalWindowStyle != 0) {
+      exitBorderlessFullscreenCurrentWindow(_originalWindowStyle);
+      _originalWindowStyle = 0;
+    }
     if (!kIsWeb &&
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-      // NOTE: window_manager.removeListener is not called because the plugin
-      // is not registered in desktop_multi_window secondary engines.
       if (_isSecondaryWindow) {
         _notifyClosed();
       }
