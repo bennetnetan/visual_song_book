@@ -327,7 +327,7 @@ class _ChangelogCardState extends State<ChangelogCard> {
     final theme = Theme.of(context);
 
     final recentEntries = [
-      _ChangelogEntry(
+      const _ChangelogEntry(
         version: 'v1.6.0+2',
         date: '2026-07-21',
         changes: [
@@ -335,7 +335,7 @@ class _ChangelogCardState extends State<ChangelogCard> {
           'Keyboard navigation hint moved above search results so it is always visible, not hidden below the list',
         ],
       ),
-      _ChangelogEntry(
+      const _ChangelogEntry(
         version: 'v1.6.0',
         date: '2026-07-21',
         changes: [
@@ -350,7 +350,7 @@ class _ChangelogCardState extends State<ChangelogCard> {
     ];
 
     final olderEntries = [
-      _ChangelogEntry(
+      const _ChangelogEntry(
         version: 'v1.5.0',
         date: '2026-07-21',
         changes: [
@@ -367,7 +367,7 @@ class _ChangelogCardState extends State<ChangelogCard> {
           'Linux AppImage with embedded logo and AppDir integration',
         ],
       ),
-      _ChangelogEntry(
+      const _ChangelogEntry(
         version: 'v1.4.2',
         date: '2026-06-26',
         changes: [
@@ -383,7 +383,7 @@ class _ChangelogCardState extends State<ChangelogCard> {
           'Slide timeline with auto-scroll to active verse in projection view',
         ],
       ),
-      _ChangelogEntry(
+      const _ChangelogEntry(
         version: 'v1.4.1',
         date: '2026-06-25',
         changes: [
@@ -395,7 +395,7 @@ class _ChangelogCardState extends State<ChangelogCard> {
           'High-resolution app icon logo in settings',
         ],
       ),
-      _ChangelogEntry(
+      const _ChangelogEntry(
         version: 'v1.4.0',
         date: '2026-06-24',
         changes: [
