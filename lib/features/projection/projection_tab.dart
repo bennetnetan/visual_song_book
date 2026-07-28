@@ -10,8 +10,10 @@ import 'package:go_router/go_router.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/projection/projection_search_provider.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
+import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
 import 'package:visual_song_book/features/sets/sets_tab.dart';
+import 'package:visual_song_book/features/song_list/song_list_controller.dart';
 
 /// Persists the set-navigator collapsed/expanded state across widget-tree rebuilds
 /// (the panel moves between large-screen Row and small-screen Column, which would
@@ -524,7 +526,7 @@ class _LivePreviewPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final currentSlide = state.currentSlide;
-    final isLargeScreen = MediaQuery.of(context).size.width >= 900;
+    final isLargeScreen = getLayoutMode(context) == LayoutMode.desktop;
 
     if (!isLargeScreen) {
       return Column(
@@ -1350,6 +1352,67 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
             },
           ),
         ),
+        if (!ref.watch(projectionSearchProvider.select((s) => s.isBibleMode)))
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: Consumer(
+              builder: (context, ref, child) {
+                final selectedSource = ref.watch(projectionSearchProvider.select((s) => s.selectedSourcePath));
+                final sourcePaths = ref.watch(songListControllerProvider.select((s) => s.sourcePaths));
+                if (sourcePaths.length <= 1) return const SizedBox.shrink();
+                return PopupMenuButton<String?>(
+                  icon: Icon(
+                    Icons.library_books_outlined,
+                    size: 18,
+                    color: selectedSource != null
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  tooltip: 'Filter by songbook',
+                  onSelected: (value) {
+                    ref.read(projectionSearchProvider.notifier).setSourceFilter(value);
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem<String?>(
+                      value: null,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.all_inclusive, size: 16),
+                          const SizedBox(width: 8),
+                          const Text('All Books'),
+                          if (selectedSource == null) ...[
+                            const Spacer(),
+                            Icon(Icons.check, size: 16, color: Theme.of(context).colorScheme.primary),
+                          ],
+                        ],
+                      ),
+                    ),
+                    ...sourcePaths.map((source) => PopupMenuItem<String?>(
+                      value: source.path,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.book_outlined, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(source.path, overflow: TextOverflow.ellipsis)),
+                          Text(
+                            '${source.count}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          if (selectedSource == source.path) ...[
+                            const SizedBox(width: 4),
+                            Icon(Icons.check, size: 16, color: Theme.of(context).colorScheme.primary),
+                          ],
+                        ],
+                      ),
+                    )),
+                  ],
+                );
+              },
+            ),
+          ),
       ],
       suggestionsBuilder: (context, controller) {
         return [

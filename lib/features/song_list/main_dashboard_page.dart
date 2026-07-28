@@ -1,11 +1,10 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:visual_song_book/core/providers/app_providers.dart';
+import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/features/bible/bible_tab.dart';
 import 'package:visual_song_book/features/history/history_tab.dart';
@@ -24,9 +23,10 @@ class MainDashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final activeTab = ref.watch(activeDashboardTabProvider);
     final isExpanded = ref.watch(isSidebarExpandedProvider);
-    final isLargeScreen = MediaQuery.of(context).size.width >= 900;
-    final isMobilePlatform = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
-    final hideProjection = isMobilePlatform || !isLargeScreen;
+    final layoutMode = getLayoutMode(context);
+    final isLargeScreen = layoutMode == LayoutMode.desktop;
+    final isMobilePlat = isMobilePlatformCheck();
+    final hideProjection = isMobilePlat || !isLargeScreen;
 
     int getSelectedIndex(int tabIdx) {
       if (!hideProjection) return tabIdx;

@@ -25,7 +25,7 @@ class SongRepository {
   }
 
   /// Searches active songs by title, body, author, or song number
-  Future<List<Song>> searchSongs(String query) {
+  Future<List<Song>> searchSongs(String query, {String? sourcePath}) {
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
       return getSongs();
@@ -37,6 +37,10 @@ class SongRepository {
     final statement = db.select(db.songs)
       ..where((t) {
         Expression<bool> activeFilter = t.isActive.equals(true);
+
+        if (sourcePath != null) {
+          activeFilter = activeFilter & t.sourcePath.equals(sourcePath);
+        }
 
         Expression<bool> searchExpr =
             t.title.lower().like(matchQuery) |
@@ -55,15 +59,41 @@ class SongRepository {
   }
 
   /// Watches active songs in a specific category
-  Stream<List<Song>> watchSongsByCategory(int? categoryId) {
+  Stream<List<Song>> watchSongsByCategory(int? categoryId, {String? sourcePath}) {
     if (categoryId == null) {
       return (db.select(db.songs)
-            ..where((t) => t.isActive.equals(true) & t.categoryId.isNull())
+            ..where((t) {
+              Expression<bool> expr = t.isActive.equals(true) & t.categoryId.isNull();
+              if (sourcePath != null) {
+                expr = expr & t.sourcePath.equals(sourcePath);
+              }
+              return expr;
+            })
             ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
           .watch();
     }
     return (db.select(db.songs)
-          ..where((t) => t.isActive.equals(true) & t.categoryId.equals(categoryId))
+          ..where((t) {
+            Expression<bool> expr = t.isActive.equals(true) & t.categoryId.equals(categoryId);
+            if (sourcePath != null) {
+              expr = expr & t.sourcePath.equals(sourcePath);
+            }
+            return expr;
+          })
+          ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
+        .watch();
+  }
+
+  /// Watches all active songs, optionally filtered by source path
+  Stream<List<Song>> watchSongsFiltered({String? sourcePath}) {
+    return (db.select(db.songs)
+          ..where((t) {
+            Expression<bool> expr = t.isActive.equals(true);
+            if (sourcePath != null) {
+              expr = expr & t.sourcePath.equals(sourcePath);
+            }
+            return expr;
+          })
           ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
         .watch();
   }
@@ -173,6 +203,23 @@ class SongRepository {
         .map((row) => row.read(db.songs.sourcePath))
         .where((path) => path != null)
         .cast<String>()
+        .toList();
+  }
+
+  /// Returns distinct source paths with song counts, ordered by count descending
+  Future<List<({String path, int count})>> getSourcePathCounts() async {
+    final query = db.selectOnly(db.songs)
+      ..addColumns([db.songs.sourcePath, db.songs.id.count()])
+      ..where(db.songs.isActive.equals(true) & db.songs.sourcePath.isNotNull())
+      ..groupBy([db.songs.sourcePath])
+      ..orderBy([OrderingTerm.desc(db.songs.id.count())]);
+    final result = await query.get();
+    return result
+        .map((row) {
+          final path = row.read(db.songs.sourcePath)!;
+          final count = row.read(db.songs.id.count())!;
+          return (path: path, count: count);
+        })
         .toList();
   }
 

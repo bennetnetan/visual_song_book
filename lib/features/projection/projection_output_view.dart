@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 
 import 'package:go_router/go_router.dart';
-import 'package:window_manager/window_manager.dart';
+import 'package:visual_song_book/core/utils/win32_window_helper.dart';
 import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 
@@ -19,7 +19,7 @@ class ProjectionOutputView extends ConsumerStatefulWidget {
 }
 
 class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
-    with SingleTickerProviderStateMixin, WindowListener {
+    with SingleTickerProviderStateMixin {
   String _ipcText = '';
   String _ipcLabel = '';
   bool _ipcIsBible = false;
@@ -55,12 +55,10 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     if (!kIsWeb &&
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       _setupSecondaryWindowChannel();
-      if (!Platform.isLinux) {
-        try {
-          windowManager.addListener(this);
-          windowManager.setPreventClose(true);
-        } catch (_) {}
-      }
+      // NOTE: window_manager plugin is not registered in desktop_multi_window
+      // secondary engines on any platform. Calling windowManager.addListener()
+      // or setPreventClose() would fail silently or target the wrong window.
+      // Close handling is done via IPC to the main window instead.
     }
   }
 
@@ -122,11 +120,23 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
 
   /// Enters fullscreen automatically when window opens.
   Future<void> _goFullscreenOnBestDisplay() async {
-    try {
-      await windowManager.setFullScreen(true);
-      debugPrint('Projection window set to fullscreen.');
-    } catch (e) {
-      debugPrint('_goFullscreenOnBestDisplay error: $e');
+    if (Platform.isWindows) {
+      // window_manager is not registered in secondary desktop_multi_window
+      // engines. Use Win32 APIs directly to maximize the window.
+      await maximizeCurrentWindow();
+      debugPrint('Projection window maximized via Win32 API.');
+    } else {
+      // On Linux/macOS, window_manager may or may not work in secondary
+      // engines. Try it as best-effort.
+      try {
+        // ignore: deprecated_member_use
+        // windowManager.setFullScreen is not available without the plugin.
+        // On Linux the secondary window is already created at 1280x720 which
+        // is a reasonable size.
+        debugPrint('Projection window: fullscreen not available on this platform in secondary engine.');
+      } catch (e) {
+        debugPrint('_goFullscreenOnBestDisplay error: $e');
+      }
     }
   }
 
@@ -142,11 +152,10 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     } catch (_) {}
   }
 
-  @override
   void onWindowClose() async {
-    if (!Platform.isLinux) {
-      await _handleManualClose();
-    }
+    // window_manager is not registered in secondary desktop_multi_window
+    // engines. Close is handled via IPC.
+    await _handleManualClose();
   }
 
   void _handleClose() {
@@ -173,26 +182,18 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     if (_isClosing) return;
     _isClosing = true;
 
-    if (Platform.isLinux) {
-      // On Linux, calling windowManager.close() or hide() from the secondary
-      // window crashes the app because window_manager targets the main window's
-      // GTK handle. Instead, we ask the main window to hide us via IPC — the
-      // main window uses WindowController.hide() which is safe.
-      try {
-        final controllers = await WindowController.getAll();
-        final currentWindow = await WindowController.fromCurrentEngine();
-        for (final c in controllers) {
-          if (c.windowId == currentWindow.windowId) continue;
-          await c.invokeMethod('close_secondary_window');
-        }
-      } catch (_) {}
-    } else {
-      // On Windows/macOS, window_manager is scoped to this window correctly.
-      try {
-        await windowManager.hide();
-      } catch (_) {}
-      _notifyClosed();
-    }
+    // window_manager is not registered in desktop_multi_window secondary
+    // engines on any platform. Always use IPC to ask the main window to
+    // close/hide us, since the main window's WindowController can access
+    // the secondary window handle.
+    try {
+      final controllers = await WindowController.getAll();
+      final currentWindow = await WindowController.fromCurrentEngine();
+      for (final c in controllers) {
+        if (c.windowId == currentWindow.windowId) continue;
+        await c.invokeMethod('close_secondary_window');
+      }
+    } catch (_) {}
   }
 
   @override
@@ -204,11 +205,8 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     }
     if (!kIsWeb &&
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-      if (!Platform.isLinux) {
-        try {
-          windowManager.removeListener(this);
-        } catch (_) {}
-      }
+      // NOTE: window_manager.removeListener is not called because the plugin
+      // is not registered in desktop_multi_window secondary engines.
       if (_isSecondaryWindow) {
         _notifyClosed();
       }

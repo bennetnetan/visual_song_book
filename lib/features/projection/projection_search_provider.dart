@@ -42,6 +42,7 @@ class ProjectionSearchState {
   final bool isBibleMode;
   final bool isLoading;
   final String? error;
+  final String? selectedSourcePath;
 
   // Bible-specific
   final List<BibleVerse> bibleResults;
@@ -57,6 +58,7 @@ class ProjectionSearchState {
     this.isBibleMode = true,
     this.isLoading = false,
     this.error,
+    this.selectedSourcePath,
     this.bibleResults = const [],
     this.totalBibleCount = 0,
     this.bibleOffset = 0,
@@ -69,6 +71,8 @@ class ProjectionSearchState {
     bool? isBibleMode,
     bool? isLoading,
     String? Function()? error,
+    String? selectedSourcePath,
+    bool? clearSourcePath = false,
     List<BibleVerse>? bibleResults,
     int? totalBibleCount,
     int? bibleOffset,
@@ -80,6 +84,9 @@ class ProjectionSearchState {
       isBibleMode: isBibleMode ?? this.isBibleMode,
       isLoading: isLoading ?? this.isLoading,
       error: error != null ? error() : this.error,
+      selectedSourcePath: clearSourcePath == true
+          ? null
+          : (selectedSourcePath ?? this.selectedSourcePath),
       bibleResults: bibleResults ?? this.bibleResults,
       totalBibleCount: totalBibleCount ?? this.totalBibleCount,
       bibleOffset: bibleOffset ?? this.bibleOffset,
@@ -239,6 +246,25 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
     state = ProjectionSearchState(isBibleMode: state.isBibleMode);
   }
 
+  /// Sets the selected source path filter for song searches (null = all sources).
+  /// Clears the song cache since results are now filtered differently.
+  void setSourceFilter(String? sourcePath) {
+    if (state.selectedSourcePath == sourcePath) return;
+    state = state.copyWith(
+      selectedSourcePath: sourcePath,
+      clearSourcePath: sourcePath == null,
+    );
+    // Clear song cache since source filter changed
+    _songCache.clear();
+    // Re-run the current search if in song mode
+    if (!state.isBibleMode && state.query.trim().isNotEmpty) {
+      _activeRequestId++;
+      final requestId = _activeRequestId;
+      state = state.copyWith(isLoading: true);
+      _performSongSearch(state.query, requestId);
+    }
+  }
+
   // ── Internal helpers ───────────────────────────────────────────────────────
 
   /// Normalised cache key: lower-cased trimmed query, mode-agnostic.
@@ -347,7 +373,10 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
   }
 
   Future<void> _performSongSearch(String query, int requestId) async {
-    final results = await _songRepo.searchSongs(query);
+    final results = await _songRepo.searchSongs(
+      query,
+      sourcePath: state.selectedSourcePath,
+    );
     if (!mounted || requestId != _activeRequestId) return;
 
     // ── Write to cache ───────────────────────────────────────────────────────

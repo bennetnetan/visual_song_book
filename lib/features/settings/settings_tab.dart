@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
+import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/data/importers/vsb_importer.dart';
 import 'package:visual_song_book/data/importers/vsbook_importer.dart';
 import 'package:visual_song_book/features/settings/settings_cards.dart';
@@ -201,7 +202,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final isLargeScreen = MediaQuery.of(context).size.width >= 900;
+    final isLargeScreen = getLayoutMode(context) == LayoutMode.desktop;
     if (isLargeScreen) {
       return _buildDesktopLayout();
     } else {

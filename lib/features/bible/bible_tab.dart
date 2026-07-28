@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
+import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/features/bible/bible_controller.dart';
@@ -524,8 +525,8 @@ class _ReadingViewState extends State<_ReadingView> {
                                               widget.onToggleBookmark(v);
                                             }
                                           },
-                                          itemBuilder: (context) {
-                                             final isLargeScreen = MediaQuery.of(context).size.width >= 900;
+                                           itemBuilder: (context) {
+                                              final isLargeScreen = getLayoutMode(context) == LayoutMode.desktop;
                                              return [
                                                PopupMenuItem(
                                                  value: 'project',
@@ -573,7 +574,7 @@ class _ReadingViewState extends State<_ReadingView> {
   ) {
     final renderBox = context.findRenderObject() as RenderBox?;
     final center = renderBox?.localToGlobal(renderBox.size.center(Offset.zero)) ?? Offset.zero;
-    final isLargeScreen = MediaQuery.of(context).size.width >= 900;
+    final isLargeScreen = getLayoutMode(context) == LayoutMode.desktop;
     showMenu<String>(
       context: context,
       position: RelativeRect.fromLTRB(center.dx, center.dy, center.dx + 1, center.dy + 1),

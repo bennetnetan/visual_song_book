@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/features/sets/sets_tab.dart';
 
@@ -362,7 +363,7 @@ class _SetDetailState extends ConsumerState<SetDetail> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final itemSongIds = widget.items.map((i) => i.songId).toSet();
-    final isLargeScreen = MediaQuery.of(context).size.width >= 900;
+    final isLargeScreen = getLayoutMode(context) == LayoutMode.desktop;
 
     final query = _searchQuery.trim().toLowerCase();
     final filteredSongs = widget.availableSongs.where((song) {

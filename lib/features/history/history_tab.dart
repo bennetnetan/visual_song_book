@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:visual_song_book/core/providers/app_providers.dart';
+import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/features/bible/bible_tab.dart';
 import 'package:visual_song_book/features/history/history_controller.dart';
 import 'package:visual_song_book/features/sets/sets_tab.dart';
@@ -19,7 +20,7 @@ class HistoryTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(historyControllerProvider);
     final selectedTab = ref.watch(_selectedHistoryTabProvider);
-    final isLargeScreen = MediaQuery.of(context).size.width >= 900;
+    final isLargeScreen = getLayoutMode(context) == LayoutMode.desktop;
 
     return DefaultTabController(
       length: 4,

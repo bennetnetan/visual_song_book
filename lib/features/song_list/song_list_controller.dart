@@ -14,6 +14,8 @@ class SongListState {
   final bool showUncategorizedOnly;
   final List<Song> songs;
   final List<Category> categories;
+  final List<({String path, int count})> sourcePaths;
+  final String? selectedSourcePath;
   final bool isLoading;
   final String? error;
   final SongSortMode sortMode;
@@ -24,6 +26,8 @@ class SongListState {
     required this.showUncategorizedOnly,
     required this.songs,
     required this.categories,
+    required this.sourcePaths,
+    this.selectedSourcePath,
     required this.isLoading,
     required this.error,
     required this.sortMode,
@@ -35,6 +39,9 @@ class SongListState {
     bool? showUncategorizedOnly,
     List<Song>? songs,
     List<Category>? categories,
+    List<({String path, int count})>? sourcePaths,
+    String? selectedSourcePath,
+    bool? clearSourcePath = false,
     bool? isLoading,
     String? error,
     SongSortMode? sortMode,
@@ -46,6 +53,10 @@ class SongListState {
           showUncategorizedOnly ?? this.showUncategorizedOnly,
       songs: songs ?? this.songs,
       categories: categories ?? this.categories,
+      sourcePaths: sourcePaths ?? this.sourcePaths,
+      selectedSourcePath: clearSourcePath == true
+          ? null
+          : (selectedSourcePath ?? this.selectedSourcePath),
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
       sortMode: sortMode ?? this.sortMode,
@@ -59,6 +70,8 @@ class SongListState {
       showUncategorizedOnly: false,
       songs: [],
       categories: [],
+      sourcePaths: [],
+      selectedSourcePath: null,
       isLoading: true,
       error: null,
       sortMode: SongSortMode.byNumber,
@@ -108,12 +121,25 @@ class SongListController extends StateNotifier<SongListState> {
       },
     );
 
-    // Watch all songs to refresh search queries when database changes
+    // Watch all songs to refresh search queries and source paths when database changes
     _dbChangesSub = _repository.watchSongs().listen((_) {
+      _loadSourcePaths();
       if (state.query.isNotEmpty) {
         fetchSongs();
       }
     });
+
+    // Load source paths
+    _loadSourcePaths();
+  }
+
+  Future<void> _loadSourcePaths() async {
+    try {
+      final paths = await _repository.getSourcePathCounts();
+      state = state.copyWith(sourcePaths: paths);
+    } catch (_) {
+      // Source paths are optional - don't fail if the query doesn't work
+    }
   }
 
   /// Sets the search query with a short debounce to avoid querying SQLite on every keystroke
@@ -147,6 +173,16 @@ class SongListController extends StateNotifier<SongListState> {
     fetchSongs();
   }
 
+  /// Sets the selected source path filter (null = all sources)
+  void selectSource(String? sourcePath) {
+    if (state.selectedSourcePath == sourcePath) return;
+    state = state.copyWith(
+      selectedSourcePath: sourcePath,
+      clearSourcePath: sourcePath == null,
+    );
+    fetchSongs();
+  }
+
   Future<void> deleteCategory(int categoryId) async {
     await _repository.deleteCategory(categoryId);
     if (state.selectedCategoryId == categoryId) {
@@ -162,7 +198,10 @@ class SongListController extends StateNotifier<SongListState> {
 
       // If there's a search query, search across all songs (ignoring category tab briefly, or filtering it)
       if (state.query.isNotEmpty) {
-        final results = await _repository.searchSongs(state.query);
+        final results = await _repository.searchSongs(
+          state.query,
+          sourcePath: state.selectedSourcePath,
+        );
 
         // Filter search results locally based on selected category if necessary
         List<Song> filtered = results;
@@ -185,12 +224,20 @@ class SongListController extends StateNotifier<SongListState> {
 
         Stream<List<Song>> stream;
         if (state.showUncategorizedOnly) {
-          stream = _repository.watchSongsByCategory(null);
+          stream = _repository.watchSongsByCategory(
+            null,
+            sourcePath: state.selectedSourcePath,
+          );
         } else if (state.selectedCategoryId != null &&
             state.selectedCategoryId != -2) {
-          stream = _repository.watchSongsByCategory(state.selectedCategoryId);
+          stream = _repository.watchSongsByCategory(
+            state.selectedCategoryId,
+            sourcePath: state.selectedSourcePath,
+          );
         } else {
-          stream = _repository.watchSongs();
+          stream = _repository.watchSongsFiltered(
+            sourcePath: state.selectedSourcePath,
+          );
         }
 
         _songsSub = stream.listen((songsList) {

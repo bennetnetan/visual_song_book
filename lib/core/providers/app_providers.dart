@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:visual_song_book/data/db/bible_db.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/importers/vsb_importer.dart';
@@ -61,3 +62,9 @@ final importersProvider = Provider<List<SongbookImporter>>((ref) {
 
 // Provider to identify if the current process is the secondary projection window
 final isProjectionWindowProvider = Provider<bool>((ref) => false);
+
+// Onboarding state — true when the user has completed the first-launch wizard
+final hasCompletedOnboardingProvider = FutureProvider<bool>((ref) async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getBool('onboarding_complete') ?? false;
+});

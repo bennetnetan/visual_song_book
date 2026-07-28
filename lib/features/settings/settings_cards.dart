@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
+import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/data/importers/vsbook_importer.dart';
 import 'package:visual_song_book/data/services/linked_songbooks_service.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
@@ -80,7 +81,7 @@ class ProjectionPreferencesCard extends ConsumerWidget {
     final state = ref.watch(projectionControllerProvider);
     final notifier = ref.read(projectionControllerProvider.notifier);
     final theme = Theme.of(context);
-    final isLargeScreen = MediaQuery.of(context).size.width >= 900;
+    final isLargeScreen = getLayoutMode(context) == LayoutMode.desktop;
 
     return SettingsCard(
       child: Column(

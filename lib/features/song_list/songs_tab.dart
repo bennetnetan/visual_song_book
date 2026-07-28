@@ -51,6 +51,83 @@ class SongsTab extends ConsumerWidget {
     );
   }
 
+  Widget _buildSourceChip(
+    BuildContext context, {
+    required String label,
+    String? subtitle,
+    required bool selected,
+    required VoidCallback onSelected,
+  }) {
+    return ChoiceChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: selected
+                  ? Theme.of(context).colorScheme.onSecondaryContainer
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+              fontSize: 12,
+            ),
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(width: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(
+                color: selected
+                    ? Theme.of(context).colorScheme.onSecondaryContainer.withValues(alpha: 0.15)
+                    : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: selected
+                      ? Theme.of(context).colorScheme.onSecondaryContainer
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+      selected: selected,
+      selectedColor: Theme.of(context).colorScheme.secondaryContainer,
+      backgroundColor: Theme.of(
+        context,
+      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+      showCheckmark: false,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: selected
+              ? Theme.of(context).colorScheme.secondary.withValues(alpha: 0.4)
+              : Theme.of(
+                  context,
+                ).colorScheme.outlineVariant.withValues(alpha: 0.2),
+        ),
+      ),
+      onSelected: (_) => onSelected(),
+    );
+  }
+
+  String _getSourceDisplayName(String path) {
+    // For file paths, extract just the filename
+    if (path.contains('/') || path.contains('\\')) {
+      final parts = path.split(RegExp(r'[/\\]'));
+      final filename = parts.last;
+      // Remove common extensions
+      return filename.replaceAll(RegExp(r'\.(vsbook|vsb|mdb)$'), '');
+    }
+    // For book names (e.g., "Full Song Book"), use as-is
+    return path;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final listState = ref.watch(songListControllerProvider);
@@ -213,6 +290,48 @@ class SongsTab extends ConsumerWidget {
                           ],
                         ),
                       ),
+                      // Source/Songbook filter chips
+                      if (listState.sourcePaths.length > 1)
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0,
+                            vertical: 4.0,
+                          ),
+                          child: Row(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: Icon(
+                                  Icons.library_books_outlined,
+                                  size: 14,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant
+                                      .withValues(alpha: 0.6),
+                                ),
+                              ),
+                              _buildSourceChip(
+                                context,
+                                label: 'All Books',
+                                selected: listState.selectedSourcePath == null,
+                                onSelected: () => listNotifier.selectSource(null),
+                              ),
+                              ...listState.sourcePaths.map(
+                                (source) => Padding(
+                                  padding: const EdgeInsets.only(left: 8.0),
+                                  child: _buildSourceChip(
+                                    context,
+                                    label: _getSourceDisplayName(source.path),
+                                    subtitle: '${source.count}',
+                                    selected: listState.selectedSourcePath == source.path,
+                                    onSelected: () => listNotifier.selectSource(source.path),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       const SizedBox(height: 8),
                       Expanded(
                         child: listState.isLoading

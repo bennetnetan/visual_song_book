@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
-import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/importers/vsbook_importer.dart';
 
 final _log = AppLogger.get('LinkedSongbooks');
@@ -140,7 +140,7 @@ final linkedSongbooksProvider =
 final linkedSongbooksSyncProvider = FutureProvider<int>((ref) async {
   final db = ref.watch(databaseProvider);
   final prefs = await SharedPreferences.getInstance();
-  final raw = prefs.getString(_prefsKey);
+  final raw = prefs.getString(_linkedSongbooksKey);
   if (raw == null) return 0;
 
   List<LinkedSongbook> linked;
@@ -189,7 +189,7 @@ final linkedSongbooksSyncProvider = FutureProvider<int>((ref) async {
   }
 
   if (synced > 0) {
-    final updatedRaw = prefs.getString(_prefsKey);
+    final updatedRaw = prefs.getString(_linkedSongbooksKey);
     if (updatedRaw != null) {
       try {
         final list = json.decode(updatedRaw) as List<dynamic>;
@@ -201,7 +201,7 @@ final linkedSongbooksSyncProvider = FutureProvider<int>((ref) async {
           if (needsUpdate) m['lastImportedAt'] = now;
           return m;
         }).toList();
-        await prefs.setString(_prefsKey, json.encode(updatedList));
+        await prefs.setString(_linkedSongbooksKey, json.encode(updatedList));
       } catch (_) {}
     }
     _log.info('Linked songbooks sync complete: $synced file(s) updated.');

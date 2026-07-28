@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:visual_song_book/core/providers/app_providers.dart';
+import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/song_list/main_dashboard_page.dart';
@@ -72,8 +73,8 @@ class SongPreviewPanel extends ConsumerWidget {
           ElevatedButton.icon(
             onPressed: () async {
               ref.read(projectionControllerProvider.notifier).setSong(song);
-              final isLargeScreen = MediaQuery.of(context).size.width >= 900;
-              await ref.read(projectionControllerProvider.notifier).triggerProjection(context, isLargeScreen);
+              final layoutMode = getLayoutMode(context);
+              await ref.read(projectionControllerProvider.notifier).triggerProjection(context, layoutMode == LayoutMode.desktop);
             },
             icon: const Icon(Icons.tv),
             label: const Text('Send to Projector'),
