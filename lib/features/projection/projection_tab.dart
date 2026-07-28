@@ -979,28 +979,6 @@ class _LivePreviewPanel extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-
-        // Song-only settings (chorus toggle doesn't apply to Bible)
-        if (!state.isBibleMode)
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-              ),
-            ),
-            color: theme.colorScheme.surfaceContainer.withValues(alpha: 0.3),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: SwitchListTile(
-                title: const Text('Auto-insert Chorus'),
-                subtitle: const Text('Show chorus between verses'),
-                value: state.autoInsertChorus,
-                onChanged: notifier.setAutoInsertChorus,
-              ),
-            ),
-          ),
       ],
     );
   }
