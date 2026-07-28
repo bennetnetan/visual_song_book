@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 // Win32 function typedefs using standard FFI types (HWND = IntPtr)
-typedef GetActiveWindowNative = IntPtr Function();
-typedef GetActiveWindowDart = int Function();
+typedef GetForegroundWindowNative = IntPtr Function();
+typedef GetForegroundWindowDart = int Function();
 
 typedef ShowWindowNative = Bool Function(IntPtr hWnd, Int32 nCmdShow);
 typedef ShowWindowDart = bool Function(int hWnd, int nCmdShow);
@@ -47,9 +47,9 @@ const int smCyscreen = 1;
 class Win32WindowHelper {
   static final _user32 = DynamicLibrary.open('user32.dll');
 
-  static final _getActiveWindow =
-      _user32.lookupFunction<GetActiveWindowNative, GetActiveWindowDart>(
-          'GetActiveWindow');
+  static final _getForegroundWindow =
+      _user32.lookupFunction<GetForegroundWindowNative, GetForegroundWindowDart>(
+          'GetForegroundWindow');
 
   static final _showWindow =
       _user32.lookupFunction<ShowWindowNative, ShowWindowDart>('ShowWindow');
@@ -71,7 +71,7 @@ class Win32WindowHelper {
           'GetSystemMetrics');
 
   static int getActiveWindowHandle() {
-    return _getActiveWindow();
+    return _getForegroundWindow();
   }
 
   static bool maximizeWindow(int hwnd) {
@@ -83,6 +83,7 @@ class Win32WindowHelper {
   }
 
   static int setWindowStyle(int hwnd, int style) {
+    if (hwnd == 0) return 0;
     return _setWindowLongPtrW(hwnd, gwlStyle, style);
   }
 
@@ -92,6 +93,7 @@ class Win32WindowHelper {
 
   static bool setWindowBounds(int hwnd, int x, int y, int width, int height,
       {bool topmost = false, bool frameChanged = false}) {
+    if (hwnd == 0) return false;
     final flags = swpShowWindow | (frameChanged ? swpFramechanged : 0);
     return _setWindowPos(
           hwnd,
@@ -118,6 +120,7 @@ class Win32WindowHelper {
   /// resizing the window to fill the screen. Returns the original window
   /// style so it can be restored later.
   static int enterBorderlessFullscreen(int hwnd) {
+    if (hwnd == 0) return 0;
     final originalStyle = getWindowStyle(hwnd);
 
     // Remove title bar, thick frame (resize border), system menu,
