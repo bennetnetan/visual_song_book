@@ -29,7 +29,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   String? _importStatus;
   bool _isExporting = false;
 
-  Future<void> _importMdb() async {
+  Future<void> _importFile() async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     setState(() {
       _isImporting = true;
@@ -48,36 +48,52 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
       }
 
       final path = result.files.single.path!;
-      setState(() => _importStatus = 'Running MDB Tools compiler...');
+      final lower = path.toLowerCase();
+
+      setState(() => _importStatus = 'Importing...');
 
       final importers = ref.read(importersProvider);
       final source = ImportSource.fromFile(path);
-      final activeImporter = importers
-          .where((imp) => imp.canImport(source))
-          .firstOrNull;
 
-      if (activeImporter == null) {
-        throw Exception(
-          'No importer supports this file on this platform. Direct .mdb import requires Desktop platforms with mdb-tools installed.',
-        );
-      }
-
-      final importResult = await activeImporter.import(source);
-      if (importResult.success) {
-        final buffer = StringBuffer()
-          ..write(
-            'Imported ${importResult.songsImported} songs, ${importResult.categoriesImported} categories.',
+      if (lower.endsWith('.vsbook')) {
+        final importer = importers.firstWhere((imp) => imp is VsBookImporter);
+        final importResult = await importer.import(source);
+        if (importResult.success) {
+          scaffoldMessenger.showSnackBar(
+            SnackBar(content: Text('Imported ${importResult.songsImported} songs.')),
           );
-        scaffoldMessenger.showSnackBar(
-          SnackBar(content: Text(buffer.toString())),
-        );
-        ref.read(songListControllerProvider.notifier).fetchSongs();
+          ref.read(songListControllerProvider.notifier).fetchSongs();
+        } else {
+          throw Exception(importResult.errorMessage ?? 'Unknown import error');
+        }
       } else {
-        throw Exception(importResult.errorMessage ?? 'Unknown import error');
+        final activeImporter = importers
+            .where((imp) => imp.canImport(source))
+            .firstOrNull;
+        if (activeImporter == null) {
+          throw Exception(
+            'No importer supports this file. Direct .mdb import requires '
+            'desktop platforms with mdb-tools installed.',
+          );
+        }
+        final importResult = await activeImporter.import(source);
+        if (importResult.success) {
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                'Imported ${importResult.songsImported} songs, '
+                '${importResult.categoriesImported} categories.',
+              ),
+            ),
+          );
+          ref.read(songListControllerProvider.notifier).fetchSongs();
+        } else {
+          throw Exception(importResult.errorMessage ?? 'Unknown import error');
+        }
       }
     } catch (e) {
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Import Failed: $e')),
+        SnackBar(content: Text('Import failed: $e')),
       );
     } finally {
       setState(() {
@@ -106,56 +122,6 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     } catch (e) {
       scaffoldMessenger.showSnackBar(
         SnackBar(content: Text('Failed to import bundled books: $e')),
-      );
-    } finally {
-      setState(() {
-        _isImporting = false;
-        _importStatus = null;
-      });
-    }
-  }
-
-  Future<void> _importVsBook() async {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    setState(() {
-      _isImporting = true;
-      _importStatus = 'Selecting backup...';
-    });
-
-    try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.any);
-
-      if (result == null || result.files.single.path == null) {
-        setState(() {
-          _isImporting = false;
-          _importStatus = null;
-        });
-        return;
-      }
-
-      final path = result.files.single.path!;
-      setState(() => _importStatus = 'Extracting and verifying .vsbook...');
-
-      final importers = ref.read(importersProvider);
-      final source = ImportSource.fromFile(path);
-      final activeImporter = importers.firstWhere(
-        (imp) => imp is VsBookImporter,
-      );
-
-      final importResult = await activeImporter.import(source);
-      if (importResult.success) {
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text('Restored ${importResult.songsImported} songs.'),
-          ),
-        );
-        ref.read(songListControllerProvider.notifier).fetchSongs();
-      } else {
-        throw Exception(importResult.errorMessage ?? 'Unknown restore error');
-      }
-    } catch (e) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Restore Failed: $e')),
       );
     } finally {
       setState(() {
@@ -214,7 +180,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   Widget _buildMobileLayout() {
     final selectedCategory = ref.watch(selectedSettingsCategoryProvider);
 
-    final categories = ['General', 'Display', 'Library', 'About'];
+    final categories = ['Appearance', 'Projection', 'Library', 'About'];
 
     return Scaffold(
       body: Column(
@@ -323,20 +289,20 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                 child: Column(
                   children: [
                     _SidebarNavItem(
-                      icon: Icons.tune_rounded,
-                      label: 'General',
-                      isSelected: selectedCategory == 'General',
+                      icon: Icons.palette_rounded,
+                      label: 'Appearance',
+                      isSelected: selectedCategory == 'Appearance',
                       onTap: () => ref
                           .read(selectedSettingsCategoryProvider.notifier)
-                          .state = 'General',
+                          .state = 'Appearance',
                     ),
                     _SidebarNavItem(
-                      icon: Icons.display_settings_rounded,
-                      label: 'Display',
-                      isSelected: selectedCategory == 'Display',
+                      icon: Icons.cast_rounded,
+                      label: 'Projection',
+                      isSelected: selectedCategory == 'Projection',
                       onTap: () => ref
                           .read(selectedSettingsCategoryProvider.notifier)
-                          .state = 'Display',
+                          .state = 'Projection',
                     ),
                     _SidebarNavItem(
                       icon: Icons.folder_copy_rounded,
@@ -345,14 +311,6 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
                       onTap: () => ref
                           .read(selectedSettingsCategoryProvider.notifier)
                           .state = 'Library',
-                    ),
-                    _SidebarNavItem(
-                      icon: Icons.build_circle_rounded,
-                      label: 'Advanced',
-                      isSelected: selectedCategory == 'Advanced',
-                      onTap: () => ref
-                          .read(selectedSettingsCategoryProvider.notifier)
-                          .state = 'Advanced',
                     ),
                     _SidebarNavItem(
                       icon: Icons.info_outline_rounded,
@@ -388,34 +346,25 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   // ───────── SHARED CONTENT BUILDER ─────────
   List<Widget> _buildCategoryContent(String category) {
     switch (category) {
-      case 'General':
+      case 'Appearance':
+        return [const AppearanceCard()];
+      case 'Projection':
+        return [const ProjectionPreferencesCard()];
+      case 'Library':
         return [
-          const ProjectionPreferencesCard(),
+          const LinkedSongbooksCard(),
           const SizedBox(height: 24),
           ImportExportCard(
             isImporting: _isImporting,
             importStatus: _importStatus,
             isExporting: _isExporting,
-            onImportMdb: _importMdb,
+            onImportFile: _importFile,
             onImportBundled: _importBundled,
-            onImportVsBook: _importVsBook,
             onExportVsBook: _exportVsBook,
           ),
-        ];
-      case 'Display':
-        return [
-          const AppearanceCard(),
-          const SizedBox(height: 24),
-          const ProjectionPreferencesCard(),
-        ];
-      case 'Library':
-        return [
-          const LinkedSongbooksCard(),
           const SizedBox(height: 24),
           const _DataSourcesCard(),
         ];
-      case 'Advanced':
-        return [const _AdvancedCard()];
       case 'About':
         return [
           const AboutCard(),
@@ -809,72 +758,6 @@ class _DangerZoneSection extends ConsumerWidget {
               ref.read(songListControllerProvider.notifier).fetchSongs();
             },
             child: const Text('Wipe Everything'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Advanced Settings Card — Material 3 placeholder
-// ─────────────────────────────────────────────────────────────────────────────
-class _AdvancedCard extends StatelessWidget {
-  const _AdvancedCard();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return SettingsCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SectionHeader(
-            icon: Icons.build_circle_rounded,
-            title: 'Advanced',
-            color: Colors.indigo,
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.code_rounded,
-                  size: 32,
-                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Developer Settings',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Advanced configuration options will appear here in a future update.',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontSize: 12,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),

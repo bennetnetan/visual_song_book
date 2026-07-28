@@ -217,9 +217,8 @@ class ImportExportCard extends StatelessWidget {
   final bool isImporting;
   final String? importStatus;
   final bool isExporting;
-  final VoidCallback onImportMdb;
+  final VoidCallback onImportFile;
   final VoidCallback onImportBundled;
-  final VoidCallback onImportVsBook;
   final VoidCallback onExportVsBook;
 
   const ImportExportCard({
@@ -227,9 +226,8 @@ class ImportExportCard extends StatelessWidget {
     required this.isImporting,
     required this.importStatus,
     required this.isExporting,
-    required this.onImportMdb,
+    required this.onImportFile,
     required this.onImportBundled,
-    required this.onImportVsBook,
     required this.onExportVsBook,
   });
 
@@ -247,7 +245,7 @@ class ImportExportCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Import legacy VSB or MDB files, or manage song database backups.',
+            'Import songs from files or manage database backups.',
             style: GoogleFonts.plusJakartaSans(
               color: theme.colorScheme.onSurfaceVariant,
               fontSize: 13,
@@ -287,38 +285,20 @@ class ImportExportCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: isImporting ? null : onImportMdb,
-                      icon: const Icon(Icons.folder_open, size: 18),
-                      label: const Text('Import VSB / MDB'),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: isImporting ? null : onImportVsBook,
-                      icon: const Icon(Icons.restore, size: 18),
-                      label: const Text('Restore .vsbook'),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                ],
+              FilledButton.tonalIcon(
+                onPressed: isImporting ? null : onImportFile,
+                icon: const Icon(Icons.file_upload_outlined, size: 18),
+                label: const Text('Import from File (.vsbook / .mdb)'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
               const SizedBox(height: 12),
               FilledButton.tonalIcon(
                 onPressed: isExporting || isImporting ? null : onExportVsBook,
                 icon: const Icon(Icons.cloud_upload, size: 18),
-                label: const Text('Export .vsbook Backup'),
+                label: const Text('Export Backup (.vsbook)'),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -332,105 +312,143 @@ class ImportExportCard extends StatelessWidget {
   }
 }
 
-class ChangelogCard extends StatelessWidget {
+class ChangelogCard extends StatefulWidget {
   const ChangelogCard({super.key});
 
   @override
+  State<ChangelogCard> createState() => _ChangelogCardState();
+}
+
+class _ChangelogCardState extends State<ChangelogCard> {
+  bool _showOlder = false;
+
+  @override
   Widget build(BuildContext context) {
-    return const SettingsCard(
+    final theme = Theme.of(context);
+
+    final recentEntries = [
+      _ChangelogEntry(
+        version: 'v1.6.0+2',
+        date: '2026-07-21',
+        changes: [
+          'Keyboard-scrolled search items now stay visible — replaced fixed-height scroll math with Scrollable.ensureVisible',
+          'Keyboard navigation hint moved above search results so it is always visible, not hidden below the list',
+        ],
+      ),
+      _ChangelogEntry(
+        version: 'v1.6.0',
+        date: '2026-07-21',
+        changes: [
+          'Categories simplified — Full Song Book & Injili Song Book replace the dozens of individual imported categories',
+          'Unified storage directory — all app data consolidated in .visual_song_book/',
+          'Cross-book duplicates eliminated — seeded songs deduplicated by title alone',
+          'Sidebar starts minimized — NavigationRail collapsed by default on launch',
+          'Seed marker hardened — verifies DB actually has songs before trusting SharedPreferences marker',
+          'AppImage OS bar icon — icons embedded in hicolor theme paths with correct StartupWMClass',
+        ],
+      ),
+    ];
+
+    final olderEntries = [
+      _ChangelogEntry(
+        version: 'v1.5.0',
+        date: '2026-07-21',
+        changes: [
+          'First-launch seeding — Full Song Book & Injili Song Book pre-loaded automatically on fresh install',
+          'Centralized AppLogger powered by Dart logging package (structured, level-aware, IDE-friendly)',
+          'SetsTab null-check crash fixed — graceful loading indicator when DB resolves before sets list',
+          'Strict DB staleness checks — stale selectedSetId auto-cleared when set is deleted externally',
+          'Reactive set-items stream — SongSetItems now watched live, eliminating stale-data races',
+          '100ms nav-ready dwell timer in search — type to search, pause to navigate with arrow keys',
+          'Enter to project highlighted result from search without touching the mouse',
+          'Subtle animated keyboard-hint indicator fades in when nav mode is active in search results',
+          'Linux window title fixed to "Visual Song Book" with app logo embedded in GTK titlebar',
+          'Android per-ABI release APKs (armeabi-v7a, arm64-v8a, x86_64)',
+          'Linux AppImage with embedded logo and AppDir integration',
+        ],
+      ),
+      _ChangelogEntry(
+        version: 'v1.4.2',
+        date: '2026-06-26',
+        changes: [
+          'Multi-monitor detection — projection opens secondary window on multi-display, fullscreen on single',
+          'UI polish — subtle hover-only nav arrows, transparent controls, PopScope blocks back gesture in projection',
+          'Fixed Positioned/AnimatedOpacity nesting crash in projection output view',
+          'Removed redundant CHANGELOG section from About card, consolidated into versioned Changelog card',
+          'Removed Bible search back button on mobile (was opening book picker instead of navigating back)',
+          'App bar hidden on mobile for History and Sets tabs',
+          'Mobile-friendly action buttons for Sets with redesigned layout',
+          'Unified Bible app bar font styling with dashboard tabs',
+          'Collapsible inline lyrics preview on mobile song list',
+          'Slide timeline with auto-scroll to active verse in projection view',
+        ],
+      ),
+      _ChangelogEntry(
+        version: 'v1.4.1',
+        date: '2026-06-25',
+        changes: [
+          'Inline song preview with collapsible lyrics on mobile',
+          'Low-opacity slide timeline at bottom of projection output',
+          'Drag-and-drop reorder hint above set list',
+          'Full-color app icon branding throughout UI',
+          'Mobile optimization — hide projection tab, clean up Bible book pickers',
+          'High-resolution app icon logo in settings',
+        ],
+      ),
+      _ChangelogEntry(
+        version: 'v1.4.0',
+        date: '2026-06-24',
+        changes: [
+          'Interactive Book and Chapter pop-up navigation dialog matching Bible specs',
+          'Subtle inline verse cross-references displayable for active verses',
+          'Bible Bookmarks list supported on mobile and desktop via History tab',
+          'Overhauled settings cards into clean, responsive Material 3 flat designs',
+          'Unified Project actions for Bible, Songs, and Sets with Display settings options',
+          'Responsive stacked live preview layout for narrow screen mobile devices',
+          'Subtle hover-only display controls in projection output view',
+          'Implemented drag-and-drop song sets reordering and inline list search filtering',
+        ],
+      ),
+    ];
+
+    return SettingsCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SectionHeader(
+          const SectionHeader(
             icon: Icons.history,
             title: 'Changelog',
             color: Colors.amber,
           ),
-          SizedBox(height: 24),
-          _ChangelogEntry(
-            version: 'v1.6.0',
-            date: '2026-07-21',
-            changes: [
-              'Categories simplified — Full Song Book & Injili Song Book replace the dozens of individual imported categories',
-              'Unified storage directory — all app data consolidated in .visual_song_book/',
-              'Cross-book duplicates eliminated — seeded songs deduplicated by title alone',
-              'Sidebar starts minimized — NavigationRail collapsed by default on launch',
-              'Seed marker hardened — verifies DB actually has songs before trusting SharedPreferences marker',
-              'AppImage OS bar icon — icons embedded in hicolor theme paths with correct StartupWMClass',
-            ],
-          ),
-          SizedBox(height: 16),
-          _ChangelogEntry(
-            version: 'v1.6.0+2',
-            date: '2026-07-21',
-            changes: [
-              'Keyboard-scrolled search items now stay visible — replaced fixed-height scroll math with Scrollable.ensureVisible',
-              'Keyboard navigation hint moved above search results so it is always visible, not hidden below the list',
-            ],
-          ),
-          SizedBox(height: 16),
-          _ChangelogEntry(
-            version: 'v1.5.0',
-            date: '2026-07-21',
-            changes: [
-              'First-launch seeding — Full Song Book & Injili Song Book pre-loaded automatically on fresh install',
-              'Centralized AppLogger powered by Dart logging package (structured, level-aware, IDE-friendly)',
-              'SetsTab null-check crash fixed — graceful loading indicator when DB resolves before sets list',
-              'Strict DB staleness checks — stale selectedSetId auto-cleared when set is deleted externally',
-              'Reactive set-items stream — SongSetItems now watched live, eliminating stale-data races',
-              '100ms nav-ready dwell timer in search — type to search, pause to navigate with arrow keys',
-              'Enter to project highlighted result from search without touching the mouse',
-              'Subtle animated keyboard-hint indicator fades in when nav mode is active in search results',
-              'Linux window title fixed to "Visual Song Book" with app logo embedded in GTK titlebar',
-              'Android per-ABI release APKs (armeabi-v7a, arm64-v8a, x86_64)',
-              'Linux AppImage with embedded logo and AppDir integration',
-            ],
-          ),
-          SizedBox(height: 16),
-          _ChangelogEntry(
-            version: 'v1.4.2',
-            date: '2026-06-26',
-            changes: [
-              'Multi-monitor detection — projection opens secondary window on multi-display, fullscreen on single',
-              'UI polish — subtle hover-only nav arrows, transparent controls, PopScope blocks back gesture in projection',
-              'Fixed Positioned/AnimatedOpacity nesting crash in projection output view',
-              'Removed redundant CHANGELOG section from About card, consolidated into versioned Changelog card',
-              'Removed Bible search back button on mobile (was opening book picker instead of navigating back)',
-              'App bar hidden on mobile for History and Sets tabs',
-              'Mobile-friendly action buttons for Sets with redesigned layout',
-              'Unified Bible app bar font styling with dashboard tabs',
-              'Collapsible inline lyrics preview on mobile song list',
-              'Slide timeline with auto-scroll to active verse in projection view',
-            ],
-          ),
-          SizedBox(height: 16),
-          _ChangelogEntry(
-            version: 'v1.4.1',
-            date: '2026-06-25',
-            changes: [
-              'Inline song preview with collapsible lyrics on mobile',
-              'Low-opacity slide timeline at bottom of projection output',
-              'Drag-and-drop reorder hint above set list',
-              'Full-color app icon branding throughout UI',
-              'Mobile optimization — hide projection tab, clean up Bible book pickers',
-              'High-resolution app icon logo in settings',
-            ],
-          ),
-          SizedBox(height: 16),
-          _ChangelogEntry(
-            version: 'v1.4.0',
-            date: '2026-06-24',
-            changes: [
-              'Interactive Book and Chapter pop-up navigation dialog matching Bible specs',
-              'Subtle inline verse cross-references displayable for active verses',
-              'Bible Bookmarks list supported on mobile and desktop via History tab',
-              'Overhauled settings cards into clean, responsive Material 3 flat designs',
-              'Unified Project actions for Bible, Songs, and Sets with Display settings options',
-              'Responsive stacked live preview layout for narrow screen mobile devices',
-              'Subtle hover-only display controls in projection output view',
-              'Implemented drag-and-drop song sets reordering and inline list search filtering',
-            ],
-          ),
+          const SizedBox(height: 24),
+          ...recentEntries,
+          if (_showOlder) ...olderEntries,
+          if (olderEntries.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () => setState(() => _showOlder = !_showOlder),
+              child: Row(
+                children: [
+                  Icon(
+                    _showOlder ? Icons.expand_less : Icons.expand_more,
+                    size: 18,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _showOlder
+                        ? 'Hide older versions'
+                        : 'Show ${olderEntries.length} older versions',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
