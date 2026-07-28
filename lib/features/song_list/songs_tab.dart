@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:visual_song_book/core/providers/app_providers.dart';
-import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/song_list/main_dashboard_page.dart';
 import 'package:visual_song_book/features/song_list/song_list_controller.dart';
@@ -13,43 +11,6 @@ class SongsTab extends ConsumerWidget {
   final bool isLargeScreen;
 
   const SongsTab({super.key, required this.isLargeScreen});
-
-  Widget _buildCategoryChip(
-    BuildContext context, {
-    required String label,
-    required bool selected,
-    required VoidCallback onSelected,
-  }) {
-    return ChoiceChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          color: selected
-              ? Theme.of(context).colorScheme.onPrimary
-              : Theme.of(context).colorScheme.onSurface,
-          fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-        ),
-      ),
-      selected: selected,
-      selectedColor: Theme.of(context).colorScheme.primary,
-      backgroundColor: Theme.of(
-        context,
-      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-      showCheckmark: false,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: selected
-              ? Colors.transparent
-              : Theme.of(
-                  context,
-                ).colorScheme.outlineVariant.withValues(alpha: 0.3),
-        ),
-      ),
-      onSelected: (_) => onSelected(),
-    );
-  }
 
   Widget _buildSourceChip(
     BuildContext context, {
@@ -247,49 +208,6 @@ class SongsTab extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16.0,
-                          vertical: 8.0,
-                        ),
-                        child: Row(
-                          children: [
-                            _buildCategoryChip(
-                              context,
-                              label: 'All',
-                              selected: listState.selectedCategoryId == -2,
-                              onSelected: () => listNotifier.selectCategory(-2),
-                            ),
-                            ...listState.categories.expand(
-                              (cat) => [
-                                const SizedBox(width: 8),
-                                GestureDetector(
-                                  onLongPress: () =>
-                                      _confirmDeleteCategory(context, ref, cat),
-                                  child: _buildCategoryChip(
-                                    context,
-                                    label: cat.name,
-                                    selected: listState.selectedCategoryId == cat.id,
-                                    onSelected: () =>
-                                        listNotifier.selectCategory(cat.id),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(width: 8),
-                            _buildCategoryChip(
-                              context,
-                              label: 'Uncategorized',
-                              selected: listState.showUncategorizedOnly,
-                              onSelected: () => listNotifier.selectCategory(
-                                null,
-                                uncategorizedOnly: true,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                       // Source/Songbook filter chips
                       if (listState.sourcePaths.length > 1)
                         SingleChildScrollView(
@@ -445,42 +363,6 @@ class SongsTab extends ConsumerWidget {
                 ],
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmDeleteCategory(
-    BuildContext context,
-    WidgetRef ref,
-    Category cat,
-  ) async {
-    final songCount = await ref
-        .read(songRepositoryProvider)
-        .getSongCountByCategory(cat.id);
-    if (!context.mounted) return;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Collection'),
-        content: Text(
-          'Are you sure you want to delete "${cat.name}" and all $songCount song(s) in it?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await ref
-                  .read(songListControllerProvider.notifier)
-                  .deleteCategory(cat.id);
-              ref.read(selectedSongIdProvider.notifier).state = null;
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
