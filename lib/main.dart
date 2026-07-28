@@ -7,7 +7,7 @@ import 'package:logging/logging.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
-import 'package:visual_song_book/core/utils/win32_window_helper.dart';
+
 import 'package:visual_song_book/data/services/app_storage.dart';
 import 'package:visual_song_book/data/services/linked_songbooks_service.dart';
 import 'package:visual_song_book/features/onboarding/onboarding_page.dart';
@@ -30,11 +30,8 @@ void main(List<String> args) async {
     // Secondary window path (desktop_multi_window).
     // NOTE: window_manager and screen_retriever plugins are NOT registered in
     // desktop_multi_window secondary engines. Any calls to them will fail
-    // silently. Instead, we use Win32 APIs directly for window manipulation.
-    if (!kIsWeb && Platform.isWindows) {
-      // Use Win32 APIs to maximize the projection window.
-      maximizeCurrentWindow();
-    }
+    // silently. The secondary window handles its own fullscreen via
+    // ProjectionOutputView._goFullscreenOnBestDisplay() using Win32 APIs.
     runApp(
       ProviderScope(
         overrides: [

@@ -404,9 +404,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       // As a best-effort here, also try to read screen list from window_manager.
       _placeOnSecondScreenAndFullscreen();
 
-      // Perform synchronization retries in the background so we do not block
-      // the caller (and the primary UI thread) with async delays.
-      _syncSecondaryWindowWithRetry();
+      // Do NOT start syncing immediately — the secondary window's IPC handler
+      // is not registered yet. Instead, wait for the 'secondary_window_ready'
+      // signal from the secondary window (handled in _setupMainWindowHandler).
 
       return true;
     } catch (e) {
@@ -417,15 +417,15 @@ class ProjectionController extends StateNotifier<ProjectionState> {
 
   /// Moves the secondary window to the second screen (if one is connected)
   /// and enters fullscreen automatically.
+  /// NOTE: The secondary window now triggers fullscreen itself during init,
+  /// so this method is only kept as a fallback re-trigger via IPC.
   Future<void> _placeOnSecondScreenAndFullscreen() async {
     if (_secondaryWindow == null) return;
     try {
-      // Give the window a moment to fully initialise its Flutter engine.
-      await Future.delayed(const Duration(milliseconds: 600));
+      // Give the window's IPC handler time to register (initState + fromCurrentEngine).
+      await Future.delayed(const Duration(milliseconds: 1200));
       if (_secondaryWindow == null) return;
 
-      // Ask the secondary window to go fullscreen via IPC so it can call
-      // windowManager on its own engine (window_manager is per-window).
       await _secondaryWindow!.invokeMethod('go_fullscreen', {});
       debugPrint('Sent go_fullscreen IPC to secondary window.');
     } catch (e) {
@@ -488,7 +488,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
           setSecondaryWindowOpen(false);
         } else if (call.method == 'secondary_window_ready') {
           debugPrint('Secondary window reported ready. Syncing current slide...');
-          _syncSecondaryWindow();
+          _syncSecondaryWindowWithRetry();
         } else if (call.method == 'close_secondary_window') {
           // On Linux, the secondary window can't close itself via window_manager
           // (it would crash), so it asks us to do it via WindowController.hide().
