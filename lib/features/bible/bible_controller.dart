@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/data/repositories/set_repository.dart';
 import 'package:visual_song_book/features/bible/bible_repository.dart';
 import 'package:visual_song_book/features/bible/bible_search_utils.dart';
@@ -332,3 +333,10 @@ class BibleController extends StateNotifier<BibleState> {
     await prefs.remove(_recentSearchesKey);
   }
 }
+
+final bibleControllerProvider =
+    StateNotifierProvider<BibleController, BibleState>((ref) {
+      final repo = ref.watch(bibleRepositoryProvider);
+      final setRepo = ref.watch(setRepositoryProvider);
+      return BibleController(repo, setRepo);
+    });

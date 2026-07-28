@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
-import 'package:visual_song_book/features/bible/bible_tab.dart';
+import 'package:visual_song_book/features/bible/bible_controller.dart';
 import 'package:visual_song_book/features/history/history_controller.dart';
 import 'package:visual_song_book/features/sets/sets_tab.dart';
 import 'package:visual_song_book/features/song_list/main_dashboard_page.dart';
