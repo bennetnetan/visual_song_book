@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -72,8 +73,13 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     });
 
     // Request fullscreen + move to screen 2 once the window is ready.
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _goFullscreenOnBestDisplay();
+    // Defer with Timer.run to avoid calling Win32 SetWindowPos inside
+    // Flutter's frame lifecycle, which causes scheduler reentrancy errors.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Timer.run(() async {
+        if (!mounted) return;
+        await _goFullscreenOnBestDisplay();
+      });
     });
 
     controller.setWindowMethodHandler((call) async {
