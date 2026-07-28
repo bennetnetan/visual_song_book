@@ -223,6 +223,219 @@ class VsBookImporter implements SongbookImporter {
     }
   }
 
+  /// Non-destructive reimport: replaces only songs whose [sourcePath] matches
+  /// [filePath]. Other songs and categories are left untouched.
+  Future<ImportResult> reimportSource(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        return ImportResult.failure('File not found: $filePath');
+      }
+      final bytes = await file.readAsBytes();
+      final archive = ZipDecoder().decodeBytes(bytes);
+
+      ArchiveFile? dbFile;
+      ArchiveFile? songsJsonFile;
+      ArchiveFile? categoriesJsonFile;
+
+      for (final entry in archive) {
+        final filename = entry.name.toLowerCase();
+        if (filename == 'songs.db' || filename == 'songs_db.sqlite') {
+          dbFile = entry;
+        } else if (filename == 'songs.json') {
+          songsJsonFile = entry;
+        } else if (filename == 'categories.json') {
+          categoriesJsonFile = entry;
+        }
+      }
+
+      if (dbFile != null) {
+        return await _reimportFromSqliteFile(dbFile, filePath);
+      }
+      if (songsJsonFile != null) {
+        return await _reimportFromJsonFiles(
+          songsJsonFile, categoriesJsonFile, filePath,
+        );
+      }
+
+      return ImportResult.failure(
+        'No SQLite database or JSON songs file found in $filePath',
+      );
+    } catch (e) {
+      return ImportResult.failure('Error reimporting $filePath: $e');
+    }
+  }
+
+  Future<ImportResult> _reimportFromSqliteFile(
+    ArchiveFile dbFile,
+    String sourceFilePath,
+  ) async {
+    final tempDir = await getTemporaryDirectory();
+    final tempDbPath = p.join(
+      tempDir.path,
+      'temp_reimport_${DateTime.now().millisecondsSinceEpoch}.db',
+    );
+    final tempFile = File(tempDbPath);
+    await tempFile.writeAsBytes(dbFile.content as List<int>);
+
+    sqlite3.Database? tempDb;
+    try {
+      tempDb = sqlite3.sqlite3.open(tempDbPath);
+
+      final List<CategoriesCompanion> categoryCompanions = [];
+      try {
+        final categoryRows = tempDb.select('SELECT id, name FROM categories');
+        for (final row in categoryRows) {
+          final id = row['id'] as int?;
+          final name = row['name'] as String?;
+          if (id != null && name != null) {
+            categoryCompanions.add(
+              CategoriesCompanion.insert(id: Value(id), name: name),
+            );
+          }
+        }
+      } catch (_) {}
+
+      final List<SongsCompanion> songCompanions = [];
+      final songRows = tempDb.select('''
+        SELECT song_num, title, key, body, modified, search, copyright, author, 
+               category_id, source_song_id, source_path, source_format 
+        FROM songs
+      ''');
+
+      for (final row in songRows) {
+        final songNum = row['song_num'] as int?;
+        final title = row['title'] as String?;
+        final body = row['body'] as String?;
+        if (songNum == null || title == null || body == null) continue;
+
+        songCompanions.add(
+          SongsCompanion.insert(
+            songNum: songNum,
+            title: title,
+            body: body,
+            key: Value(row['key'] as String?),
+            modified: Value(
+              row['modified'] != null
+                  ? DateTime.tryParse(row['modified'] as String)
+                  : null,
+            ),
+            search: Value(row['search'] as String?),
+            copyright: Value(row['copyright'] as String?),
+            author: Value(row['author'] as String?),
+            categoryId: row['category_id'] != null
+                ? Value(row['category_id'] as int)
+                : const Value<int?>.absent(),
+            sourceSongId: Value(row['source_song_id'] as int?),
+            sourcePath: Value(sourceFilePath),
+            sourceFormat: const Value('vsbook_linked'),
+          ),
+        );
+      }
+
+      await db.transaction(() async {
+        for (final category in categoryCompanions) {
+          await db.into(db.categories).insertOnConflictUpdate(category);
+        }
+
+        await (db.delete(db.songs)
+              ..where((t) => t.sourcePath.equals(sourceFilePath)))
+            .go();
+
+        await db.batch((batch) {
+          batch.insertAll(db.songs, songCompanions);
+        });
+      });
+
+      return ImportResult.success(
+        songs: songCompanions.length,
+        categories: categoryCompanions.length,
+        added: songCompanions.length,
+      );
+    } finally {
+      tempDb?.dispose();
+      if (await tempFile.exists()) await tempFile.delete();
+    }
+  }
+
+  Future<ImportResult> _reimportFromJsonFiles(
+    ArchiveFile songsFile,
+    ArchiveFile? categoriesFile,
+    String sourceFilePath,
+  ) async {
+    final songsContent = utf8.decode(songsFile.content as List<int>);
+    final List<dynamic> songsJson = json.decode(songsContent) as List<dynamic>;
+
+    final List<CategoriesCompanion> categoryCompanions = [];
+    if (categoriesFile != null) {
+      final categoriesContent = utf8.decode(
+        categoriesFile.content as List<int>,
+      );
+      final List<dynamic> categoriesJson =
+          json.decode(categoriesContent) as List<dynamic>;
+      for (final item in categoriesJson) {
+        final id = item['id'] as int?;
+        final name = item['name'] as String?;
+        if (id != null && name != null) {
+          categoryCompanions.add(
+            CategoriesCompanion.insert(id: Value(id), name: name),
+          );
+        }
+      }
+    }
+
+    final List<SongsCompanion> songCompanions = [];
+    for (final item in songsJson) {
+      final songNum = item['song_num'] as int?;
+      final title = item['title'] as String?;
+      final body = item['body'] as String?;
+      if (songNum == null || title == null || body == null) continue;
+
+      songCompanions.add(
+        SongsCompanion.insert(
+          songNum: songNum,
+          title: title,
+          body: body,
+          key: Value(item['key'] as String?),
+          modified: Value(
+            item['modified'] != null
+                ? DateTime.tryParse(item['modified'] as String)
+                : null,
+          ),
+          search: Value(item['search'] as String?),
+          copyright: Value(item['copyright'] as String?),
+          author: Value(item['author'] as String?),
+          categoryId: item['category_id'] != null
+              ? Value(item['category_id'] as int)
+              : const Value<int?>.absent(),
+          sourceSongId: Value(item['source_song_id'] as int?),
+          sourcePath: Value(sourceFilePath),
+          sourceFormat: const Value('vsbook_linked'),
+        ),
+      );
+    }
+
+    await db.transaction(() async {
+      for (final category in categoryCompanions) {
+        await db.into(db.categories).insertOnConflictUpdate(category);
+      }
+
+      await (db.delete(db.songs)
+            ..where((t) => t.sourcePath.equals(sourceFilePath)))
+          .go();
+
+      await db.batch((batch) {
+        batch.insertAll(db.songs, songCompanions);
+      });
+    });
+
+    return ImportResult.success(
+      songs: songCompanions.length,
+      categories: categoryCompanions.length,
+      added: songCompanions.length,
+    );
+  }
+
   Future<ImportResult> _importFromJsonFiles(
     ArchiveFile songsFile,
     ArchiveFile? categoriesFile,

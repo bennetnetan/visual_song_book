@@ -1,7 +1,13 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
+import 'package:visual_song_book/data/importers/vsbook_importer.dart';
+import 'package:visual_song_book/data/services/linked_songbooks_service.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 
 class SettingsCard extends StatelessWidget {
@@ -602,4 +608,298 @@ class AboutCard extends StatelessWidget {
     );
   }
 
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Linked Songbooks Card — manage .vsbook files synced via cloud storage
+// ─────────────────────────────────────────────────────────────────────────────
+class LinkedSongbooksCard extends ConsumerWidget {
+  const LinkedSongbooksCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final linkedAsync = ref.watch(linkedSongbooksProvider);
+    final theme = Theme.of(context);
+
+    return SettingsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader(
+            icon: Icons.sync,
+            title: 'Linked Songbooks',
+            color: Colors.cyan,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Link .vsbook files from Google Drive or shared folders. '
+            'The app checks for changes on startup and reimports automatically.',
+            style: GoogleFonts.plusJakartaSans(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 20),
+          linkedAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Text('Error loading: $e'),
+            data: (linked) {
+              if (linked.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.link_off,
+                          size: 40,
+                          color: theme.colorScheme.onSurfaceVariant
+                              .withValues(alpha: 0.4),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'No linked songbooks yet.',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontStyle: FontStyle.italic,
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Click "Link File" to get started.',
+                          style: GoogleFonts.plusJakartaSans(
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.6),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              return Column(
+                children: linked.map((book) {
+                  final exists = book.fileExists;
+                  final needsSync = book.hasChangedSinceLastImport;
+                  return Card(
+                    elevation: 0,
+                    margin: const EdgeInsets.only(bottom: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(
+                        color: theme.colorScheme.outlineVariant
+                            .withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: exists
+                              ? (needsSync
+                                  ? Colors.orange.withValues(alpha: 0.1)
+                                  : Colors.green.withValues(alpha: 0.1))
+                              : Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          exists
+                              ? (needsSync ? Icons.sync : Icons.check_circle_outline)
+                              : Icons.error_outline,
+                          size: 20,
+                          color: exists
+                              ? (needsSync ? Colors.orange : Colors.green)
+                              : Colors.red,
+                        ),
+                      ),
+                      title: Text(
+                        book.name,
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            book.path,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (!exists)
+                            Text(
+                              'File not found',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: Colors.red,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            )
+                          else if (needsSync)
+                            Text(
+                              'Changes detected — will sync on next startup',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: Colors.orange,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            )
+                          else if (book.lastImportedAt != null)
+                            Text(
+                              'Last synced: ${_formatDate(book.lastImportedAt!)}',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: Colors.green,
+                              ),
+                            ),
+                        ],
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.link_off, size: 20),
+                        color: theme.colorScheme.error,
+                        tooltip: 'Unlink',
+                        onPressed: () => _unlink(context, ref, book),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () => _linkFile(context, ref),
+                  icon: const Icon(Icons.link, size: 18),
+                  label: const Text('Link File'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              if (linkedAsync.hasValue && linkedAsync.value!.isNotEmpty) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _syncAll(context, ref),
+                    icon: const Icon(Icons.sync, size: 18),
+                    label: const Text('Sync Now'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _linkFile(BuildContext context, WidgetRef ref) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['vsbook', 'vsb'],
+    );
+    if (result == null || result.files.single.path == null) return;
+    final path = result.files.single.path!;
+    final name = result.files.single.name;
+    await ref.read(linkedSongbooksProvider.notifier).add(path, name: name);
+  }
+
+  void _unlink(BuildContext context, WidgetRef ref, LinkedSongbook book) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Unlink Songbook'),
+        content: Text('Remove "${book.name}" from linked songbooks?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await ref
+                  .read(linkedSongbooksProvider.notifier)
+                  .remove(book.path);
+            },
+            child: const Text('Unlink'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _syncAll(BuildContext context, WidgetRef ref) async {
+    final linked = ref.read(linkedSongbooksProvider).value ?? [];
+    final needsSync = linked.where((b) => b.hasChangedSinceLastImport && b.fileExists).toList();
+    if (needsSync.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('All linked songbooks are up to date.')),
+        );
+      }
+      return;
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Syncing ${needsSync.length} songbook(s)...')),
+      );
+    }
+
+    for (final book in needsSync) {
+      final file = File(book.path);
+      if (!file.existsSync()) continue;
+
+      final ext = book.path.toLowerCase();
+      if (ext.endsWith('.vsbook')) {
+        final db = ref.read(databaseProvider);
+        final importer = VsBookImporter(db);
+        final result = await importer.reimportSource(book.path);
+        if (result.success) {
+          await ref
+              .read(linkedSongbooksProvider.notifier)
+              .markImported(book.path);
+        }
+      }
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sync complete.')),
+      );
+    }
+  }
+
+  static String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} '
+        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
 }

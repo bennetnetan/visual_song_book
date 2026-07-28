@@ -56,8 +56,10 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       _setupSecondaryWindowChannel();
       if (!Platform.isLinux) {
-        windowManager.addListener(this);
-        windowManager.setPreventClose(true);
+        try {
+          windowManager.addListener(this);
+          windowManager.setPreventClose(true);
+        } catch (_) {}
       }
     }
   }
@@ -203,7 +205,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     if (!kIsWeb &&
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       if (!Platform.isLinux) {
-        windowManager.removeListener(this);
+        try {
+          windowManager.removeListener(this);
+        } catch (_) {}
       }
       if (_isSecondaryWindow) {
         _notifyClosed();

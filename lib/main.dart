@@ -8,6 +8,7 @@ import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/data/services/app_storage.dart';
+import 'package:visual_song_book/data/services/linked_songbooks_service.dart';
 import 'package:visual_song_book/routing/app_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:screen_retriever/screen_retriever.dart';
@@ -28,9 +29,13 @@ void main(List<String> args) async {
       (args.first == 'multi_window' || args.first == 'Projection Output')) {
     if (!kIsWeb &&
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-      await windowManager.ensureInitialized();
-      await windowManager.setFullScreen(true);
-      await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+      // window_manager is not registered in secondary (desktop_multi_window)
+      // engines, so guard every call with a try-catch.
+      try {
+        await windowManager.ensureInitialized();
+        await windowManager.setFullScreen(true);
+        await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+      } catch (_) {}
 
       try {
         final displays = await screenRetriever.getAllDisplays();
@@ -110,6 +115,7 @@ class MyApp extends ConsumerWidget {
     // SeedingService is a no-op after the first successful seed.
     if (!isProjectionWindow) {
       ref.watch(appSeedProvider);
+      ref.watch(linkedSongbooksSyncProvider);
     }
 
     return MaterialApp.router(

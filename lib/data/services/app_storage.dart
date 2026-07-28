@@ -15,8 +15,11 @@ Future<String> getAppStoragePath() async {
 
   final Directory baseDir;
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    final home =
-        Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? Platform.environment['TEMP'] ?? Platform.environment['TMP'];
+    final home = Platform.environment['HOME'] ??
+        Platform.environment['USERPROFILE'] ??
+        Platform.environment['TEMP'] ??
+        Platform.environment['TMP'] ??
+        p.current;
     baseDir = Directory(p.join(home, '.visual_song_book'));
   } else {
     final docs = await getApplicationDocumentsDirectory();
