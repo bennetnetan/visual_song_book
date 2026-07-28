@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:visual_song_book/data/repositories/set_repository.dart';
 import 'package:visual_song_book/features/bible/bible_repository.dart';
 import 'package:visual_song_book/features/bible/bible_search_utils.dart';
 import 'package:visual_song_book/features/bible/bible_state.dart';
@@ -7,15 +9,37 @@ export 'package:visual_song_book/features/bible/bible_state.dart' show BibleStat
 
 class BibleController extends StateNotifier<BibleState> {
   final BibleRepository _repo;
+  final SetRepository _setRepo;
 
-  BibleController(this._repo) : super(BibleState.initial()) {
+  static const _recentBooksKey = 'bible_recent_books';
+  static const _recentSearchesKey = 'bible_recent_searches';
+  static const _fontSizeKey = 'bible_font_size';
+  static const _serifFontKey = 'bible_use_serif_font';
+  static const _maxRecentBooks = 5;
+  static const _maxRecentSearches = 8;
+
+  BibleController(this._repo, this._setRepo) : super(BibleState.initial()) {
     _init();
   }
 
   Future<void> _init() async {
     final books = await _repo.getBooks();
+    final prefs = await SharedPreferences.getInstance();
+    final recentBookIds = prefs.getStringList(_recentBooksKey)?.map(int.parse).toList() ?? [];
+    final recentSearches = prefs.getStringList(_recentSearchesKey) ?? [];
+    final fontSize = prefs.getDouble(_fontSizeKey) ?? 15.0;
+    final useSerif = prefs.getBool(_serifFontKey) ?? false;
+
     if (mounted) {
-      state = state.copyWith(books: books, isLoaded: true, isLoading: false);
+      state = state.copyWith(
+        books: books,
+        isLoaded: true,
+        isLoading: false,
+        recentBookIds: recentBookIds,
+        recentSearches: recentSearches,
+        bibleFontSize: fontSize,
+        useSerifFont: useSerif,
+      );
       final genesis = books.where((b) => b.name.toLowerCase() == 'genesis').firstOrNull;
       if (genesis != null) {
         await navigateToVerse(genesis.id, 1, 1);
@@ -31,9 +55,20 @@ class BibleController extends StateNotifier<BibleState> {
       query: '',
       activeVerse: () => null,
       activeCrossReferences: [],
+      selectionMode: false,
+      selectedVerseIds: {},
+      isLoadingVerses: true,
     );
     final chapters = await _repo.getChapters(bookId);
-    if (mounted) state = state.copyWith(chapters: chapters);
+    final verseCounts = await _repo.getChapterVerseCounts(bookId);
+    await _addRecentBook(bookId);
+    if (mounted) {
+      state = state.copyWith(
+        chapters: chapters,
+        chapterVerseCounts: verseCounts,
+        isLoadingVerses: false,
+      );
+    }
   }
 
   Future<void> selectChapter(int chapter) async {
@@ -42,11 +77,21 @@ class BibleController extends StateNotifier<BibleState> {
       query: '',
       activeVerse: () => null,
       activeCrossReferences: [],
+      selectionMode: false,
+      selectedVerseIds: {},
+      isLoadingVerses: true,
     );
     final bookId = state.selectedBookId;
     if (bookId == null) return;
     final verses = await _repo.getVerses(bookId, chapter);
-    if (mounted) state = state.copyWith(verses: verses);
+    final bookmarked = await _setRepo.getBookmarkedVerseIdsForChapter(bookId, chapter);
+    if (mounted) {
+      state = state.copyWith(
+        verses: verses,
+        bookmarkedVerseIds: bookmarked,
+        isLoadingVerses: false,
+      );
+    }
   }
 
   Future<void> selectVerse(BibleVerse verse) async {
@@ -84,7 +129,6 @@ class BibleController extends StateNotifier<BibleState> {
     );
     if (normalized.isEmpty) return;
 
-    // Try structured reference: "gen 1:1", "1jn 5:4", "jn 3:16", "ps 23:1", "rev 2:1"
     BibleVerse? exact;
     final ref = parseBibleReference(normalized);
     if (ref != null) {
@@ -95,7 +139,6 @@ class BibleController extends StateNotifier<BibleState> {
       state = state.copyWith(exactMatch: () => exact);
     }
 
-    // Full-text search — count all matches, then load first page
     final total = await _repo.countSearchResults(normalized);
     final results = await _repo.searchVersesPaginated(normalized, 10, 0);
     if (mounted) {
@@ -105,6 +148,10 @@ class BibleController extends StateNotifier<BibleState> {
         totalSearchCount: total,
         searchOffset: filtered.length,
       );
+    }
+
+    if (query.trim().isNotEmpty) {
+      await _addRecentSearch(query.trim());
     }
   }
 
@@ -145,6 +192,10 @@ class BibleController extends StateNotifier<BibleState> {
       query: '',
       activeVerse: () => null,
       activeCrossReferences: [],
+      selectionMode: false,
+      selectedVerseIds: {},
+      bookmarkedVerseIds: {},
+      chapterVerseCounts: {},
     );
   }
 
@@ -187,5 +238,97 @@ class BibleController extends StateNotifier<BibleState> {
         }
       }
     }
+  }
+
+  // --- Selection mode ---
+
+  void toggleSelectionMode() {
+    if (state.selectionMode) {
+      state = state.copyWith(selectionMode: false, selectedVerseIds: {});
+    } else {
+      state = state.copyWith(selectionMode: true);
+    }
+  }
+
+  void toggleVerseSelection(int verseId) {
+    final current = Set<int>.from(state.selectedVerseIds);
+    if (current.contains(verseId)) {
+      current.remove(verseId);
+    } else {
+      current.add(verseId);
+    }
+    state = state.copyWith(selectedVerseIds: current);
+  }
+
+  void selectAllVerses() {
+    state = state.copyWith(
+      selectedVerseIds: state.verses.map((v) => v.id).toSet(),
+    );
+  }
+
+  // --- Bookmarks (batch) ---
+
+  Future<void> toggleBookmark(BibleVerse verse) async {
+    final isMarked = state.bookmarkedVerseIds.contains(verse.verse);
+    if (isMarked) {
+      await _setRepo.removeBookmarkByVerse(verse.bookId, verse.chapter, verse.verse);
+    } else {
+      await _setRepo.addBookmark(
+        verse.bookId, verse.chapter, verse.verse,
+        verse.reference, verse.text, verse.bookName ?? '',
+      );
+    }
+
+    final bookId = state.selectedBookId;
+    final chapter = state.selectedChapter;
+    if (bookId != null && chapter != null) {
+      final bookmarked = await _setRepo.getBookmarkedVerseIdsForChapter(bookId, chapter);
+      if (mounted) state = state.copyWith(bookmarkedVerseIds: bookmarked);
+    }
+  }
+
+  // --- Reading settings ---
+
+  Future<void> setBibleFontSize(double size) async {
+    state = state.copyWith(bibleFontSize: size);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_fontSizeKey, size);
+  }
+
+  Future<void> toggleSerifFont() async {
+    final newValue = !state.useSerifFont;
+    state = state.copyWith(useSerifFont: newValue);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_serifFontKey, newValue);
+  }
+
+  // --- Recent books ---
+
+  Future<void> _addRecentBook(int bookId) async {
+    final current = List<int>.from(state.recentBookIds);
+    current.remove(bookId);
+    current.insert(0, bookId);
+    final trimmed = current.take(_maxRecentBooks).toList();
+    state = state.copyWith(recentBookIds: trimmed);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_recentBooksKey, trimmed.map((id) => id.toString()).toList());
+  }
+
+  // --- Recent searches ---
+
+  Future<void> _addRecentSearch(String query) async {
+    final current = List<String>.from(state.recentSearches);
+    current.remove(query);
+    current.insert(0, query);
+    final trimmed = current.take(_maxRecentSearches).toList();
+    state = state.copyWith(recentSearches: trimmed);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_recentSearchesKey, trimmed);
+  }
+
+  Future<void> clearRecentSearches() async {
+    state = state.copyWith(recentSearches: []);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_recentSearchesKey);
   }
 }

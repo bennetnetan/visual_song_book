@@ -13,9 +13,35 @@ class BibleState {
   final String query;
   final bool isLoaded;
   final bool isLoading;
+  final bool isLoadingVerses;
   final BibleVerse? activeVerse;
   final List<BibleCrossReference> activeCrossReferences;
   final bool isLoadingCrossReferences;
+
+  // Batch bookmarks for current chapter
+  final Set<int> bookmarkedVerseIds;
+
+  // Multi-verse selection for projection
+  final bool selectionMode;
+  final Set<int> selectedVerseIds;
+
+  // Reading customization
+  final double bibleFontSize;
+  final bool useSerifFont;
+
+  // Recent books (book IDs)
+  final List<int> recentBookIds;
+
+  // Last read position
+  final int? lastReadBookId;
+  final int? lastReadChapter;
+  final int? lastReadVerse;
+
+  // Chapter verse counts (keyed by chapter number)
+  final Map<int, int> chapterVerseCounts;
+
+  // Recent search queries
+  final List<String> recentSearches;
 
   BibleState({
     required this.books,
@@ -30,9 +56,21 @@ class BibleState {
     required this.query,
     required this.isLoaded,
     required this.isLoading,
+    this.isLoadingVerses = false,
     this.activeVerse,
     required this.activeCrossReferences,
     required this.isLoadingCrossReferences,
+    this.bookmarkedVerseIds = const {},
+    this.selectionMode = false,
+    this.selectedVerseIds = const {},
+    this.bibleFontSize = 15.0,
+    this.useSerifFont = false,
+    this.recentBookIds = const [],
+    this.lastReadBookId,
+    this.lastReadChapter,
+    this.lastReadVerse,
+    this.chapterVerseCounts = const {},
+    this.recentSearches = const [],
   });
 
   BibleState copyWith({
@@ -48,9 +86,21 @@ class BibleState {
     String? query,
     bool? isLoaded,
     bool? isLoading,
+    bool? isLoadingVerses,
     BibleVerse? Function()? activeVerse,
     List<BibleCrossReference>? activeCrossReferences,
     bool? isLoadingCrossReferences,
+    Set<int>? bookmarkedVerseIds,
+    bool? selectionMode,
+    Set<int>? selectedVerseIds,
+    double? bibleFontSize,
+    bool? useSerifFont,
+    List<int>? recentBookIds,
+    int? Function()? lastReadBookId,
+    int? Function()? lastReadChapter,
+    int? Function()? lastReadVerse,
+    Map<int, int>? chapterVerseCounts,
+    List<String>? recentSearches,
   }) {
     return BibleState(
       books: books ?? this.books,
@@ -69,11 +119,29 @@ class BibleState {
       query: query ?? this.query,
       isLoaded: isLoaded ?? this.isLoaded,
       isLoading: isLoading ?? this.isLoading,
+      isLoadingVerses: isLoadingVerses ?? this.isLoadingVerses,
       activeVerse: activeVerse != null
           ? activeVerse()
           : this.activeVerse,
       activeCrossReferences: activeCrossReferences ?? this.activeCrossReferences,
       isLoadingCrossReferences: isLoadingCrossReferences ?? this.isLoadingCrossReferences,
+      bookmarkedVerseIds: bookmarkedVerseIds ?? this.bookmarkedVerseIds,
+      selectionMode: selectionMode ?? this.selectionMode,
+      selectedVerseIds: selectedVerseIds ?? this.selectedVerseIds,
+      bibleFontSize: bibleFontSize ?? this.bibleFontSize,
+      useSerifFont: useSerifFont ?? this.useSerifFont,
+      recentBookIds: recentBookIds ?? this.recentBookIds,
+      lastReadBookId: lastReadBookId != null
+          ? lastReadBookId()
+          : this.lastReadBookId,
+      lastReadChapter: lastReadChapter != null
+          ? lastReadChapter()
+          : this.lastReadChapter,
+      lastReadVerse: lastReadVerse != null
+          ? lastReadVerse()
+          : this.lastReadVerse,
+      chapterVerseCounts: chapterVerseCounts ?? this.chapterVerseCounts,
+      recentSearches: recentSearches ?? this.recentSearches,
     );
   }
 
@@ -88,8 +156,20 @@ class BibleState {
     query: '',
     isLoaded: false,
     isLoading: true,
+    isLoadingVerses: false,
     activeVerse: null,
     activeCrossReferences: [],
     isLoadingCrossReferences: false,
+    bookmarkedVerseIds: const {},
+    selectionMode: false,
+    selectedVerseIds: const {},
+    bibleFontSize: 15.0,
+    useSerifFont: false,
+    recentBookIds: const [],
+    lastReadBookId: null,
+    lastReadChapter: null,
+    lastReadVerse: null,
+    chapterVerseCounts: const {},
+    recentSearches: const [],
   );
 }

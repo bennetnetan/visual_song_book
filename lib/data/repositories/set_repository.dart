@@ -265,4 +265,24 @@ class SetRepository {
     ).get();
     return rows.isNotEmpty;
   }
+
+  Future<Set<int>> getBookmarkedVerseIdsForChapter(int bookId, int chapter) async {
+    final rows = await (db.select(db.bibleBookmarks)
+      ..where((t) => t.bookId.equals(bookId) & t.chapter.equals(chapter))
+    ).get();
+    return rows.map((r) => r.verseNum).toSet();
+  }
+
+  Future<BibleBookmark?> getBookmarkByVerse(int bookId, int chapter, int verseNum) async {
+    final rows = await (db.select(db.bibleBookmarks)
+      ..where((t) => t.bookId.equals(bookId) & t.chapter.equals(chapter) & t.verseNum.equals(verseNum))
+    ).get();
+    return rows.isNotEmpty ? rows.first : null;
+  }
+
+  Future<void> removeBookmarkByVerse(int bookId, int chapter, int verseNum) async {
+    await (db.delete(db.bibleBookmarks)
+      ..where((t) => t.bookId.equals(bookId) & t.chapter.equals(chapter) & t.verseNum.equals(verseNum))
+    ).go();
+  }
 }

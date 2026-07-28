@@ -110,6 +110,14 @@ class BibleRepository {
         .toList();
   }
 
+  Future<Map<int, int>> getChapterVerseCounts(int bookId) async {
+    final rows = await _db.queryAsync(
+      'SELECT chapter, COUNT(*) as cnt FROM verses WHERE book_id = ? GROUP BY chapter ORDER BY chapter',
+      [bookId],
+    );
+    return {for (final r in rows) r['chapter'] as int: r['cnt'] as int};
+  }
+
   Future<List<BibleVerse>> searchVerses(String query) async {
     if (query.trim().isEmpty) return [];
     final like = '%${query.trim()}%';
