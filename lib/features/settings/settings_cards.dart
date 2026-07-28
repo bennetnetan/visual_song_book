@@ -585,7 +585,7 @@ class AboutCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Chip(
                   label: Text(
-                    'v1.6.0+2',
+                    'v1.7.0',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -598,13 +598,23 @@ class AboutCard extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           Text(
-            'A premium church hymnal management & live projection app. '
-            'Manage your song library, import from various formats, '
-            'and project lyrics with style.',
+            'Song management, KJV Bible reader, and live projection '
+            'for church worship teams. Import from various formats, '
+            'organize song sets, and project lyrics to external screens.',
             style: GoogleFonts.plusJakartaSans(
               color: theme.colorScheme.onSurfaceVariant,
               fontSize: 13,
               height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Made by BenjaNetan',
+            style: GoogleFonts.plusJakartaSans(
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
             ),
             textAlign: TextAlign.center,
           ),

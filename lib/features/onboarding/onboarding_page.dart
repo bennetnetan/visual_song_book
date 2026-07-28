@@ -181,7 +181,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Your church hymnal management\nand live projection app',
+            'Song management, KJV Bible reader,\nand live projection for church worship',
             style: theme.textTheme.bodyLarge?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

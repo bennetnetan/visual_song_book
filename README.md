@@ -1,6 +1,6 @@
 # Visual Song Book
 
-> A premium, cross-platform church hymnal management, KJV Bible reader, and live projection app built with Flutter.
+> Song management, KJV Bible reader, and live projection for church worship teams.
 
 ![Logo](assets/images/logo.png)
 
@@ -22,6 +22,7 @@
 - **History** — tracks projected songs, sets, and Bible passages
 - **Import** — legacy `.mdb` (via mdb-tools), `.vsbook` backup archives, bundled JSON songbooks
 - **Export** — set sharing (JSON), database backup (`.vsbook`)
+- **Linked Songbooks** — link `.vsbook` files from Google Drive or shared folders for automatic sync
 
 ---
 
@@ -31,20 +32,21 @@
 lib/
 ├── core/
 │   ├── providers/          # Riverpod providers (database, importers, theme, state)
-│   ├── utils/              # Verse parser, app logger, highlighting
+│   ├── utils/              # Verse parser, app logger, layout utils, Win32 helpers
 │   └── widgets/            # Shared UI components (bible widgets, settings cards)
 ├── data/
 │   ├── db/                 # Drift SQLite schema & migrations (songs, sets, bible)
 │   ├── importers/          # MDB, VSB, bundled JSON, .vsbook importers
 │   ├── models/             # Shared data models
 │   ├── repositories/       # SongRepository, SetRepository, BackupRepository
-│   └── services/           # AppStorage (unified data directory), SeedingService
+│   └── services/           # AppStorage (unified data directory), SeedingService, LinkedSongbooksService
 ├── features/
 │   ├── bible/              # Bible reader tab (repository, search, UI)
 │   ├── history/            # History tab (Songs / Sets / Bible sub-tabs)
+│   ├── onboarding/         # First-launch setup wizard
 │   ├── projection/         # Projection controller, output view, search provider
 │   ├── sets/               # Song sets (controller, tab, widgets)
-│   ├── settings/           # Settings tab (manage data, about, import)
+│   ├── settings/           # Settings tab (Appearance, Projection, Library, About)
 │   ├── song_editor/        # Song creation / editing view
 │   └── song_list/          # Main dashboard, song list, navigation sidebar
 ├── routing/
@@ -92,4 +94,8 @@ flutter run -d linux
 
 ## Version
 
-Current: **v1.6.0** — see About → Changelog in the app for full history.
+Current: **v1.7.0** — see About → Changelog in the app for full history.
+
+---
+
+Made by BenjaNetan
