@@ -329,6 +329,14 @@ class _ProjectionHeader extends StatelessWidget {
             ],
           ),
         ),
+        if (!isBible && state.currentSong != null)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: _AutoChorusToggle(
+              value: state.autoInsertChorus,
+              onChanged: notifier.setAutoInsertChorus,
+            ),
+          ),
         ElevatedButton.icon(
           onPressed: notifier.clearSong,
           icon: const Icon(Icons.close, size: 16),
@@ -339,6 +347,67 @@ class _ProjectionHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auto-chorus toggle chip — shown inline next to Clear Screen for songs
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _AutoChorusToggle extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _AutoChorusToggle({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Tooltip(
+      message: 'Auto-insert chorus between verses',
+      child: GestureDetector(
+        onTap: () => onChanged(!value),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: value
+                ? theme.colorScheme.primaryContainer
+                : theme.colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: value
+                  ? theme.colorScheme.primary.withValues(alpha: 0.4)
+                  : theme.colorScheme.outlineVariant,
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                value ? Icons.repeat : Icons.repeat_one,
+                size: 14,
+                color: value
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Chorus',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: value
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

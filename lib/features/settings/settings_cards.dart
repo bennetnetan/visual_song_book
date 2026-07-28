@@ -107,19 +107,6 @@ class ProjectionPreferencesCard extends ConsumerWidget {
             contentPadding: EdgeInsets.zero,
           ),
           const Divider(height: 24),
-          SwitchListTile(
-            title: Text(
-              'Auto-insert Chorus',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 14),
-            ),
-            subtitle: Text(
-              'Automatically repeat chorus slides between verses',
-              style: GoogleFonts.plusJakartaSans(fontSize: 12),
-            ),
-            value: state.autoInsertChorus,
-            onChanged: notifier.setAutoInsertChorus,
-            contentPadding: EdgeInsets.zero,
-          ),
           if (isLargeScreen) ...[
             const Divider(height: 24),
             Text(
