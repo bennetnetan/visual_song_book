@@ -1,5 +1,6 @@
 import 'dart:ffi';
 import 'dart:io';
+import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 
 // Win32 function typedefs using standard FFI types (HWND = IntPtr)
@@ -22,6 +23,22 @@ typedef GetWindowLongPtrWDart = int Function(int hWnd, int nIndex);
 
 typedef GetSystemMetricsNative = Int32 Function(Int32 nIndex);
 typedef GetSystemMetricsDart = int Function(int nIndex);
+
+// Process / thread functions for HWND discovery
+typedef GetCurrentProcessIdNative = Uint32 Function();
+typedef GetCurrentProcessIdDart = int Function();
+
+typedef GetWindowThreadProcessIdNative = Uint32 Function(IntPtr hWnd, Pointer<Int32> lpdwProcessId);
+typedef GetWindowThreadProcessIdDart = int Function(int hWnd, Pointer<Int32> lpdwProcessId);
+
+typedef IsWindowVisibleNative = Bool Function(IntPtr hWnd);
+typedef IsWindowVisibleDart = bool Function(int hWnd);
+
+// EnumWindows callback
+typedef EnumWindowsNative = Bool Function(Pointer<NativeFunction<EnumWindowsProcNative>> lpEnumFunc, IntPtr lParam);
+typedef EnumWindowsDart = bool Function(Pointer<NativeFunction<EnumWindowsProcNative>> lpEnumFunc, int lParam);
+
+typedef EnumWindowsProcNative = Bool Function(IntPtr hWnd, IntPtr lParam);
 
 // Win32 constants
 const int swMaximize = 3;
@@ -46,6 +63,7 @@ const int smCyscreen = 1;
 
 class Win32WindowHelper {
   static final _user32 = DynamicLibrary.open('user32.dll');
+  static final _kernel32 = DynamicLibrary.open('kernel32.dll');
 
   static final _getForegroundWindow =
       _user32.lookupFunction<GetForegroundWindowNative, GetForegroundWindowDart>(
@@ -54,21 +72,34 @@ class Win32WindowHelper {
   static final _showWindow =
       _user32.lookupFunction<ShowWindowNative, ShowWindowDart>('ShowWindow');
 
-  static final _setWindowPos =
-      _user32.lookupFunction<SetWindowPosNative, SetWindowPosDart>(
-          'SetWindowPos');
+  static final _setWindowPos = _user32.lookupFunction<SetWindowPosNative, SetWindowPosDart>(
+      'SetWindowPos');
 
-  static final _setWindowLongPtrW =
-      _user32.lookupFunction<SetWindowLongPtrWNative, SetWindowLongPtrWDart>(
-          'SetWindowLongPtrW');
+  static final _setWindowLongPtrW = _user32.lookupFunction<SetWindowLongPtrWNative, SetWindowLongPtrWDart>(
+      'SetWindowLongPtrW');
 
-  static final _getWindowLongPtrW =
-      _user32.lookupFunction<GetWindowLongPtrWNative, GetWindowLongPtrWDart>(
-          'GetWindowLongPtrW');
+  static final _getWindowLongPtrW = _user32.lookupFunction<GetWindowLongPtrWNative, GetWindowLongPtrWDart>(
+      'GetWindowLongPtrW');
 
-  static final _getSystemMetrics =
-      _user32.lookupFunction<GetSystemMetricsNative, GetSystemMetricsDart>(
-          'GetSystemMetrics');
+  static final _getSystemMetrics = _user32.lookupFunction<GetSystemMetricsNative, GetSystemMetricsDart>(
+      'GetSystemMetrics');
+
+  // Cached lookups for HWND discovery (avoid repeated FFI lookups)
+  // GetCurrentProcessId is in kernel32.dll, not user32.dll!
+  static final _getCurrentProcessId = _kernel32
+      .lookupFunction<GetCurrentProcessIdNative, GetCurrentProcessIdDart>(
+          'GetCurrentProcessId');
+
+  static final _getWindowThreadProcessId = _user32
+      .lookupFunction<GetWindowThreadProcessIdNative,
+          GetWindowThreadProcessIdDart>('GetWindowThreadProcessId');
+
+  static final _isWindowVisible = _user32
+      .lookupFunction<IsWindowVisibleNative, IsWindowVisibleDart>(
+          'IsWindowVisible');
+
+  static final _enumWindowsNative = _user32
+      .lookupFunction<EnumWindowsNative, EnumWindowsDart>('EnumWindows');
 
   static int getActiveWindowHandle() {
     return _getForegroundWindow();
@@ -148,6 +179,79 @@ class Win32WindowHelper {
     setWindowBounds(hwnd, 0, 0, screenWidth, screenHeight,
         frameChanged: true);
   }
+
+  /// Finds the current window's HWND reliably in a desktop_multi_window
+  /// secondary engine. Uses EnumWindows + process ID matching instead of
+  /// GetForegroundWindow, which returns the main window's HWND in secondary
+  /// engines.
+  ///
+  /// Strategy:
+  /// 1. Enumerate all visible windows in our process
+  /// 2. Exclude the foreground window (which is typically the main window)
+  /// 3. Return the remaining window (the secondary projector window)
+  /// 4. Fall back to GetForegroundWindow if no match found
+  static int findCurrentWindowHandle() {
+    try {
+      final currentPid = _getCurrentProcessId();
+      final foregroundHwnd = _getForegroundWindow();
+
+      // Collect visible windows in our process that are NOT the foreground
+      // window. In a secondary engine, the foreground window is typically the
+      // main window, so the secondary window is everything else.
+      final foundHwnds = <int>[];
+
+      // Use isolateLocal for synchronous EnumWindows callback (listener
+      // dispatches asynchronously which breaks enumeration).
+      // NOTE: The callback is called synchronously by EnumWindows on the
+      // same thread, and close() is called immediately after, so captured
+      // closure variables are always alive during enumeration.
+      final callback = NativeCallable<EnumWindowsProcNative>.isolateLocal(
+        (int hWnd, int lParam) {
+          final pidPtr = calloc<Int32>();
+          try {
+            _getWindowThreadProcessId(hWnd, pidPtr);
+            final windowPid = pidPtr.value;
+            if (windowPid == currentPid &&
+                _isWindowVisible(hWnd) &&
+                hWnd != foregroundHwnd) {
+              foundHwnds.add(hWnd);
+            }
+          } finally {
+            calloc.free(pidPtr);
+          }
+          return true; // Continue enumeration
+        },
+        exceptionalReturn: false, // Value returned if Dart throws
+      );
+
+      _enumWindowsNative(callback.nativeFunction, 0);
+      callback.close();
+
+      if (foundHwnds.isNotEmpty) {
+        return foundHwnds.first;
+      }
+
+      // Fallback: if no non-foreground window found, the secondary window
+      // might actually BE the foreground window. Return it.
+      if (foregroundHwnd != 0) {
+        final pidPtr = calloc<Int32>();
+        try {
+          _getWindowThreadProcessId(foregroundHwnd, pidPtr);
+          if (pidPtr.value == currentPid) {
+            return foregroundHwnd;
+          }
+        } finally {
+          calloc.free(pidPtr);
+        }
+      }
+
+      return 0;
+    } catch (e) {
+      debugPrint('findCurrentWindowHandle failed: $e');
+      // Final fallback
+      return _getForegroundWindow();
+    }
+  }
 }
 
 /// Attempts to maximize the current window using Win32 APIs.
@@ -157,11 +261,10 @@ Future<void> maximizeCurrentWindow({bool topmost = false}) async {
   if (!Platform.isWindows) return;
 
   try {
-    final hwnd = Win32WindowHelper.getActiveWindowHandle();
+    final hwnd = Win32WindowHelper.findCurrentWindowHandle();
     if (hwnd == 0) {
-      // Try again after a short delay - the window may not be active yet
       await Future.delayed(const Duration(milliseconds: 200));
-      final hwnd2 = Win32WindowHelper.getActiveWindowHandle();
+      final hwnd2 = Win32WindowHelper.findCurrentWindowHandle();
       if (hwnd2 == 0) return;
       Win32WindowHelper.maximizeWindow(hwnd2);
       if (topmost) {
@@ -187,15 +290,15 @@ Future<int> enterBorderlessFullscreenCurrentWindow() async {
 
   for (var attempt = 0; attempt < 5; attempt++) {
     try {
-      final hwnd = Win32WindowHelper.getActiveWindowHandle();
+      final hwnd = Win32WindowHelper.findCurrentWindowHandle();
       if (hwnd == 0) {
-        await Future.delayed(const Duration(milliseconds: 150));
+        await Future.delayed(const Duration(milliseconds: 200));
         continue;
       }
       return Win32WindowHelper.enterBorderlessFullscreen(hwnd);
     } catch (e) {
       debugPrint('enterBorderlessFullscreen attempt $attempt failed: $e');
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 150));
     }
   }
   return 0;
@@ -206,7 +309,7 @@ void exitBorderlessFullscreenCurrentWindow(int originalStyle) {
   if (!Platform.isWindows || originalStyle == 0) return;
 
   try {
-    final hwnd = Win32WindowHelper.getActiveWindowHandle();
+    final hwnd = Win32WindowHelper.findCurrentWindowHandle();
     if (hwnd == 0) return;
     Win32WindowHelper.exitBorderlessFullscreen(hwnd, originalStyle);
   } catch (e) {

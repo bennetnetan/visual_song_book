@@ -83,8 +83,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     });
 
     controller.setWindowMethodHandler((call) async {
-      debugPrint('Received IPC method call: ${call.method}');
-
       if (call.method == 'update_slide') {
         if (!mounted) return null;
         setState(() {
@@ -96,18 +94,13 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
             _ipcFontSize = (call.arguments['fontSize'] as num).toDouble();
           }
         });
-        debugPrint('Updated secondary window text: "$_ipcText" label: "$_ipcLabel" fontSize: $_ipcFontSize');
       } else if (call.method == 'go_fullscreen') {
-        // Main window asks us to fullscreen (triggered when the window opens).
         await _goFullscreenOnBestDisplay();
       }
       return 'OK';
     });
 
     // Notify main window that secondary window is ready to receive updates.
-    // We retry a few times because immediately after window creation (or during
-    // hot restart), the plugin channels might not be fully registered yet,
-    // throwing MissingPluginException.
     for (var attempt = 0; attempt < 10; attempt++) {
       try {
         final controllers = await WindowController.getAll();
@@ -115,11 +108,10 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
         for (final c in controllers) {
           if (c.windowId == currentWindow.windowId) continue;
           await c.invokeMethod('secondary_window_ready');
-          debugPrint('Notified main window (ID: ${c.windowId}) that secondary window is ready.');
         }
         break; // Success
       } catch (e) {
-        debugPrint('Failed to send secondary_window_ready signal: $e');
+        debugPrint('Secondary window ready notification attempt $attempt failed: $e');
         await Future.delayed(const Duration(milliseconds: 300));
       }
     }
@@ -128,21 +120,15 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
   /// Enters borderless fullscreen automatically when window opens.
   Future<void> _goFullscreenOnBestDisplay() async {
     if (Platform.isWindows) {
-      // Use Win32 APIs to enter true borderless fullscreen:
-      // strip title bar + resize to full monitor.
-      _originalWindowStyle = await enterBorderlessFullscreenCurrentWindow();
-      if (_originalWindowStyle != 0) {
-        debugPrint('Projection window entered borderless fullscreen via Win32 API.');
-      } else {
-        // Fallback to maximized if borderless fullscreen failed
-        await maximizeCurrentWindow();
-        debugPrint('Projection window maximized (borderless fullscreen failed).');
-      }
-    } else {
-      // On Linux/macOS, window_manager may or may not work in secondary
-      // engines. Try it as best-effort.
       try {
-        debugPrint('Projection window: fullscreen not available on this platform in secondary engine.');
+        _originalWindowStyle = await enterBorderlessFullscreenCurrentWindow();
+        if (_originalWindowStyle != 0) {
+          debugPrint('Projection window entered borderless fullscreen via Win32 API.');
+        } else {
+          // Fallback to maximized if borderless fullscreen failed
+          await maximizeCurrentWindow();
+          debugPrint('Projection window maximized (borderless fullscreen failed).');
+        }
       } catch (e) {
         debugPrint('_goFullscreenOnBestDisplay error: $e');
       }

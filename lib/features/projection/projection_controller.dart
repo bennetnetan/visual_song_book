@@ -456,7 +456,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     for (var attempt = 0; attempt < 10; attempt++) {
       await Future.delayed(const Duration(milliseconds: 300));
       if (await _syncSecondaryWindow()) {
-        debugPrint('Secondary window synced successfully on attempt $attempt');
+        debugPrint('Secondary window synced on attempt $attempt');
         break;
       }
     }
@@ -542,8 +542,6 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     final label = slide?.label ?? '';
     final fontSize = state.fontSize;
     final isBible = state.isBibleMode;
-
-    debugPrint('Syncing slide to window ${_secondaryWindow!.windowId}: "$label"');
 
     try {
       await _secondaryWindow!.invokeMethod('update_slide', {
