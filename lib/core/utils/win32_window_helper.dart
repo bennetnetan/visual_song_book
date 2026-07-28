@@ -200,32 +200,37 @@ class Win32WindowHelper {
       // main window, so the secondary window is everything else.
       final foundHwnds = <int>[];
 
-      // Use isolateLocal for synchronous EnumWindows callback (listener
-      // dispatches asynchronously which breaks enumeration).
-      // NOTE: The callback is called synchronously by EnumWindows on the
-      // same thread, and close() is called immediately after, so captured
-      // closure variables are always alive during enumeration.
-      final callback = NativeCallable<EnumWindowsProcNative>.isolateLocal(
-        (int hWnd, int lParam) {
-          final pidPtr = calloc<Int32>();
-          try {
-            _getWindowThreadProcessId(hWnd, pidPtr);
-            final windowPid = pidPtr.value;
-            if (windowPid == currentPid &&
-                _isWindowVisible(hWnd) &&
-                hWnd != foregroundHwnd) {
-              foundHwnds.add(hWnd);
+      // Allocate pidPtr once outside the callback to avoid repeated
+      // calloc/free inside EnumWindows which can cause issues on some
+      // Windows versions when called hundreds of times.
+      final pidPtr = calloc<Int32>();
+      try {
+        final callback = NativeCallable<EnumWindowsProcNative>.isolateLocal(
+          (int hWnd, int lParam) {
+            try {
+              _getWindowThreadProcessId(hWnd, pidPtr);
+              final windowPid = pidPtr.value;
+              if (windowPid == currentPid &&
+                  _isWindowVisible(hWnd) &&
+                  hWnd != foregroundHwnd) {
+                foundHwnds.add(hWnd);
+              }
+            } catch (_) {
+              // Swallow per-window errors to continue enumeration
             }
-          } finally {
-            calloc.free(pidPtr);
-          }
-          return true; // Continue enumeration
-        },
-        exceptionalReturn: false, // Value returned if Dart throws
-      );
+            return true; // Continue enumeration
+          },
+          exceptionalReturn: true, // Continue enumeration even on Dart error
+        );
 
-      _enumWindowsNative(callback.nativeFunction, 0);
-      callback.close();
+        try {
+          _enumWindowsNative(callback.nativeFunction, 0);
+        } finally {
+          callback.close();
+        }
+      } finally {
+        calloc.free(pidPtr);
+      }
 
       if (foundHwnds.isNotEmpty) {
         return foundHwnds.first;
@@ -234,14 +239,14 @@ class Win32WindowHelper {
       // Fallback: if no non-foreground window found, the secondary window
       // might actually BE the foreground window. Return it.
       if (foregroundHwnd != 0) {
-        final pidPtr = calloc<Int32>();
+        final fallbackPidPtr = calloc<Int32>();
         try {
-          _getWindowThreadProcessId(foregroundHwnd, pidPtr);
-          if (pidPtr.value == currentPid) {
+          _getWindowThreadProcessId(foregroundHwnd, fallbackPidPtr);
+          if (fallbackPidPtr.value == currentPid) {
             return foregroundHwnd;
           }
         } finally {
-          calloc.free(pidPtr);
+          calloc.free(fallbackPidPtr);
         }
       }
 

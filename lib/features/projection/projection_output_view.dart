@@ -31,6 +31,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
   bool _isClosing = false;
   bool _isHovering = false;
   int _originalWindowStyle = 0;
+  bool _isGoingFullscreen = false;
 
   double _baseFontSize = 40.0;
   bool _pinchActive = false;
@@ -57,10 +58,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     if (!kIsWeb &&
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       _setupSecondaryWindowChannel();
-      // NOTE: window_manager plugin is not registered in desktop_multi_window
-      // secondary engines on any platform. Calling windowManager.addListener()
-      // or setPreventClose() would fail silently or target the wrong window.
-      // Close handling is done via IPC to the main window instead.
     }
   }
 
@@ -76,9 +73,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     // Defer with Timer.run to avoid calling Win32 SetWindowPos inside
     // Flutter's frame lifecycle, which causes scheduler reentrancy errors.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Timer.run(() async {
+      Timer.run(() {
         if (!mounted) return;
-        await _goFullscreenOnBestDisplay();
+        _goFullscreenOnBestDisplay();
       });
     });
 
@@ -95,7 +92,11 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
           }
         });
       } else if (call.method == 'go_fullscreen') {
-        await _goFullscreenOnBestDisplay();
+        // Only enter fullscreen if we haven't already — prevents double
+        // fullscreen from both the init path and the controller's fallback IPC.
+        if (!_isGoingFullscreen && _originalWindowStyle == 0) {
+          await _goFullscreenOnBestDisplay();
+        }
       }
       return 'OK';
     });
@@ -119,19 +120,25 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
 
   /// Enters borderless fullscreen automatically when window opens.
   Future<void> _goFullscreenOnBestDisplay() async {
-    if (Platform.isWindows) {
-      try {
-        _originalWindowStyle = await enterBorderlessFullscreenCurrentWindow();
-        if (_originalWindowStyle != 0) {
-          debugPrint('Projection window entered borderless fullscreen via Win32 API.');
-        } else {
-          // Fallback to maximized if borderless fullscreen failed
-          await maximizeCurrentWindow();
-          debugPrint('Projection window maximized (borderless fullscreen failed).');
+    if (_isGoingFullscreen) return; // Guard against concurrent calls
+    _isGoingFullscreen = true;
+    try {
+      if (Platform.isWindows) {
+        try {
+          _originalWindowStyle = await enterBorderlessFullscreenCurrentWindow();
+          if (_originalWindowStyle != 0) {
+            debugPrint('Projection window entered borderless fullscreen via Win32 API.');
+          } else {
+            // Fallback to maximized if borderless fullscreen failed
+            await maximizeCurrentWindow();
+            debugPrint('Projection window maximized (borderless fullscreen failed).');
+          }
+        } catch (e) {
+          debugPrint('_goFullscreenOnBestDisplay error: $e');
         }
-      } catch (e) {
-        debugPrint('_goFullscreenOnBestDisplay error: $e');
       }
+    } finally {
+      _isGoingFullscreen = false;
     }
   }
 
@@ -148,8 +155,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
   }
 
   void onWindowClose() async {
-    // window_manager is not registered in secondary desktop_multi_window
-    // engines. Close is handled via IPC.
     await _handleManualClose();
   }
 
@@ -183,10 +188,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
       _originalWindowStyle = 0;
     }
 
-    // window_manager is not registered in desktop_multi_window secondary
-    // engines on any platform. Always use IPC to ask the main window to
-    // close/hide us, since the main window's WindowController can access
-    // the secondary window handle.
     try {
       final controllers = await WindowController.getAll();
       final currentWindow = await WindowController.fromCurrentEngine();
@@ -709,4 +710,3 @@ class _SlideTextTimelineState extends State<_SlideTextTimeline> {
 
 
 /// Scrollable chapter reference panel with auto-center and edge fades.
-

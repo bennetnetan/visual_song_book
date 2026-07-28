@@ -123,7 +123,11 @@ class ProjectionController extends StateNotifier<ProjectionState> {
 
   ProjectionController(this._songRepository, this._bibleRepo, this.ref)
     : super(ProjectionState.initial()) {
-    _loadSettings();
+    // Skip plugin-dependent initialization in secondary windows where
+    // SharedPreferences, WakelockPlus, etc. are not registered.
+    if (!ref.read(isProjectionWindowProvider)) {
+      _loadSettings();
+    }
     _setupMainWindowHandler();
   }
 
