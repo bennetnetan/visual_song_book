@@ -411,7 +411,7 @@ class _BibleReadingViewState extends State<BibleReadingView> {
             _baseFontSize = widget.fontSize;
           },
           onScaleUpdate: (details) {
-            if (details.pointerCount > 1) {
+            if (details.scale != 1.0) {
               final newSize = (_baseFontSize * details.scale).clamp(12.0, 96.0);
               widget.onFontSizeChanged?.call(newSize);
             }

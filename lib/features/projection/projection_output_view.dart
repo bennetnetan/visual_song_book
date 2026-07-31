@@ -328,11 +328,11 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
           _panDeltaX = 0.0;
         },
         onScaleUpdate: (details) {
-          if (details.pointerCount > 1) {
+          if (details.scale != 1.0) {
             _pinchActive = true;
             final newSize = (_baseFontSize * details.scale).clamp(16.0, 160.0);
             notifier.setFontSize(newSize);
-          } else {
+          } else if (details.pointerCount == 1) {
             _panDeltaX = details.localFocalPoint.dx - _panStartOffset.dx;
           }
         },
