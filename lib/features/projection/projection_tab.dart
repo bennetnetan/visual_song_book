@@ -1563,6 +1563,25 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
 
     final key = event.logicalKey;
 
+    // ── Enter/Return always projects immediately — even before _navReady fires.
+    // This lets quick typists hit Enter right after their last keystroke without
+    // waiting for the 100 ms dwell timer. We check Enter first, before the
+    // _navReady gate which only gates arrow navigation (to avoid fighting the
+    // text-field cursor movement while the user is still typing).
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter) {
+      final int totalItems = searchState.isBibleMode
+          ? (searchState.exactMatch != null ? 1 : 0) + searchState.bibleResults.length
+          : searchState.songResults.length;
+      if (totalItems > 0) {
+        // Clamp selected index in case results changed since last interaction.
+        final safeIndex = _selectedIndex.clamp(0, totalItems - 1);
+        _pickItem(safeIndex, searchState);
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    }
+
     // ── If nav mode is not yet active, pass everything through so the text
     // field can handle cursor movement and character input normally. ──────────
     if (!_navReady) return KeyEventResult.ignored;
@@ -1594,17 +1613,12 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
       return KeyEventResult.handled;
     }
 
-    if (key == LogicalKeyboardKey.enter ||
-        key == LogicalKeyboardKey.numpadEnter) {
-      _pickItem(_selectedIndex, searchState);
-      return KeyEventResult.handled;
-    }
-
     // Any other key (printable characters, backspace, etc.) is ignored so it
     // bubbles to the text field — typing continues as normal and will trigger
     // the query-change listener which resets nav mode.
     return KeyEventResult.ignored;
   }
+
 
   @override
   Widget build(BuildContext context) {

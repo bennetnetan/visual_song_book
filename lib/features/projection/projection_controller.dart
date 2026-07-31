@@ -367,12 +367,20 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     _syncSecondaryWindow();
   }
 
+  bool _isCreatingWindow = false;
+
   /// Opens a native projector window on a second display (if available).
   /// Returns true if a secondary window was created; false if the caller
   /// should open the projection fullscreen on the current screen instead.
   Future<bool> openProjectorWindow() async {
     if (kIsWeb) return false;
     if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return false;
+
+    // Guard against concurrent initialization races.
+    if (_isCreatingWindow) {
+      debugPrint('Already in the process of creating a projector window. Ignoring request.');
+      return false;
+    }
 
     // If we already have a tracked secondary window from this session,
     // just show it and sync.
@@ -389,6 +397,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       }
     }
 
+    _isCreatingWindow = true;
     try {
       // Always create a fresh window. We do NOT use WindowController.getAll()
       // to find existing windows because it returns stale handles from
@@ -405,8 +414,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       // Auto-place on second screen and go fullscreen.
       // We send an IPC message to the new window and handle it in
       // _ProjectionOutputViewState._setupSecondaryWindowChannel().
-      // As a best-effort here, also try to read screen list from window_manager.
-      _placeOnSecondScreenAndFullscreen();
+      // This is now triggered on the 'secondary_window_ready' handshake.
 
       // Do NOT start syncing immediately — the secondary window's IPC handler
       // is not registered yet. Instead, wait for the 'secondary_window_ready'
@@ -416,6 +424,8 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     } catch (e) {
       debugPrint('Failed to open projector window: $e');
       return false;
+    } finally {
+      _isCreatingWindow = false;
     }
   }
 
@@ -426,10 +436,6 @@ class ProjectionController extends StateNotifier<ProjectionState> {
   Future<void> _placeOnSecondScreenAndFullscreen() async {
     if (_secondaryWindow == null) return;
     try {
-      // Give the window's IPC handler time to register (initState + fromCurrentEngine).
-      await Future.delayed(const Duration(milliseconds: 1200));
-      if (_secondaryWindow == null) return;
-
       await _secondaryWindow!.invokeMethod('go_fullscreen', {});
       debugPrint('Sent go_fullscreen IPC to secondary window.');
     } catch (e) {
@@ -491,7 +497,8 @@ class ProjectionController extends StateNotifier<ProjectionState> {
           _secondaryWindow = null;
           setSecondaryWindowOpen(false);
         } else if (call.method == 'secondary_window_ready') {
-          debugPrint('Secondary window reported ready. Syncing current slide...');
+          debugPrint('Secondary window reported ready. Placing and syncing current slide...');
+          _placeOnSecondScreenAndFullscreen();
           _syncSecondaryWindowWithRetry();
         } else if (call.method == 'close_secondary_window') {
           // On Linux, the secondary window can't close itself via window_manager

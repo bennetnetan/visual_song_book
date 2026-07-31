@@ -14,6 +14,7 @@ void main() {
       ProviderScope(
         overrides: [
           databaseProvider.overrideWithValue(testDb),
+          hasCompletedOnboardingProvider.overrideWith((ref) => true),
         ],
         child: const MyApp(),
       ),

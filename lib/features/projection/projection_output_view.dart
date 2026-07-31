@@ -32,11 +32,16 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
   bool _isHovering = false;
   int _originalWindowStyle = 0;
   bool _isGoingFullscreen = false;
+  VoidCallback? _focusListener; // re-asserts fullscreen on window focus gain
 
   double _baseFontSize = 40.0;
   bool _pinchActive = false;
   Offset _panStartOffset = Offset.zero;
   double _panDeltaX = 0.0;
+
+  /// True on Android and iOS — used to select mobile-friendly UI variants
+  /// (always-visible controls rather than hover-gated desktop controls).
+  bool get _isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
   @override
   void initState() {
@@ -58,6 +63,34 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     if (!kIsWeb &&
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       _setupSecondaryWindowChannel();
+
+      // ── Windows: kick off decoration-strip as early as possible (before
+      // the first frame) so the title bar flash is minimised. The call is
+      // fire-and-forget here; _setupSecondaryWindowChannel will repeat it
+      // once the window handle is reliably available.
+      if (Platform.isWindows) {
+        enterBorderlessFullscreenCurrentWindow().then((style) {
+          if (style != 0 && mounted) {
+            _originalWindowStyle = style;
+            debugPrint('Early Win32 decoration strip succeeded (style=$style).');
+          }
+        }).catchError((_) {});
+      }
+
+      // On Windows, re-assert borderless fullscreen whenever the projection
+      // window regains focus. This handles accidental drags, ALT+TAB
+      // sequences, and display-configuration changes that drop fullscreen.
+      if (Platform.isWindows) {
+        _focusListener = () {
+          if (_focusNode.hasFocus && _originalWindowStyle != 0) {
+            // Re-apply borderless fullscreen style + position.
+            // Use a microtask to avoid calling Win32 inside the focus
+            // notification itself (can cause re-entrant Win32 calls).
+            Future.microtask(() => _goFullscreenOnBestDisplay(isReAssertion: true));
+          }
+        };
+        _focusNode.addListener(_focusListener!);
+      }
     }
   }
 
@@ -119,19 +152,29 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
   }
 
   /// Enters borderless fullscreen automatically when window opens.
-  Future<void> _goFullscreenOnBestDisplay() async {
+  /// On re-assertion (after focus regain), we only re-apply the size/position
+  /// without overwriting [_originalWindowStyle] so the exit-restore stays valid.
+  Future<void> _goFullscreenOnBestDisplay({bool isReAssertion = false}) async {
     if (_isGoingFullscreen) return; // Guard against concurrent calls
     _isGoingFullscreen = true;
     try {
       if (Platform.isWindows) {
         try {
-          _originalWindowStyle = await enterBorderlessFullscreenCurrentWindow();
-          if (_originalWindowStyle != 0) {
-            debugPrint('Projection window entered borderless fullscreen via Win32 API.');
-          } else {
-            // Fallback to maximized if borderless fullscreen failed
-            await maximizeCurrentWindow();
-            debugPrint('Projection window maximized (borderless fullscreen failed).');
+          if (!isReAssertion) {
+            // First call: strip decorations AND save original style.
+            _originalWindowStyle = await enterBorderlessFullscreenCurrentWindow();
+            if (_originalWindowStyle != 0) {
+              debugPrint('Projection window entered borderless fullscreen via Win32 API.');
+            } else {
+              // Fallback to maximized if borderless fullscreen failed.
+              await maximizeCurrentWindow();
+              debugPrint('Projection window maximized (borderless fullscreen failed).');
+            }
+          } else if (_originalWindowStyle != 0) {
+            // Re-assertion: style already stripped; just reposition the window
+            // to fill the monitor (handles resolution changes / dragged windows).
+            await enterBorderlessFullscreenCurrentWindow();
+            debugPrint('Projection window re-asserted borderless fullscreen.');
           }
         } catch (e) {
           debugPrint('_goFullscreenOnBestDisplay error: $e');
@@ -141,6 +184,8 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
       _isGoingFullscreen = false;
     }
   }
+
+
 
 
   Future<void> _sendNavigateToMain(String action) async {
@@ -200,6 +245,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
 
   @override
   void dispose() {
+    if (_focusListener != null) {
+      _focusNode.removeListener(_focusListener!);
+    }
     _focusNode.dispose();
     _fadeController.dispose();
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
@@ -367,45 +415,52 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                 ),
               ),
 
-              // Close button — subtle, only shows on hover
+              // Close button:
+              //   • Desktop  — fades in on hover (subtle, out-of-the-way)
+              //   • Mobile   — always visible at low opacity so the audience
+              //                presenter can tap to exit at any time
               Positioned(
                 top: 4,
                 left: 4,
                 child: AnimatedOpacity(
-                  opacity: _isHovering ? 0.4 : 0.0,
+                  opacity: _isMobile ? 0.45 : (_isHovering ? 0.4 : 0.0),
                   duration: const Duration(milliseconds: 300),
                   child: SafeArea(
                     child: IconButton(
                       icon: const Icon(Icons.close, color: Colors.white, size: 18),
                       onPressed: _handleClose,
                       tooltip: 'Exit projection (Esc)',
-                      splashRadius: 16,
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                      splashRadius: 20,
+                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                     ),
                   ),
                 ),
               ),
 
-              // Navigation arrows — very transparent, fade in slightly on hover
+              // Navigation arrows:
+              //   • Desktop  — hover-gated (hidden until mouse moves over)
+              //   • Mobile   — always visible at low opacity, always interactive,
+              //                with larger hit-targets for touch
               if (state.slides.isNotEmpty)
                 IgnorePointer(
-                  ignoring: !_isHovering,
+                  // Mobile: always interactive. Desktop: gate on hover.
+                  ignoring: _isMobile ? false : !_isHovering,
                   child: AnimatedOpacity(
-                    opacity: _isHovering ? 0.35 : 0.0,
+                    opacity: _isMobile ? 0.38 : (_isHovering ? 0.35 : 0.0),
                     duration: const Duration(milliseconds: 400),
                     child: Stack(
                       children: [
                         // Prev arrow — left edge
                         Positioned(
-                          left: 8,
+                          left: _isMobile ? 0 : 8,
                           top: 0,
                           bottom: 0,
                           child: Center(
                             child: IconButton(
                               icon: Icon(
-                                _isSecondaryWindow ? Icons.chevron_left : Icons.chevron_left,
-                                size: 36,
+                                Icons.chevron_left,
+                                size: _isMobile ? 44 : 36,
                                 color: Colors.white,
                               ),
                               onPressed: () {
@@ -415,21 +470,24 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                                   notifier.prevSlide();
                                 }
                               },
-                              splashRadius: 22,
+                              splashRadius: _isMobile ? 32 : 22,
+                              padding: _isMobile
+                                  ? const EdgeInsets.all(12)
+                                  : const EdgeInsets.all(8),
                               hoverColor: Colors.white.withValues(alpha: 0.1),
                             ),
                           ),
                         ),
                         // Next arrow — right edge
                         Positioned(
-                          right: 8,
+                          right: _isMobile ? 0 : 8,
                           top: 0,
                           bottom: 0,
                           child: Center(
                             child: IconButton(
                               icon: Icon(
-                                _isSecondaryWindow ? Icons.chevron_right : Icons.chevron_right,
-                                size: 36,
+                                Icons.chevron_right,
+                                size: _isMobile ? 44 : 36,
                                 color: Colors.white,
                               ),
                               onPressed: () {
@@ -439,13 +497,17 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                                   notifier.nextSlide();
                                 }
                               },
-                              splashRadius: 22,
+                              splashRadius: _isMobile ? 32 : 22,
+                              padding: _isMobile
+                                  ? const EdgeInsets.all(12)
+                                  : const EdgeInsets.all(8),
                               hoverColor: Colors.white.withValues(alpha: 0.1),
                             ),
                           ),
                         ),
-                        // Font size controls — top-right, even more subtle
-                        if (!_isSecondaryWindow)
+                        // Font size controls — desktop only (top-right, hover-gated).
+                        // Mobile has its own always-visible font bar below.
+                        if (!_isSecondaryWindow && !_isMobile)
                           Positioned(
                             top: 0,
                             right: 48,
@@ -487,8 +549,69 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                   ),
                 ),
 
-              // Slide indicator dots or timeline at the bottom — subtle, always visible at low opacity on main controls
-              if (state.slides.isNotEmpty)
+              // Mobile-only: always-visible bottom bar with font size controls
+              // and a slide-count chip. Keeps the same translucent aesthetic
+              // but at a fixed opacity that doesn't require hover.
+              if (_isMobile && !_isSecondaryWindow && state.slides.isNotEmpty)
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: SafeArea(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      color: Colors.black.withValues(alpha: 0.35),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Font − button
+                          _FontSizeButton(
+                            icon: Icons.text_decrease,
+                            tooltip: 'Smaller font',
+                            onPressed: state.fontSize > 16
+                                ? () => notifier.setFontSize(state.fontSize - 4)
+                                : null,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Text(
+                              '${state.fontSize.toInt()}pt',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          // Font + button
+                          _FontSizeButton(
+                            icon: Icons.text_increase,
+                            tooltip: 'Larger font',
+                            onPressed: state.fontSize < 96
+                                ? () => notifier.setFontSize(state.fontSize + 4)
+                                : null,
+                          ),
+                          const Spacer(),
+                          // Slide position indicator  e.g. "3 / 12"
+                          Text(
+                            '${state.currentSlideIndex + 1} / ${state.slides.length}',
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 12,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Slide indicator dots / timeline:
+              //   • Secondary desktop window — dot row, hover-gated
+              //   • Desktop main  — text timeline, hover-gated but always faintly visible
+              //   • Mobile        — text timeline hidden (replaced by bottom bar above)
+              if (state.slides.isNotEmpty && !(_isMobile && !_isSecondaryWindow))
                 Positioned(
                   bottom: _isSecondaryWindow ? 96 : 14,
                   left: 0,

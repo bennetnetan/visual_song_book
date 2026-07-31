@@ -15,8 +15,26 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
+// Called for every secondary window created by desktop_multi_window.
+// Strips GTK window chrome and goes fullscreen so the projection output
+// window appears borderless on any connected display.
 static void on_window_created(FlPluginRegistry* registry) {
   fl_register_plugins(registry);
+
+  // FlPluginRegistry is implemented by FlView — cast to retrieve the
+  // parent GtkWindow and remove its decorations + enter fullscreen.
+  FlView* view = FL_VIEW(registry);
+  if (view != nullptr) {
+    GtkWidget* toplevel = gtk_widget_get_toplevel(GTK_WIDGET(view));
+    if (GTK_IS_WINDOW(toplevel)) {
+      GtkWindow* window = GTK_WINDOW(toplevel);
+      // Strip title bar and resize borders from the projection window.
+      gtk_window_set_decorated(window, FALSE);
+      // Enter OS fullscreen — GTK will place the window on whichever
+      // display it was assigned to by desktop_multi_window.
+      gtk_window_fullscreen(window);
+    }
+  }
 }
 
 // Called when first Flutter frame received.
