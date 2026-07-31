@@ -7,10 +7,24 @@ import 'package:visual_song_book/features/song_list/song_list_controller.dart';
 import 'package:visual_song_book/features/song_list/widgets/song_list_item.dart';
 import 'package:visual_song_book/features/song_list/widgets/song_preview_panel.dart';
 
-class SongsTab extends ConsumerWidget {
+class SongsTab extends ConsumerStatefulWidget {
   final bool isLargeScreen;
 
   const SongsTab({super.key, required this.isLargeScreen});
+
+  @override
+  ConsumerState<SongsTab> createState() => _SongsTabState();
+}
+
+class _SongsTabState extends ConsumerState<SongsTab> {
+  bool _isSearching = false;
+  final _searchFocusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
 
   Widget _buildSourceChip(
     BuildContext context, {
@@ -90,7 +104,7 @@ class SongsTab extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final listState = ref.watch(songListControllerProvider);
     final listNotifier = ref.read(songListControllerProvider.notifier);
     final selectedSongId = ref.watch(selectedSongIdProvider);
@@ -120,62 +134,87 @@ class SongsTab extends ConsumerWidget {
                           toolbarHeight: 80,
                           title: Padding(
                             padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    onChanged: listNotifier.setQuery,
-                                    decoration: InputDecoration(
-                                      hintText: 'Search title, number, or lyrics...',
-                                      hintStyle: TextStyle(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant
-                                            .withValues(alpha: 0.6),
+                            child: _isSearching
+                                ? Row(
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.arrow_back),
+                                        onPressed: () {
+                                          setState(() => _isSearching = false);
+                                          ref.read(songListControllerProvider.notifier).setQuery('');
+                                        },
                                       ),
-                                      prefixIcon: Icon(
-                                        Icons.search,
-                                        color: Theme.of(context).colorScheme.primary,
-                                      ),
-                                      suffixIcon: listState.query.isNotEmpty
-                                          ? IconButton(
-                                              icon: const Icon(Icons.clear),
-                                              onPressed: () => listNotifier.setQuery(''),
-                                            )
-                                          : null,
-                                      filled: true,
-                                      fillColor: Theme.of(context)
-                                          .colorScheme
-                                          .surfaceContainerHighest
-                                          .withValues(alpha: 0.3),
-                                      contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 20,
-                                        vertical: 14,
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(28),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(28),
-                                        borderSide: BorderSide(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .outlineVariant
-                                              .withValues(alpha: 0.4),
-                                          width: 1,
+                                      Expanded(
+                                        child: TextField(
+                                          focusNode: _searchFocusNode,
+                                          onChanged: listNotifier.setQuery,
+                                          decoration: InputDecoration(
+                                            hintText: 'Search title, number, or lyrics...',
+                                            hintStyle: TextStyle(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurfaceVariant
+                                                  .withValues(alpha: 0.6),
+                                            ),
+                                            suffixIcon: listState.query.isNotEmpty
+                                                ? IconButton(
+                                                    icon: const Icon(Icons.clear),
+                                                    onPressed: () => listNotifier.setQuery(''),
+                                                  )
+                                                : null,
+                                            filled: true,
+                                            fillColor: Theme.of(context)
+                                                .colorScheme
+                                                .surfaceContainerHighest
+                                                .withValues(alpha: 0.3),
+                                            contentPadding: const EdgeInsets.symmetric(
+                                              horizontal: 20,
+                                              vertical: 14,
+                                            ),
+                                            border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(28),
+                                              borderSide: BorderSide.none,
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(28),
+                                              borderSide: BorderSide(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .outlineVariant
+                                                    .withValues(alpha: 0.4),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(28),
+                                              borderSide: BorderSide(
+                                                color: Theme.of(context).colorScheme.primary,
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(28),
-                                        borderSide: BorderSide(
-                                          color: Theme.of(context).colorScheme.primary,
-                                          width: 1.5,
-                                        ),
+                                    ],
+                                  )
+                                : Row(
+                                    children: [
+                                      Text(
+                                        'Songs',
+                                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: Theme.of(context).colorScheme.primary,
+                                            ),
                                       ),
-                                    ),
-                                  ),
-                                ),
+                                      const Spacer(),
+                                      IconButton(
+                                        icon: const Icon(Icons.search),
+                                        tooltip: 'Search Songs',
+                                        onPressed: () {
+                                          setState(() => _isSearching = true);
+                                          _searchFocusNode.requestFocus();
+                                        },
+                                      ),
                                 const SizedBox(width: 8),
                                 PopupMenuButton<SongSortMode>(
                                   icon: const Icon(Icons.sort),
@@ -314,7 +353,7 @@ class SongsTab extends ConsumerWidget {
                                   return SongListItem(
                                     song: song,
                                     isSelected: isSelected,
-                                    isLargeScreen: isLargeScreen,
+                                    isLargeScreen: widget.isLargeScreen,
                                     onTap: () {
                                       ref
                                           .read(selectedSongIdProvider.notifier)
@@ -326,7 +365,7 @@ class SongsTab extends ConsumerWidget {
                                           .setSong(song);
                                       await ref
                                           .read(projectionControllerProvider.notifier)
-                                          .triggerProjection(context, isLargeScreen);
+                                          .triggerProjection(context, widget.isLargeScreen);
                                     },
                                     onProjectTap: () async {
                                       ref
@@ -334,14 +373,14 @@ class SongsTab extends ConsumerWidget {
                                           .setSong(song);
                                       await ref
                                           .read(projectionControllerProvider.notifier)
-                                          .triggerProjection(context, isLargeScreen);
+                                          .triggerProjection(context, widget.isLargeScreen);
                                     },
                                   );
                                 },
                               ),
                   ),
                 ),
-                if (isLargeScreen) ...[
+                if (widget.isLargeScreen) ...[
                   const VerticalDivider(width: 1, thickness: 1),
                   Expanded(
                     flex: 4,

@@ -44,9 +44,7 @@ class _BibleTabState extends ConsumerState<BibleTab> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
-    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
-    final isReading = state.selectedBookId != null && state.query.isEmpty;
+
 
     return KeyboardListener(
       focusNode: FocusNode(),
@@ -62,46 +60,83 @@ class _BibleTabState extends ConsumerState<BibleTab> {
       child: Row(
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (isMobile && isLandscape && isReading && !_isSearchExpanded)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: IconButton(
-                        icon: const Icon(Icons.search),
-                        onPressed: () {
-                          setState(() => _isSearchExpanded = true);
-                          _searchFocusNode.requestFocus();
-                        },
-                        tooltip: 'Search Bible',
-                      ),
+            child: NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) {
+                return [
+                  SliverAppBar(
+                    floating: true,
+                    snap: true,
+                    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                    elevation: 0,
+                    automaticallyImplyLeading: false,
+                    titleSpacing: 0,
+                    toolbarHeight: 80,
+                    title: Padding(
+                      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+                      child: _isSearchExpanded
+                          ? Row(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.arrow_back),
+                                  onPressed: () {
+                                    setState(() => _isSearchExpanded = false);
+                                    notifier.clearSearch();
+                                    _searchController.clear();
+                                    FocusManager.instance.primaryFocus?.unfocus();
+                                  },
+                                ),
+                                Expanded(
+                                  child: BibleSearchBar(
+                                    query: state.query,
+                                    controller: _searchController,
+                                    focusNode: _searchFocusNode,
+                                    onChanged: notifier.search,
+                                    recentSearches: state.recentSearches,
+                                    onClearRecent: notifier.clearRecentSearches,
+                                    onSuggestionTap: (q) {
+                                      _searchController.text = q;
+                                      notifier.search(q);
+                                      _searchFocusNode.unfocus();
+                                    },
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                Text(
+                                  'Bible',
+                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(context).colorScheme.primary,
+                                      ),
+                                ),
+                                const Spacer(),
+                                IconButton(
+                                  icon: const Icon(Icons.search),
+                                  tooltip: 'Search Bible',
+                                  onPressed: () {
+                                    setState(() => _isSearchExpanded = true);
+                                    _searchFocusNode.requestFocus();
+                                  },
+                                ),
+                              ],
+                            ),
                     ),
-                  )
-                else
-                  BibleSearchBar(
-                    query: state.query,
-                    controller: _searchController,
-                    focusNode: _searchFocusNode,
-                    onChanged: notifier.search,
-                    recentSearches: state.recentSearches,
-                    onClearRecent: notifier.clearRecentSearches,
-                    onSuggestionTap: (q) {
-                      _searchController.text = q;
-                      notifier.search(q);
-                      _searchFocusNode.unfocus();
-                    },
                   ),
-                if (state.query.isEmpty)
-                  BibleSearchSuggestionSection(
-                    state: state,
-                    notifier: notifier,
-                    searchController: _searchController,
-                    searchFocusNode: _searchFocusNode,
-                  ),
-                Expanded(
+                ];
+              },
+              body: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (state.query.isEmpty && _isSearchExpanded)
+                    BibleSearchSuggestionSection(
+                      state: state,
+                      notifier: notifier,
+                      searchController: _searchController,
+                      searchFocusNode: _searchFocusNode,
+                    ),
+                  Expanded(
                   child: state.searchResults.isNotEmpty ||
                           state.exactMatch != null ||
                           state.query.isNotEmpty
@@ -177,8 +212,9 @@ class _BibleTabState extends ConsumerState<BibleTab> {
                               onShowCrossRefs: _showMobileCrossRefs,
                               onFontSizeChanged: notifier.setBibleFontSize,
                             ),
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
           if (widget.isLargeScreen) ...[
