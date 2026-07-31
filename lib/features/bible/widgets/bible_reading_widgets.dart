@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -123,6 +125,7 @@ class BibleReadingView extends StatefulWidget {
   final bool isLoadingVerses;
   final bool isLargeScreen;
   final ValueChanged<BibleVerse> onShowCrossRefs;
+  final ValueChanged<double>? onFontSizeChanged;
 
   const BibleReadingView({
     super.key,
@@ -144,6 +147,7 @@ class BibleReadingView extends StatefulWidget {
     required this.isLoadingVerses,
     required this.isLargeScreen,
     required this.onShowCrossRefs,
+    this.onFontSizeChanged,
   });
 
   @override
@@ -155,6 +159,7 @@ class _BibleReadingViewState extends State<BibleReadingView> {
   final _activeVerseKey = GlobalKey();
   final _verseJumpController = TextEditingController();
   bool _showJumpInput = false;
+  double _baseFontSize = 16.0;
 
   @override
   void initState() {
@@ -401,11 +406,21 @@ class _BibleReadingViewState extends State<BibleReadingView> {
   Widget _buildVerseList(ColorScheme colorScheme, String readingFont) {
     return Stack(
       children: [
-        ListView.builder(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          controller: _scrollController,
-          padding: EdgeInsets.fromLTRB(
-              24, 12, 24, MediaQuery.of(context).padding.bottom + 80),
+        GestureDetector(
+          onScaleStart: (details) {
+            _baseFontSize = widget.fontSize;
+          },
+          onScaleUpdate: (details) {
+            if (details.pointerCount > 1) {
+              final newSize = (_baseFontSize * details.scale).clamp(12.0, 96.0);
+              widget.onFontSizeChanged?.call(newSize);
+            }
+          },
+          child: ListView.builder(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            controller: _scrollController,
+            padding: EdgeInsets.fromLTRB(
+                24, 12, 24, MediaQuery.of(context).padding.bottom + 80),
           itemCount: widget.verses.length,
           itemBuilder: (context, index) {
             final v = widget.verses[index];
@@ -521,6 +536,7 @@ class _BibleReadingViewState extends State<BibleReadingView> {
             );
           },
         ),
+        ),
         if (widget.verses.length > 30)
           Positioned(
             right: 16,
@@ -592,14 +608,15 @@ class _BibleReadingViewState extends State<BibleReadingView> {
             dense: true,
           ),
         ),
-        const PopupMenuItem(
-          value: 'navigate',
-          child: ListTile(
-            leading: Icon(Icons.open_in_new, size: 18),
-            title: Text('Navigate to Verse', style: TextStyle(fontSize: 13)),
-            dense: true,
+        if (kIsWeb || !Platform.isAndroid)
+          const PopupMenuItem(
+            value: 'navigate',
+            child: ListTile(
+              leading: Icon(Icons.open_in_new, size: 18),
+              title: Text('Navigate to Verse', style: TextStyle(fontSize: 13)),
+              dense: true,
+            ),
           ),
-        ),
         PopupMenuItem(
           value: 'bookmark',
           child: ListTile(
@@ -690,14 +707,15 @@ class BibleVersePopupMenu extends StatelessWidget {
             dense: true,
           ),
         ),
-        PopupMenuItem(
-          value: 'navigate',
-          child: const ListTile(
-            leading: Icon(Icons.open_in_new, size: 18),
-            title: Text('Navigate to Verse', style: TextStyle(fontSize: 13)),
-            dense: true,
+        if (kIsWeb || !Platform.isAndroid)
+          PopupMenuItem(
+            value: 'navigate',
+            child: const ListTile(
+              leading: Icon(Icons.open_in_new, size: 18),
+              title: Text('Navigate to Verse', style: TextStyle(fontSize: 13)),
+              dense: true,
+            ),
           ),
-        ),
         PopupMenuItem(
           value: 'bookmark',
           child: ListTile(

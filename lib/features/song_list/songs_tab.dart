@@ -107,152 +107,168 @@ class SongsTab extends ConsumerWidget {
               children: [
                 Expanded(
                   flex: 3,
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                onChanged: listNotifier.setQuery,
-                                decoration: InputDecoration(
-                                  hintText: 'Search title, number, or lyrics...',
-                                  hintStyle: TextStyle(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant
-                                        .withValues(alpha: 0.6),
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.search,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  ),
-                                  suffixIcon: listState.query.isNotEmpty
-                                      ? IconButton(
-                                          icon: const Icon(Icons.clear),
-                                          onPressed: () => listNotifier.setQuery(''),
-                                        )
-                                      : null,
-                                  filled: true,
-                                  fillColor: Theme.of(context)
-                                      .colorScheme
-                                      .surfaceContainerHighest
-                                      .withValues(alpha: 0.3),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 14,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(28),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(28),
-                                    borderSide: BorderSide(
-                                      color: Theme.of(context)
+                  child: NestedScrollView(
+                    headerSliverBuilder: (context, innerBoxIsScrolled) {
+                      return [
+                        SliverAppBar(
+                          floating: true,
+                          snap: true,
+                          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                          elevation: 0,
+                          automaticallyImplyLeading: false,
+                          titleSpacing: 0,
+                          toolbarHeight: 80,
+                          title: Padding(
+                            padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    onChanged: listNotifier.setQuery,
+                                    decoration: InputDecoration(
+                                      hintText: 'Search title, number, or lyrics...',
+                                      hintStyle: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant
+                                            .withValues(alpha: 0.6),
+                                      ),
+                                      prefixIcon: Icon(
+                                        Icons.search,
+                                        color: Theme.of(context).colorScheme.primary,
+                                      ),
+                                      suffixIcon: listState.query.isNotEmpty
+                                          ? IconButton(
+                                              icon: const Icon(Icons.clear),
+                                              onPressed: () => listNotifier.setQuery(''),
+                                            )
+                                          : null,
+                                      filled: true,
+                                      fillColor: Theme.of(context)
                                           .colorScheme
-                                          .outlineVariant
-                                          .withValues(alpha: 0.4),
-                                      width: 1,
+                                          .surfaceContainerHighest
+                                          .withValues(alpha: 0.3),
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 14,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(28),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(28),
+                                        borderSide: BorderSide(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .outlineVariant
+                                              .withValues(alpha: 0.4),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(28),
+                                        borderSide: BorderSide(
+                                          color: Theme.of(context).colorScheme.primary,
+                                          width: 1.5,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(28),
-                                    borderSide: BorderSide(
-                                      color: Theme.of(context).colorScheme.primary,
-                                      width: 1.5,
+                                ),
+                                const SizedBox(width: 8),
+                                PopupMenuButton<SongSortMode>(
+                                  icon: const Icon(Icons.sort),
+                                  tooltip: 'Sort By',
+                                  onSelected: listNotifier.setSortMode,
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(
+                                      value: SongSortMode.byNumber,
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.format_list_numbered),
+                                          SizedBox(width: 8),
+                                          Text('Number'),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            PopupMenuButton<SongSortMode>(
-                              icon: const Icon(Icons.sort),
-                              tooltip: 'Sort By',
-                              onSelected: listNotifier.setSortMode,
-                              itemBuilder: (context) => [
-                                const PopupMenuItem(
-                                  value: SongSortMode.byNumber,
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.format_list_numbered),
-                                      SizedBox(width: 8),
-                                      Text('Number'),
-                                    ],
-                                  ),
-                                ),
-                                const PopupMenuItem(
-                                  value: SongSortMode.byTitle,
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.sort_by_alpha),
-                                      SizedBox(width: 8),
-                                      Text('Alphabetical'),
-                                    ],
-                                  ),
-                                ),
-                                const PopupMenuItem(
-                                  value: SongSortMode.byKey,
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.music_note),
-                                      SizedBox(width: 8),
-                                      Text('By Key'),
-                                    ],
-                                  ),
+                                    const PopupMenuItem(
+                                      value: SongSortMode.byTitle,
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.sort_by_alpha),
+                                          SizedBox(width: 8),
+                                          Text('Alphabetical'),
+                                        ],
+                                      ),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: SongSortMode.byKey,
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.music_note),
+                                          SizedBox(width: 8),
+                                          Text('By Key'),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
-                      // Source/Songbook filter chips
-                      if (listState.sourcePaths.length > 1)
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16.0,
-                            vertical: 4.0,
                           ),
-                          child: Row(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(right: 8.0),
-                                child: Icon(
-                                  Icons.library_books_outlined,
-                                  size: 14,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant
-                                      .withValues(alpha: 0.6),
-                                ),
-                              ),
-                              _buildSourceChip(
-                                context,
-                                label: 'All Books',
-                                selected: listState.selectedSourcePath == null,
-                                onSelected: () => listNotifier.selectSource(null),
-                              ),
-                              ...listState.sourcePaths.map(
-                                (source) => Padding(
-                                  padding: const EdgeInsets.only(left: 8.0),
-                                  child: _buildSourceChip(
-                                    context,
-                                    label: _getSourceDisplayName(source.path),
-                                    subtitle: '${source.count}',
-                                    selected: listState.selectedSourcePath == source.path,
-                                    onSelected: () => listNotifier.selectSource(source.path),
+                          bottom: listState.sourcePaths.length > 1
+                              ? PreferredSize(
+                                  preferredSize: const Size.fromHeight(48),
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16.0,
+                                      vertical: 4.0,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.only(right: 8.0),
+                                          child: Icon(
+                                            Icons.library_books_outlined,
+                                            size: 14,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurfaceVariant
+                                                .withValues(alpha: 0.6),
+                                          ),
+                                        ),
+                                        _buildSourceChip(
+                                          context,
+                                          label: 'All Books',
+                                          selected: listState.selectedSourcePath == null,
+                                          onSelected: () => listNotifier.selectSource(null),
+                                        ),
+                                        ...listState.sourcePaths.map(
+                                          (source) => Padding(
+                                            padding: const EdgeInsets.only(left: 8.0),
+                                            child: _buildSourceChip(
+                                              context,
+                                              label: _getSourceDisplayName(source.path),
+                                              subtitle: '${source.count}',
+                                              selected: listState.selectedSourcePath == source.path,
+                                              onSelected: () => listNotifier.selectSource(source.path),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
+                                )
+                              : const PreferredSize(
+                                  preferredSize: Size.fromHeight(8),
+                                  child: SizedBox(height: 8),
                                 ),
-                              ),
-                            ],
-                          ),
                         ),
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: listState.isLoading
+                      ];
+                    },
+                    body: listState.isLoading
                             ? const Center(child: CircularProgressIndicator())
                             : listState.songs.isEmpty
                             ? Center(
@@ -323,8 +339,6 @@ class SongsTab extends ConsumerWidget {
                                   );
                                 },
                               ),
-                      ),
-                    ],
                   ),
                 ),
                 if (isLargeScreen) ...[

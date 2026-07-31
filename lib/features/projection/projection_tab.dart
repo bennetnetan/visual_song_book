@@ -1381,6 +1381,31 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
           _searchController.closeView(null);
         },
       ),
+      viewOnSubmitted: (value) {
+        final searchState = ref.read(projectionSearchProvider);
+        if (searchState.isBibleMode) {
+          final results = [
+            if (searchState.exactMatch != null) searchState.exactMatch!,
+            ...searchState.bibleResults,
+          ];
+          if (results.isNotEmpty) {
+            final v = results.first;
+            widget.notifier.projectVerse(
+              v.bookId, v.chapter, v.verse, v.bookName ?? '',
+            );
+            ref.read(setRepositoryProvider).recordBibleProjection(v.reference, v.text);
+            ref.read(projectionSearchProvider.notifier).clear();
+            _searchController.closeView(null);
+          }
+        } else {
+          final songs = searchState.songResults;
+          if (songs.isNotEmpty) {
+            widget.notifier.setSong(songs.first);
+            ref.read(projectionSearchProvider.notifier).clear();
+            _searchController.closeView(null);
+          }
+        }
+      },
       viewTrailing: [
         Padding(
           padding: const EdgeInsets.only(right: 8.0),

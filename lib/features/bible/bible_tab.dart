@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,6 +26,7 @@ class BibleTab extends ConsumerStatefulWidget {
 class _BibleTabState extends ConsumerState<BibleTab> {
   final _searchFocusNode = FocusNode();
   final _searchController = TextEditingController();
+  bool _isSearchExpanded = false;
 
   @override
   void dispose() {
@@ -41,6 +44,10 @@ class _BibleTabState extends ConsumerState<BibleTab> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    final isReading = state.selectedBookId != null && state.query.isEmpty;
+
     return KeyboardListener(
       focusNode: FocusNode(),
       onKeyEvent: (event) {
@@ -48,6 +55,7 @@ class _BibleTabState extends ConsumerState<BibleTab> {
         final ctrl = HardwareKeyboard.instance.isControlPressed ||
             HardwareKeyboard.instance.isMetaPressed;
         if (ctrl && event.logicalKey == LogicalKeyboardKey.keyF) {
+          setState(() => _isSearchExpanded = true);
           _searchFocusNode.requestFocus();
         }
       },
@@ -55,20 +63,37 @@ class _BibleTabState extends ConsumerState<BibleTab> {
         children: [
           Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                BibleSearchBar(
-                  query: state.query,
-                  controller: _searchController,
-                  focusNode: _searchFocusNode,
-                  onChanged: notifier.search,
-                  recentSearches: state.recentSearches,
-                  onClearRecent: notifier.clearRecentSearches,
-                  onSuggestionTap: (q) {
-                    _searchController.text = q;
-                    notifier.search(q);
-                    _searchFocusNode.unfocus();
-                  },
-                ),
+                if (isMobile && isLandscape && isReading && !_isSearchExpanded)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: IconButton(
+                        icon: const Icon(Icons.search),
+                        onPressed: () {
+                          setState(() => _isSearchExpanded = true);
+                          _searchFocusNode.requestFocus();
+                        },
+                        tooltip: 'Search Bible',
+                      ),
+                    ),
+                  )
+                else
+                  BibleSearchBar(
+                    query: state.query,
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    onChanged: notifier.search,
+                    recentSearches: state.recentSearches,
+                    onClearRecent: notifier.clearRecentSearches,
+                    onSuggestionTap: (q) {
+                      _searchController.text = q;
+                      notifier.search(q);
+                      _searchFocusNode.unfocus();
+                    },
+                  ),
                 if (state.query.isEmpty)
                   BibleSearchSuggestionSection(
                     state: state,
@@ -90,6 +115,7 @@ class _BibleTabState extends ConsumerState<BibleTab> {
                               notifier.clearSearch();
                               _searchController.clear();
                               FocusManager.instance.primaryFocus?.unfocus();
+                              setState(() => _isSearchExpanded = false);
                             }
                           },
                           onProject: (v) => _projectVerse(v),
@@ -98,6 +124,7 @@ class _BibleTabState extends ConsumerState<BibleTab> {
                             notifier.clearSearch();
                             _searchController.clear();
                             FocusManager.instance.primaryFocus?.unfocus();
+                            setState(() => _isSearchExpanded = false);
                           },
                           onBookmark: (v) => notifier.toggleBookmark(v),
                           bookmarkedVerseIds: state.bookmarkedVerseIds,
@@ -148,6 +175,7 @@ class _BibleTabState extends ConsumerState<BibleTab> {
                               isLoadingVerses: state.isLoadingVerses,
                               isLargeScreen: widget.isLargeScreen,
                               onShowCrossRefs: _showMobileCrossRefs,
+                              onFontSizeChanged: notifier.setBibleFontSize,
                             ),
                 ),
               ],

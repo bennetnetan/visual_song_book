@@ -58,6 +58,12 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     // On Mobile/Web, hide the status/navigation bar for a fully immersive experience
     if (kIsWeb || (!kIsWeb && (Platform.isAndroid || Platform.isIOS))) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+        SystemChrome.setPreferredOrientations([
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight,
+        ]);
+      }
     }
 
     if (!kIsWeb &&
@@ -252,6 +258,12 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     _fadeController.dispose();
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
     }
     // Restore window style if we were in borderless fullscreen
     if (_originalWindowStyle != 0) {
@@ -549,9 +561,8 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                   ),
                 ),
 
-              // Mobile-only: always-visible bottom bar with font size controls
-              // and a slide-count chip. Keeps the same translucent aesthetic
-              // but at a fixed opacity that doesn't require hover.
+              // Mobile-only: always-visible bottom bar with a slide-count chip.
+              // Font controls removed in favor of pinch-to-zoom.
               if (_isMobile && !_isSecondaryWindow && state.slides.isNotEmpty)
                 Positioned(
                   bottom: 0,
@@ -564,34 +575,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Font − button
-                          _FontSizeButton(
-                            icon: Icons.text_decrease,
-                            tooltip: 'Smaller font',
-                            onPressed: state.fontSize > 16
-                                ? () => notifier.setFontSize(state.fontSize - 4)
-                                : null,
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: Text(
-                              '${state.fontSize.toInt()}pt',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          // Font + button
-                          _FontSizeButton(
-                            icon: Icons.text_increase,
-                            tooltip: 'Larger font',
-                            onPressed: state.fontSize < 96
-                                ? () => notifier.setFontSize(state.fontSize + 4)
-                                : null,
-                          ),
-                          const Spacer(),
                           // Slide position indicator  e.g. "3 / 12"
                           Text(
                             '${state.currentSlideIndex + 1} / ${state.slides.length}',
