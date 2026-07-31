@@ -619,7 +619,7 @@ class AboutCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Chip(
                   label: Text(
-                    'v1.7.0',
+                    'v1.7.1',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -643,14 +643,16 @@ class AboutCard extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
-          Text(
-            'Made by BenjaNetan',
-            style: GoogleFonts.plusJakartaSans(
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+          Center(
+            child: Text(
+              'Made by BenjaNetan',
+              style: GoogleFonts.plusJakartaSans(
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
         ],
