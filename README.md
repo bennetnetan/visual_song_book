@@ -94,7 +94,7 @@ flutter run -d linux
 
 ## Version
 
-Current: **v1.7.0** — see About → Changelog in the app for full history.
+Current: **v1.7.1** — see About → Changelog in the app for full history.
 
 ---
 
