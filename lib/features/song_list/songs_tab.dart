@@ -124,8 +124,7 @@ class _SongsTabState extends ConsumerState<SongsTab> {
                     headerSliverBuilder: (context, innerBoxIsScrolled) {
                       return [
                         SliverAppBar(
-                          floating: true,
-                          snap: true,
+                          pinned: true,
                           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                           elevation: 0,
                           automaticallyImplyLeading: false,

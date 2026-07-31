@@ -65,8 +65,7 @@ class _BibleTabState extends ConsumerState<BibleTab> {
               headerSliverBuilder: (context, innerBoxIsScrolled) {
                 return [
                   SliverAppBar(
-                    floating: true,
-                    snap: true,
+                    pinned: true,
                     backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                     elevation: 0,
                     automaticallyImplyLeading: false,

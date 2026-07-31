@@ -180,27 +180,48 @@ class _BibleReadingViewState extends State<BibleReadingView> {
     if (v == null) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) return;
+      if (!mounted) return;
 
       final currentContext = _activeVerseKey.currentContext;
-      if (currentContext != null) {
+      if (currentContext != null && _scrollController.hasClients) {
         Scrollable.ensureVisible(
           currentContext,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
+          alignment: 0.3,
         );
-      } else {
-        final index = widget.verses.indexWhere((verse) => verse.id == v.id);
-        if (index < 0) return;
-        const itemHeight = 60.0;
+        return;
+      }
+
+      if (!_scrollController.hasClients) return;
+      final index = widget.verses.indexWhere((verse) => verse.id == v.id);
+      if (index < 0) return;
+
+      Future.delayed(const Duration(milliseconds: 80), () {
+        if (!mounted || !_scrollController.hasClients) return;
+        final ctx = _activeVerseKey.currentContext;
+        if (ctx != null) {
+          Scrollable.ensureVisible(
+            ctx,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            alignment: 0.3,
+          );
+          return;
+        }
         final viewportHeight = _scrollController.position.viewportDimension;
-        final targetOffset = (index * itemHeight) - (viewportHeight * 0.3);
+        final headerHeight = kToolbarHeight +
+            MediaQuery.of(context).padding.top +
+            (widget.selectedChapter != null ? 52.0 : 0.0) +
+            (widget.selectionMode ? 48.0 : 0.0) +
+            24.0;
+        final targetOffset = (index * 60.0) - (viewportHeight * 0.3) + headerHeight;
         _scrollController.animateTo(
           targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         );
-      }
+      });
     });
   }
 

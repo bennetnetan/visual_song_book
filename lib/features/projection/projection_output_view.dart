@@ -309,6 +309,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
       onEnter: (_) => setState(() => _isHovering = true),
       onExit: (_) => setState(() => _isHovering = false),
       child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
         // Tap left half = prev, tap right half = next (for mobile presenters)
         onTapUp: (details) {
           _focusNode.requestFocus();
