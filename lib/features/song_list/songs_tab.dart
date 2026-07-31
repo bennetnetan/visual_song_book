@@ -113,15 +113,14 @@ class _SongsTabState extends ConsumerState<SongsTab> {
         ? listState.songs.where((s) => s.id == selectedSongId).firstOrNull
         : null;
 
-    return Scaffold(
-      body: Column(
-        children: [
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: NestedScrollView(
+    return Column(
+      children: [
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: NestedScrollView(
                     headerSliverBuilder: (context, innerBoxIsScrolled) {
                       return [
                         SliverAppBar(
@@ -419,7 +418,6 @@ class _SongsTabState extends ConsumerState<SongsTab> {
             ),
           ),
         ],
-      ),
     );
   }
 }

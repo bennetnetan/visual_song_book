@@ -92,9 +92,6 @@ class MainDashboardPage extends ConsumerWidget {
                   ),
                 ],
               ),
-              actions: [
-                if (activeTab == 0) ...[const AddMenuButton(isExpanded: false), const SizedBox(width: 8)],
-              ],
             )
           : null,
       body: Row(

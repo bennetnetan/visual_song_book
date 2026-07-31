@@ -25,12 +25,14 @@ class BibleTab extends ConsumerStatefulWidget {
 class _BibleTabState extends ConsumerState<BibleTab> {
   final _searchFocusNode = FocusNode();
   final _searchController = TextEditingController();
+  final _keyboardFocusNode = FocusNode();
   bool _isSearchExpanded = false;
 
   @override
   void dispose() {
     _searchFocusNode.dispose();
     _searchController.dispose();
+    _keyboardFocusNode.dispose();
     super.dispose();
   }
 
@@ -46,7 +48,7 @@ class _BibleTabState extends ConsumerState<BibleTab> {
 
 
     return KeyboardListener(
-      focusNode: FocusNode(),
+      focusNode: _keyboardFocusNode,
       onKeyEvent: (event) {
         if (event is! KeyDownEvent && event is! KeyRepeatEvent) return;
         final ctrl = HardwareKeyboard.instance.isControlPressed ||
