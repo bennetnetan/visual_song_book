@@ -130,132 +130,133 @@ class _SongsTabState extends ConsumerState<SongsTab> {
                           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                           elevation: 0,
                           automaticallyImplyLeading: false,
-                          titleSpacing: 0,
-                          toolbarHeight: 80,
-                          title: Padding(
-                            padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
-                            child: _isSearching
-                                ? Row(
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.arrow_back),
-                                        onPressed: () {
-                                          setState(() => _isSearching = false);
-                                          ref.read(songListControllerProvider.notifier).setQuery('');
-                                        },
+                          leading: _isSearching
+                              ? IconButton(
+                                  icon: const Icon(Icons.arrow_back),
+                                  onPressed: () {
+                                    setState(() => _isSearching = false);
+                                    ref.read(songListControllerProvider.notifier).setQuery('');
+                                    FocusManager.instance.primaryFocus?.unfocus();
+                                  },
+                                )
+                              : null,
+                          titleSpacing: _isSearching ? 0 : 16,
+                          title: _isSearching
+                              ? Padding(
+                                  padding: const EdgeInsets.only(right: 16.0),
+                                  child: TextField(
+                                    focusNode: _searchFocusNode,
+                                    onChanged: listNotifier.setQuery,
+                                    decoration: InputDecoration(
+                                      hintText: 'Search title, number, or lyrics...',
+                                      hintStyle: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant
+                                            .withValues(alpha: 0.6),
                                       ),
-                                      Expanded(
-                                        child: TextField(
-                                          focusNode: _searchFocusNode,
-                                          onChanged: listNotifier.setQuery,
-                                          decoration: InputDecoration(
-                                            hintText: 'Search title, number, or lyrics...',
-                                            hintStyle: TextStyle(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurfaceVariant
-                                                  .withValues(alpha: 0.6),
-                                            ),
-                                            suffixIcon: listState.query.isNotEmpty
-                                                ? IconButton(
-                                                    icon: const Icon(Icons.clear),
-                                                    onPressed: () => listNotifier.setQuery(''),
-                                                  )
-                                                : null,
-                                            filled: true,
-                                            fillColor: Theme.of(context)
-                                                .colorScheme
-                                                .surfaceContainerHighest
-                                                .withValues(alpha: 0.3),
-                                            contentPadding: const EdgeInsets.symmetric(
-                                              horizontal: 20,
-                                              vertical: 14,
-                                            ),
-                                            border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(28),
-                                              borderSide: BorderSide.none,
-                                            ),
-                                            enabledBorder: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(28),
-                                              borderSide: BorderSide(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .outlineVariant
-                                                    .withValues(alpha: 0.4),
-                                                width: 1,
-                                              ),
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(28),
-                                              borderSide: BorderSide(
-                                                color: Theme.of(context).colorScheme.primary,
-                                                width: 1.5,
-                                              ),
-                                            ),
-                                          ),
+                                      suffixIcon: listState.query.isNotEmpty
+                                          ? IconButton(
+                                              icon: const Icon(Icons.clear),
+                                              onPressed: () => listNotifier.setQuery(''),
+                                            )
+                                          : null,
+                                      filled: true,
+                                      fillColor: Theme.of(context)
+                                          .colorScheme
+                                          .surfaceContainerHighest
+                                          .withValues(alpha: 0.3),
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 10,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(28),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : Row(
+                                  children: [
+                                    Hero(
+                                      tag: 'app_logo_songs',
+                                      child: Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context).colorScheme.primaryContainer,
+                                          borderRadius: const BorderRadius.all(Radius.circular(10)),
+                                        ),
+                                        child: Image.asset(
+                                          'assets/images/logo.png',
+                                          width: 24,
+                                          height: 24,
                                         ),
                                       ),
-                                    ],
-                                  )
-                                : Row(
-                                    children: [
-                                      Text(
-                                        'Songs',
-                                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              color: Theme.of(context).colorScheme.primary,
-                                            ),
-                                      ),
-                                      const Spacer(),
-                                      IconButton(
-                                        icon: const Icon(Icons.search),
-                                        tooltip: 'Search Songs',
-                                        onPressed: () {
-                                          setState(() => _isSearching = true);
-                                          _searchFocusNode.requestFocus();
-                                        },
-                                      ),
-                                const SizedBox(width: 8),
-                                PopupMenuButton<SongSortMode>(
-                                  icon: const Icon(Icons.sort),
-                                  tooltip: 'Sort By',
-                                  onSelected: listNotifier.setSortMode,
-                                  itemBuilder: (context) => [
-                                    const PopupMenuItem(
-                                      value: SongSortMode.byNumber,
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.format_list_numbered),
-                                          SizedBox(width: 8),
-                                          Text('Number'),
-                                        ],
-                                      ),
                                     ),
-                                    const PopupMenuItem(
-                                      value: SongSortMode.byTitle,
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.sort_by_alpha),
-                                          SizedBox(width: 8),
-                                          Text('Alphabetical'),
-                                        ],
-                                      ),
-                                    ),
-                                    const PopupMenuItem(
-                                      value: SongSortMode.byKey,
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.music_note),
-                                          SizedBox(width: 8),
-                                          Text('By Key'),
-                                        ],
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'Song Book',
+                                      style: TextStyle(
+                                        fontFamily: 'Outfit',
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 20,
+                                        letterSpacing: 0.5,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
-                          ),
+                          actions: _isSearching
+                              ? []
+                              : [
+                                  IconButton(
+                                    icon: const Icon(Icons.search),
+                                    tooltip: 'Search Songs',
+                                    onPressed: () {
+                                      setState(() => _isSearching = true);
+                                      _searchFocusNode.requestFocus();
+                                    },
+                                  ),
+                                  PopupMenuButton<SongSortMode>(
+                                    icon: const Icon(Icons.sort),
+                                    tooltip: 'Sort By',
+                                    onSelected: listNotifier.setSortMode,
+                                    itemBuilder: (context) => [
+                                      const PopupMenuItem(
+                                        value: SongSortMode.byNumber,
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.format_list_numbered),
+                                            SizedBox(width: 8),
+                                            Text('Number'),
+                                          ],
+                                        ),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: SongSortMode.byTitle,
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.sort_by_alpha),
+                                            SizedBox(width: 8),
+                                            Text('Alphabetical'),
+                                          ],
+                                        ),
+                                      ),
+                                      const PopupMenuItem(
+                                        value: SongSortMode.byKey,
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.music_note),
+                                            SizedBox(width: 8),
+                                            Text('By Key'),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const AddMenuButton(isExpanded: false),
+                                  const SizedBox(width: 8),
+                                ],
                           bottom: listState.sourcePaths.length > 1
                               ? PreferredSize(
                                   preferredSize: const Size.fromHeight(48),

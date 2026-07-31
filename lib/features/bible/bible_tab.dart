@@ -1,6 +1,5 @@
 import 'dart:async';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -69,60 +68,77 @@ class _BibleTabState extends ConsumerState<BibleTab> {
                     backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                     elevation: 0,
                     automaticallyImplyLeading: false,
-                    titleSpacing: 0,
-                    toolbarHeight: 80,
-                    title: Padding(
-                      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
-                      child: _isSearchExpanded
-                          ? Row(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.arrow_back),
-                                  onPressed: () {
-                                    setState(() => _isSearchExpanded = false);
-                                    notifier.clearSearch();
-                                    _searchController.clear();
-                                    FocusManager.instance.primaryFocus?.unfocus();
-                                  },
-                                ),
-                                Expanded(
-                                  child: BibleSearchBar(
-                                    query: state.query,
-                                    controller: _searchController,
-                                    focusNode: _searchFocusNode,
-                                    onChanged: notifier.search,
-                                    recentSearches: state.recentSearches,
-                                    onClearRecent: notifier.clearRecentSearches,
-                                    onSuggestionTap: (q) {
-                                      _searchController.text = q;
-                                      notifier.search(q);
-                                      _searchFocusNode.unfocus();
-                                    },
+                    leading: _isSearchExpanded
+                        ? IconButton(
+                            icon: const Icon(Icons.arrow_back),
+                            onPressed: () {
+                              setState(() => _isSearchExpanded = false);
+                              notifier.clearSearch();
+                              _searchController.clear();
+                              FocusManager.instance.primaryFocus?.unfocus();
+                            },
+                          )
+                        : null,
+                    titleSpacing: _isSearchExpanded ? 0 : 16,
+                    title: _isSearchExpanded
+                        ? Padding(
+                            padding: const EdgeInsets.only(right: 16.0),
+                            child: BibleSearchBar(
+                              query: state.query,
+                              controller: _searchController,
+                              focusNode: _searchFocusNode,
+                              onChanged: notifier.search,
+                              recentSearches: state.recentSearches,
+                              onClearRecent: notifier.clearRecentSearches,
+                              onSuggestionTap: (q) {
+                                _searchController.text = q;
+                                notifier.search(q);
+                                _searchFocusNode.unfocus();
+                              },
+                            ),
+                          )
+                        : Row(
+                            children: [
+                              Hero(
+                                tag: 'app_logo_bible',
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.primaryContainer,
+                                    borderRadius: const BorderRadius.all(Radius.circular(10)),
+                                  ),
+                                  child: Image.asset(
+                                    'assets/images/logo.png',
+                                    width: 24,
+                                    height: 24,
                                   ),
                                 ),
-                              ],
-                            )
-                          : Row(
-                              children: [
-                                Text(
-                                  'Bible',
-                                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).colorScheme.primary,
-                                      ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'Bible',
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                  letterSpacing: 0.5,
                                 ),
-                                const Spacer(),
-                                IconButton(
-                                  icon: const Icon(Icons.search),
-                                  tooltip: 'Search Bible',
-                                  onPressed: () {
-                                    setState(() => _isSearchExpanded = true);
-                                    _searchFocusNode.requestFocus();
-                                  },
-                                ),
-                              ],
+                              ),
+                            ],
+                          ),
+                    actions: _isSearchExpanded
+                        ? []
+                        : [
+                            IconButton(
+                              icon: const Icon(Icons.search),
+                              tooltip: 'Search Bible',
+                              onPressed: () {
+                                setState(() => _isSearchExpanded = true);
+                                _searchFocusNode.requestFocus();
+                              },
                             ),
-                    ),
+                            const SizedBox(width: 16),
+                          ],
                   ),
                 ];
               },
