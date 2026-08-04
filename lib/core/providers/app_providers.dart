@@ -63,6 +63,11 @@ final importersProvider = Provider<List<SongbookImporter>>((ref) {
 // Provider to identify if the current process is the secondary projection window
 final isProjectionWindowProvider = Provider<bool>((ref) => false);
 
+// Projection window placement mode passed from the main window at creation time:
+// 'extended' (default) = place on a second display and go fullscreen;
+// 'single' = normal decorated window on the primary display, no auto-move.
+final projectionWindowModeProvider = Provider<String>((ref) => 'extended');
+
 // Onboarding state — true when the user has completed the first-launch wizard
 final hasCompletedOnboardingProvider = FutureProvider<bool>((ref) async {
   final prefs = await SharedPreferences.getInstance();

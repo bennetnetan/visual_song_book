@@ -31,16 +31,23 @@ void main(List<String> args) async {
   getAppStoragePath(); // fire-and-forget — result is cached for all subsequent calls
 
   if (args.isNotEmpty &&
-      (args.first == 'multi_window' || args.first == 'Projection Output')) {
+      (args.first == 'multi_window' ||
+          args.first.startsWith('Projection Output'))) {
     // Secondary window path (desktop_multi_window).
     // NOTE: window_manager and screen_retriever plugins are NOT registered in
     // desktop_multi_window secondary engines. Any calls to them will fail
     // silently. The secondary window handles its own fullscreen via
     // ProjectionOutputView._goFullscreenOnBestDisplay() using Win32 APIs.
+    // The window placement mode ('extended' or 'single') is passed in the
+    // arguments so the secondary engine knows whether to auto-fullscreen.
+    final modeArg = args.first.contains(':')
+        ? args.first.substring(args.first.indexOf(':') + 1)
+        : 'extended';
     runApp(
       ProviderScope(
         overrides: [
           isProjectionWindowProvider.overrideWithValue(true),
+          projectionWindowModeProvider.overrideWithValue(modeArg),
         ],
         child: const MyApp(isProjectionWindow: true),
       ),

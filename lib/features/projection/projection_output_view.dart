@@ -78,6 +78,11 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS) &&
         ref.read(isProjectionWindowProvider);
 
+    // 'single' mode opens a normal decorated window on the primary display —
+    // no auto-fullscreen, no placement, no decoration stripping.
+    final isExtendedMode =
+        ref.read(projectionWindowModeProvider) != 'single';
+
     if (isProjectionEngine) {
       _setupSecondaryWindowChannel();
 
@@ -85,7 +90,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
       // the first frame) so the title bar flash is minimised. The call is
       // fire-and-forget here; _setupSecondaryWindowChannel will repeat it
       // once the window handle is reliably available.
-      if (Platform.isWindows) {
+      if (Platform.isWindows && isExtendedMode) {
         enterBorderlessFullscreenCurrentWindow().then((style) {
           if (style != 0 && mounted) {
             _originalWindowStyle = style;
@@ -97,7 +102,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
       // On Windows, re-assert borderless fullscreen whenever the projection
       // window regains focus. This handles accidental drags, ALT+TAB
       // sequences, and display-configuration changes that drop fullscreen.
-      if (Platform.isWindows) {
+      if (Platform.isWindows && isExtendedMode) {
         _focusListener = () {
           if (_focusNode.hasFocus && _originalWindowStyle != 0) {
             // Re-apply borderless fullscreen style + position.
@@ -122,10 +127,13 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     // Request fullscreen + move to screen 2 once the window is ready.
     // Defer with Timer.run to avoid calling Win32 SetWindowPos inside
     // Flutter's frame lifecycle, which causes scheduler reentrancy errors.
+    // Skipped in 'single' mode (normal decorated window on the primary display).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Timer.run(() {
         if (!mounted) return;
-        _goFullscreenOnBestDisplay();
+        if (ref.read(projectionWindowModeProvider) != 'single') {
+          _goFullscreenOnBestDisplay();
+        }
       });
     });
 
@@ -151,7 +159,10 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
       } else if (call.method == 'go_fullscreen') {
         // Only enter fullscreen if we haven't already — prevents double
         // fullscreen from both the init path and the controller's fallback IPC.
-        if (!_isGoingFullscreen && _originalWindowStyle == 0) {
+        // Skipped in 'single' mode.
+        if (!_isGoingFullscreen &&
+            _originalWindowStyle == 0 &&
+            ref.read(projectionWindowModeProvider) != 'single') {
           await _goFullscreenOnBestDisplay();
         }
       }

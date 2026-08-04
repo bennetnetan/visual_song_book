@@ -145,12 +145,16 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       final savedKeepAwake = _prefs?.getBool('projection_keep_awake') ?? true;
       final savedAutoChorus = _prefs?.getBool('projection_auto_chorus') ?? true;
       final savedMode = _prefs?.getString('projection_mode') ?? 'extended';
+      // 'duplicate' is not implemented yet — fall back to 'extended'.
+      final effectiveMode = (savedMode == 'single' || savedMode == 'extended')
+          ? savedMode
+          : 'extended';
 
       state = state.copyWith(
         fontSize: savedFontSize,
         keepAwake: savedKeepAwake,
         autoInsertChorus: savedAutoChorus,
-        projectionMode: savedMode,
+        projectionMode: effectiveMode,
       );
 
       if (state.keepAwake) {
@@ -406,7 +410,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       // to find existing windows because it returns stale handles from
       // previous app sessions whose channels are unregistered.
       final window = await WindowController.create(
-        const WindowConfiguration(arguments: 'Projection Output'),
+        WindowConfiguration(
+          arguments: 'Projection Output:${state.projectionMode}',
+        ),
       );
       await window.show();
       _secondaryWindow = window;
@@ -438,6 +444,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
   /// so this method is only kept as a fallback re-trigger via IPC.
   Future<void> _placeOnSecondScreenAndFullscreen() async {
     if (_secondaryWindow == null) return;
+    // In 'single' mode the window stays a normal decorated window on the
+    // primary display — no auto-move and no fullscreen.
+    if (state.projectionMode == 'single') return;
     try {
       await _secondaryWindow!.invokeMethod('go_fullscreen', {});
       debugPrint('Sent go_fullscreen IPC to secondary window.');

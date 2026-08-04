@@ -431,6 +431,19 @@ class _ProjectionModeSelectorState extends ConsumerState<_ProjectionModeSelector
           ],
           selected: {_selectedMode},
           onSelectionChanged: (modes) async {
+            if (modes.first == 'duplicate') {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Duplicate projection is coming soon. '
+                      'Single and Extended are available now.',
+                    ),
+                  ),
+                );
+              return;
+            }
             setState(() => _selectedMode = modes.first);
             final prefs = await SharedPreferences.getInstance();
             await prefs.setString('projection_mode', modes.first);

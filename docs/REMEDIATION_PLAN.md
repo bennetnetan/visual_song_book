@@ -285,6 +285,8 @@ New `test/song_list_controller_test.dart` (2 tests). Analyze baseline unchanged 
 
 ## Phase 8 — Projection search load-more + `projectionMode` behavior (MAJOR #13 & #8)
 
+**Status:** ✅ DONE.
+
 1. `projection_tab.dart`: in the Bible results list, render a "Load more" button when
    `searchState.bibleResults.length < searchState.totalBibleCount`, calling the existing
    `loadMoreBible` (`projection_search_provider.dart:401`).
@@ -299,6 +301,20 @@ New `test/song_list_controller_test.dart` (2 tests). Analyze baseline unchanged 
 
 **Verify:** switching the setting in Appearance → Projection changes window placement;
 broad search query shows a working "Load more".
+
+**Decided:** implement `single` vs `extended`; gate `duplicate` as "coming soon". ✅
+
+**Done:** "Load more results" button appended to the Bible result list when
+`bibleResults.length < totalBibleCount`, wired to `loadMoreBible` (spinner while loading).
+`projectionMode` is now behavioral: the mode is passed to the secondary engine via the window
+arguments (`Projection Output:<mode>`), parsed in `main.dart` and exposed through a new
+`projectionWindowModeProvider`. The secondary window only auto-fullscreens / strips
+decorations in `extended` mode; `_placeOnSecondScreenAndFullscreen` is skipped in `single`
+mode (normal decorated window on the primary display). Unsupported/legacy `duplicate` values
+fall back to `extended` on load, and the settings + onboarding selectors reject `duplicate`
+with a "coming soon" snackbar. New `test/projection_search_test.dart` (2 tests). Analyze
+baseline unchanged (18), `flutter test` 36 pass. Runtime verify (window placement) pending a
+Linux/Windows desktop box.
 
 ---
 
@@ -380,6 +396,7 @@ Prioritize regression tests for the criticals:
 3. Application ID / org for all platforms — **P4c** ⏸️ DEFERRED 2026-08-04 (awaiting product owner)
 4. Category deletion: reassign songs or cascade-delete them? — **P7** ✅ DECIDED (reassign to
    Uncategorized, commit in Phase 7)
-5. `projectionMode` "duplicate": full mirroring or gated/deferred? — **P8**
+5. `projectionMode` "duplicate": full mirroring or gated/deferred? — **P8** ✅ DECIDED
+   (implement single vs extended, gate duplicate as "coming soon")
 6. License type (if any) — **P10**
 7. Font files for Plus Jakarta Sans / EB Garamond (bundling) — **P4b** ✅ DONE (commit `b60aba4`)

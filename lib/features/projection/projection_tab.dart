@@ -1712,12 +1712,37 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
       if (results.isEmpty) {
         list = const ListTile(title: Text('No results found'));
       } else {
+        final hasMore =
+            searchState.bibleResults.length < searchState.totalBibleCount;
+        final itemCount = hasMore ? results.length + 1 : results.length;
         list = ListView.builder(
           controller: _scrollController,
           shrinkWrap: true,
           physics: const ClampingScrollPhysics(),
-          itemCount: results.length,
+          itemCount: itemCount,
           itemBuilder: (context, index) {
+            if (index == results.length) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Center(
+                  child: TextButton.icon(
+                    onPressed: searchState.isLoading
+                        ? null
+                        : () => ref
+                            .read(projectionSearchProvider.notifier)
+                            .loadMoreBible(),
+                    icon: searchState.isLoading
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.expand_more),
+                    label: const Text('Load more results'),
+                  ),
+                ),
+              );
+            }
             final v = results[index];
             final isExact = v == searchState.exactMatch;
             final isSelected = index == _selectedIndex;

@@ -148,6 +148,19 @@ class ProjectionPreferencesCard extends ConsumerWidget {
               ],
               selected: {state.projectionMode},
               onSelectionChanged: (val) {
+                if (val.first == 'duplicate') {
+                  ScaffoldMessenger.of(context)
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Duplicate projection is coming soon. '
+                          'Single Screen and Extended are available now.',
+                        ),
+                      ),
+                    );
+                  return;
+                }
                 notifier.setProjectionMode(val.first);
               },
               showSelectedIcon: false,
