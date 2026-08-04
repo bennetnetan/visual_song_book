@@ -80,20 +80,24 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
         appBar: AppBar(
             title: const Text('Projection Controls'),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.open_in_new),
-                tooltip: 'Open Projector Output Window',
-                onPressed: () async {
-                  if (kIsWeb) {
-                    context.push('/projection');
-                  } else if (Platform.isWindows ||
-                      Platform.isLinux ||
-                      Platform.isMacOS) {
-                    await ref.read(projectionControllerProvider.notifier).openProjectorWindow();
-                  } else {
-                    context.push('/projection');
-                  }
-                },
+              Semantics(
+                label: 'Open Projector Output Window',
+                button: true,
+                child: IconButton(
+                  icon: const Icon(Icons.open_in_new),
+                  tooltip: 'Open Projector Output Window',
+                  onPressed: () async {
+                    if (kIsWeb) {
+                      context.push('/projection');
+                    } else if (Platform.isWindows ||
+                        Platform.isLinux ||
+                        Platform.isMacOS) {
+                      await ref.read(projectionControllerProvider.notifier).openProjectorWindow();
+                    } else {
+                      context.push('/projection');
+                    }
+                  },
+                ),
               ),
             ],
           ),
@@ -617,12 +621,16 @@ class _LivePreviewPanel extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.chevron_left, size: 18),
-                    onPressed: notifier.goToPrevChapter,
-                    tooltip: 'Previous Chapter',
-                    constraints: const BoxConstraints(),
-                    padding: EdgeInsets.zero,
+                  Semantics(
+                    label: 'Previous Chapter',
+                    button: true,
+                    child: IconButton(
+                      icon: const Icon(Icons.chevron_left, size: 18),
+                      onPressed: notifier.goToPrevChapter,
+                      tooltip: 'Previous Chapter',
+                      constraints: const BoxConstraints(),
+                      padding: EdgeInsets.zero,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -634,12 +642,16 @@ class _LivePreviewPanel extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.chevron_right, size: 18),
-                    onPressed: notifier.goToNextChapter,
-                    tooltip: 'Next Chapter',
-                    constraints: const BoxConstraints(),
-                    padding: EdgeInsets.zero,
+                  Semantics(
+                    label: 'Next Chapter',
+                    button: true,
+                    child: IconButton(
+                      icon: const Icon(Icons.chevron_right, size: 18),
+                      onPressed: notifier.goToNextChapter,
+                      tooltip: 'Next Chapter',
+                      constraints: const BoxConstraints(),
+                      padding: EdgeInsets.zero,
+                    ),
                   ),
                 ],
               ),
@@ -761,12 +773,16 @@ class _LivePreviewPanel extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.chevron_left, size: 20),
-                  onPressed: notifier.goToPrevChapter,
-                  tooltip: 'Previous Chapter',
-                  constraints: const BoxConstraints(),
-                  padding: EdgeInsets.zero,
+                Semantics(
+                  label: 'Previous Chapter',
+                  button: true,
+                  child: IconButton(
+                    icon: const Icon(Icons.chevron_left, size: 20),
+                    onPressed: notifier.goToPrevChapter,
+                    tooltip: 'Previous Chapter',
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                  ),
                 ),
                 Text(
                   'Ch. ${state.bibleChapter ?? ''}',
@@ -776,12 +792,16 @@ class _LivePreviewPanel extends StatelessWidget {
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.chevron_right, size: 20),
-                  onPressed: notifier.goToNextChapter,
-                  tooltip: 'Next Chapter',
-                  constraints: const BoxConstraints(),
-                  padding: EdgeInsets.zero,
+                Semantics(
+                  label: 'Next Chapter',
+                  button: true,
+                  child: IconButton(
+                    icon: const Icon(Icons.chevron_right, size: 20),
+                    onPressed: notifier.goToNextChapter,
+                    tooltip: 'Next Chapter',
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                  ),
                 ),
               ],
             ),
@@ -944,17 +964,21 @@ class _LivePreviewPanel extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.remove, size: 18),
-                  onPressed: state.fontSize > 16
-                      ? () {
-                          notifier.setFontSize(state.fontSize - 4);
-                          notifier.persistFontSize();
-                        }
-                      : null,
-                  tooltip: 'Decrease (${state.fontSize - 4})',
-                  constraints: const BoxConstraints(),
-                  padding: const EdgeInsets.all(4),
+                Semantics(
+                  label: 'Decrease Font Size',
+                  button: true,
+                  child: IconButton(
+                    icon: const Icon(Icons.remove, size: 18),
+                    onPressed: state.fontSize > 16
+                        ? () {
+                            notifier.setFontSize(state.fontSize - 4);
+                            notifier.persistFontSize();
+                          }
+                        : null,
+                    tooltip: 'Decrease (${state.fontSize - 4})',
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(4),
+                  ),
                 ),
                 SizedBox(
                   width: 48,
@@ -968,17 +992,21 @@ class _LivePreviewPanel extends StatelessWidget {
                     ),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.add, size: 18),
-                  onPressed: state.fontSize < 160
-                      ? () {
-                          notifier.setFontSize(state.fontSize + 4);
-                          notifier.persistFontSize();
-                        }
-                      : null,
-                  tooltip: 'Increase (${state.fontSize + 4})',
-                  constraints: const BoxConstraints(),
-                  padding: const EdgeInsets.all(4),
+                Semantics(
+                  label: 'Increase Font Size',
+                  button: true,
+                  child: IconButton(
+                    icon: const Icon(Icons.add, size: 18),
+                    onPressed: state.fontSize < 160
+                        ? () {
+                            notifier.setFontSize(state.fontSize + 4);
+                            notifier.persistFontSize();
+                          }
+                        : null,
+                    tooltip: 'Increase (${state.fontSize + 4})',
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(4),
+                  ),
                 ),
               ],
             ),
@@ -1382,12 +1410,16 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
           },
         );
       },
-      viewLeading: IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () {
-          ref.read(projectionSearchProvider.notifier).clear();
-          _searchController.closeView(null);
-        },
+      viewLeading: Semantics(
+        label: 'Back',
+        button: true,
+        child: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            ref.read(projectionSearchProvider.notifier).clear();
+            _searchController.closeView(null);
+          },
+        ),
       ),
       viewOnSubmitted: (value) {
         final searchState = ref.read(projectionSearchProvider);

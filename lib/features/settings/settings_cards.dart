@@ -785,9 +785,9 @@ class LinkedSongbooksCard extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: exists
                               ? (needsSync
-                                    ? Colors.orange.withValues(alpha: 0.1)
-                                    : Colors.green.withValues(alpha: 0.1))
-                              : Colors.red.withValues(alpha: 0.1),
+                                    ? theme.colorScheme.tertiary.withValues(alpha: 0.1)
+                                    : theme.colorScheme.primary.withValues(alpha: 0.1))
+                              : theme.colorScheme.error.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
@@ -798,8 +798,8 @@ class LinkedSongbooksCard extends ConsumerWidget {
                               : Icons.error_outline,
                           size: 20,
                           color: exists
-                              ? (needsSync ? Colors.orange : Colors.green)
-                              : Colors.red,
+                              ? (needsSync ? theme.colorScheme.tertiary : theme.colorScheme.primary)
+                              : theme.colorScheme.error,
                         ),
                       ),
                       title: Text(
@@ -849,11 +849,15 @@ class LinkedSongbooksCard extends ConsumerWidget {
                             ),
                         ],
                       ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.link_off, size: 20),
-                        color: theme.colorScheme.error,
-                        tooltip: 'Unlink',
-                        onPressed: () => _unlink(context, ref, book),
+                      trailing: Semantics(
+                        label: 'Unlink',
+                        button: true,
+                        child: IconButton(
+                          icon: const Icon(Icons.link_off, size: 20),
+                          color: theme.colorScheme.error,
+                          tooltip: 'Unlink',
+                          onPressed: () => _unlink(context, ref, book),
+                        ),
                       ),
                     ),
                   );

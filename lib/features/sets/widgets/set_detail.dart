@@ -388,12 +388,16 @@ class _SetDetailState extends ConsumerState<SetDetail> {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.edit_outlined, size: 16),
-          tooltip: 'Rename Set',
-          onPressed: () => _showRenameDialog(context),
-          constraints: const BoxConstraints(),
-          padding: const EdgeInsets.only(left: 8),
+        Semantics(
+          label: 'Rename Set',
+          button: true,
+          child: IconButton(
+            icon: const Icon(Icons.edit_outlined, size: 16),
+            tooltip: 'Rename Set',
+            onPressed: () => _showRenameDialog(context),
+            constraints: const BoxConstraints(),
+            padding: const EdgeInsets.only(left: 8),
+          ),
         ),
       ],
     );
@@ -640,13 +644,17 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                                 ],
                               )
                             : null,
-                        trailing: IconButton(
-                          icon: Icon(
-                            Icons.remove_circle_outline,
-                            size: 18,
-                            color: theme.colorScheme.error.withValues(alpha: 0.7),
+                        trailing: Semantics(
+                          label: 'Remove Song',
+                          button: true,
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.remove_circle_outline,
+                              size: 18,
+                              color: theme.colorScheme.error.withValues(alpha: 0.7),
+                            ),
+                            onPressed: () => widget.onRemoveSong(item.songId),
                           ),
-                          onPressed: () => widget.onRemoveSong(item.songId),
                         ),
                       ),
                     );
@@ -684,14 +692,18 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                 borderRadius: BorderRadius.circular(12),
               ),
               suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 16),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => _searchQuery = '');
-                      },
-                      constraints: const BoxConstraints(),
-                      padding: EdgeInsets.zero,
+                  ? Semantics(
+                      label: 'Clear Search',
+                      button: true,
+                      child: IconButton(
+                        icon: const Icon(Icons.clear, size: 16),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
+                      ),
                     )
                   : null,
             ),
@@ -740,12 +752,16 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                                 size: 18,
                                 color: theme.colorScheme.primary,
                               )
-                            : IconButton(
-                                icon: const Icon(
-                                  Icons.add_circle_outline,
-                                  size: 18,
+                            : Semantics(
+                                label: 'Add Song',
+                                button: true,
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.add_circle_outline,
+                                    size: 18,
+                                  ),
+                                  onPressed: () => _showAddSongKeyDialog(song),
                                 ),
-                                onPressed: () => _showAddSongKeyDialog(song),
                               ),
                       ),
                     );
@@ -780,10 +796,14 @@ class _SetDetailState extends ConsumerState<SetDetail> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.share_outlined),
-                    tooltip: 'Share Set',
-                    onPressed: widget.items.isEmpty ? null : () => _showShareMenu(context),
+                  Semantics(
+                    label: 'Share Set',
+                    button: true,
+                    child: IconButton(
+                      icon: const Icon(Icons.share_outlined),
+                      tooltip: 'Share Set',
+                      onPressed: widget.items.isEmpty ? null : () => _showShareMenu(context),
+                    ),
                   ),
                   const SizedBox(width: 8),
                   if (isLargeScreen)
