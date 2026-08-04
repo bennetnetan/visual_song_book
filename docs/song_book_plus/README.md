@@ -18,7 +18,7 @@ The app uses **SQLite via Drift** as its main database and a bundled **KJV Bible
 
 ### 🎵 Song Management
 - Full **CRUD** for songs: title, number, key, author, copyright, category, and lyrics body
-- Category filtering (General, Kiswahili, Uncategorized) with live search across title, number, and lyrics
+- **Collection / category filtering** (Full Song Book, Injili Song Book, Uncategorized) with live search across title, number, and lyrics
 - Verse/chorus structure parser — the app understands `CHORUS` and `VERSE N` blocks
 - Auto-suggest next song number on create
 
@@ -38,6 +38,7 @@ The app uses **SQLite via Drift** as its main database and a bundled **KJV Bible
 
 ### 📽️ Live Projection
 - **Desktop (Windows / Linux / macOS)**: Opens a dedicated secondary window on any connected screen using `desktop_multi_window`. Operator controls stay in the main window; lyrics appear full-screen in the projection window
+- **Projection window modes**: `single` (decorated window on the primary display) or `extended` (auto-placed fullscreen on a secondary screen); `duplicate` gated as "coming soon"
 - **Mobile / Tablet**: Immersive sticky fullscreen projection mode (`SystemUiMode.immersiveSticky`) with inline "Open" actions next to selected songs, hiding edit/delete controls and the redundant projection tab to keep operation clean.
 - **Bible projection**: Project individual verses or full chapters with scripture reference displayed below the text
 - **Unified search**: Inline search bar and SearchAnchor overlay share state — search Bible or songs directly from the projection tab with structured reference parsing ("Jn 3:16"), BEST MATCH cards, query highlighting, and paginated results
@@ -45,12 +46,13 @@ The app uses **SQLite via Drift** as its main database and a bundled **KJV Bible
 - Keyboard navigation: **Arrow keys** and **Space** to advance slides, **Escape** to clear
 - Swipe gestures on mobile: swipe left = next slide, swipe right = previous
 - **Auto-insert Chorus** mode: automatically repeats the chorus between each verse during projection
-- Adjustable font size (24–80 px) with real-time IPC sync to the projection window
+- Adjustable font size (16–160 px) with real-time IPC sync to the projection window
 - Wakelock support to prevent the screen from sleeping during a service
 
 ### 📜 History
 - **Three sub-tabs**: Songs | Sets | Bible — each records projection history independently
 - Tracks what was projected and when, for service wrap-up logs
+- Per-tab **Clear history** actions (with confirmation) in the app bar
 
 ### 📥 Import & Export
 - **Legacy VSB / MDB import**: Reads Microsoft Access `.mdb` files via the `mdb-tools` CLI (Linux/macOS) and imports all songs and categories into SQLite
@@ -72,7 +74,7 @@ lib/
 ├── core/
 │   ├── providers/         # Riverpod providers (DB, importers, settings, UI state)
 │   ├── utils/             # Verse parser, helpers
-│   └── widgets/           # Shared widgets (neomorphic cards, etc.)
+│   └── widgets/           # Shared widgets
 ├── data/
 │   ├── db/                # Drift SQLite schema & DAOs (songbook_db.dart, bible_db.dart)
 │   ├── importers/         # MDB, VSB, .vsbook importers
@@ -91,8 +93,8 @@ lib/
 └── main.dart              # App entry point, theme setup, window init
 ```
 
-**State management**: `flutter_riverpod` with `riverpod_annotation` code generation  
-**Database**: `drift` (type-safe SQLite) + `drift_flutter` + `sqlite3_flutter_libs`  
+**State management**: `flutter_riverpod`  
+**Database**: `drift` (type-safe SQLite) + `sqlite3_flutter_libs` (`drift_flutter` reserved for a future web effort)  
 **Routing**: `go_router`  
 **Multi-window IPC**: `desktop_multi_window` via `WindowMethodChannel('projection_channel')`
 
@@ -174,6 +176,79 @@ The projection window listens on `WindowMethodChannel` and renders whatever text
 ---
 
 ## Changelog
+
+### v1.7.1 (2026-07-31)
+- Fixed projection crash caused by background enumeration on Windows
+- Eliminated title bar flash on secondary projection screen (Windows)
+- Improved Enter-key interaction and responsiveness for search results
+- Improved projection UI and controls visibility on Android/touch devices
+
+### v1.7.0 (2026-07-28)
+- Settings restructured into 4 categories: Appearance, Projection, Library, About
+- Borderless fullscreen projection on Windows via Win32 FFI (title bar + taskbar hidden)
+- Mobile/desktop layout split — phone/tablet gets simplified single-column layout
+- Linked songbooks — link .vsbook files from Google Drive or shared folders with auto-sync
+- Source filter on songs tab — filter by songbook/source with counts
+- First-launch onboarding wizard for initial setup
+- Auto-chorus toggle moved inline next to Clear Screen in projection header
+- Import from File button — auto-detects .mdb vs .vsbook format
+- Changelog now expandable — shows latest 2 entries by default
+- Fixed Win32 fullscreen scheduler reentrancy crash (deferred via Timer.run)
+
+### v1.6.0+2 (2026-07-21)
+- Keyboard-scrolled search items now stay visible — replaced fixed-height scroll math with Scrollable.ensureVisible
+- Keyboard navigation hint moved above search results so it is always visible, not hidden below the list
+
+### v1.6.0 (2026-07-21)
+- Categories simplified — Full Song Book & Injili Song Book replace the dozens of individual imported categories
+- Unified storage directory — all app data consolidated in .visual_song_book/
+- Cross-book duplicates eliminated — seeded songs deduplicated by title alone
+- Sidebar starts minimized — NavigationRail collapsed by default on launch
+- Seed marker hardened — verifies DB actually has songs before trusting SharedPreferences marker
+- AppImage OS bar icon — icons embedded in hicolor theme paths with correct StartupWMClass
+
+### v1.5.0 (2026-07-21)
+- First-launch seeding — Full Song Book & Injili Song Book pre-loaded automatically on fresh install
+- Centralized AppLogger powered by Dart logging package (structured, level-aware, IDE-friendly)
+- SetsTab null-check crash fixed — graceful loading indicator when DB resolves before sets list
+- Strict DB staleness checks — stale selectedSetId auto-cleared when set is deleted externally
+- Reactive set-items stream — SongSetItems now watched live, eliminating stale-data races
+- 100ms nav-ready dwell timer in search — type to search, pause to navigate with arrow keys
+- Enter to project highlighted result from search without touching the mouse
+- Subtle animated keyboard-hint indicator fades in when nav mode is active in search results
+- Linux window title fixed to "Visual Song Book" with app logo embedded in GTK titlebar
+- Android per-ABI release APKs (armeabi-v7a, arm64-v8a, x86_64)
+- Linux AppImage with embedded logo and AppDir integration
+
+### v1.4.2 (2026-06-26)
+- Multi-monitor detection — projection opens secondary window on multi-display, fullscreen on single
+- UI polish — subtle hover-only nav arrows, transparent controls, PopScope blocks back gesture in projection
+- Fixed Positioned/AnimatedOpacity nesting crash in projection output view
+- Removed redundant CHANGELOG section from About card, consolidated into versioned Changelog card
+- Removed Bible search back button on mobile (was opening book picker instead of navigating back)
+- App bar hidden on mobile for History and Sets tabs
+- Mobile-friendly action buttons for Sets with redesigned layout
+- Unified Bible app bar font styling with dashboard tabs
+- Collapsible inline lyrics preview on mobile song list
+- Slide timeline with auto-scroll to active verse in projection view
+
+### v1.4.1 (2026-06-25)
+- Inline song preview with collapsible lyrics on mobile
+- Low-opacity slide timeline at bottom of projection output
+- Drag-and-drop reorder hint above set list
+- Full-color app icon branding throughout UI
+- Mobile optimization — hide projection tab, clean up Bible book pickers
+- High-resolution app icon logo in settings
+
+### v1.4.0 (2026-06-24)
+- Interactive Book and Chapter pop-up navigation dialog matching Bible specs
+- Subtle inline verse cross-references displayable for active verses
+- Bible Bookmarks list supported on mobile and desktop via History tab
+- Overhauled settings cards into clean, responsive Material 3 flat designs
+- Unified Project actions for Bible, Songs, and Sets with Display settings options
+- Responsive stacked live preview layout for narrow screen mobile devices
+- Subtle hover-only display controls in projection output view
+- Implemented drag-and-drop song sets reordering and inline list search filtering
 
 ### v1.3.0 (2026-06-25)
 - **Unified search infrastructure**: Extracted `bible_search_utils.dart` (book ID map, reference parser, query normalizer) shared between Bible reader and projection
