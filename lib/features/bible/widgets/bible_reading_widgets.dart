@@ -303,7 +303,7 @@ class _BibleReadingViewState extends State<BibleReadingView> {
                 ),
                 onPressed: () => showDialog(
                   context: context,
-                  builder: (context) => BibleNavigationDialog(),
+                  builder: (context) => const BibleNavigationDialog(),
                 ),
               ),
             ),
@@ -714,8 +714,9 @@ class BibleVersePopupMenu extends StatelessWidget {
         ],
       ),
       onSelected: (action) {
-        if (action == 'project') onProject();
-        else if (action == 'bookmark') onBookmark();
+        if (action == 'project') {
+          onProject();
+        } else if (action == 'bookmark') onBookmark();
         else if (action == 'navigate') onNavigate();
       },
       itemBuilder: (context) => [
@@ -729,9 +730,9 @@ class BibleVersePopupMenu extends StatelessWidget {
           ),
         ),
         if (kIsWeb || !Platform.isAndroid)
-          PopupMenuItem(
+          const PopupMenuItem(
             value: 'navigate',
-            child: const ListTile(
+            child: ListTile(
               leading: Icon(Icons.open_in_new, size: 18),
               title: Text('Navigate to Verse', style: TextStyle(fontSize: 13)),
               dense: true,

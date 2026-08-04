@@ -248,7 +248,7 @@ class MainDashboardPage extends ConsumerWidget {
 
 class AddMenuButton extends ConsumerWidget {
   final bool isExpanded;
-  const AddMenuButton({this.isExpanded = true});
+  const AddMenuButton({super.key, this.isExpanded = true});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
