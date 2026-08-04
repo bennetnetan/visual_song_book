@@ -244,7 +244,7 @@ class SetsController extends StateNotifier<SetsState> {
       final existingSet = await _repo.getSetByUuid(targetUuid);
       if (existingSet != null) {
         targetUuid = UuidGenerator.generate();
-        targetName = "$originalName (Imported)";
+        targetName = '$originalName (Imported)';
       }
 
       // Create the set list

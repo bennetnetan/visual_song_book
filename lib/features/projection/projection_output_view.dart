@@ -132,20 +132,21 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
     controller.setWindowMethodHandler((call) async {
       if (call.method == 'update_slide') {
         if (!mounted) return null;
+        final args = Map<String, dynamic>.from(call.arguments as Map);
         setState(() {
           _isClosing = false;
-          if (call.arguments['text'] != null) _ipcText = call.arguments['text'] as String;
-          if (call.arguments['label'] != null) _ipcLabel = call.arguments['label'] as String;
-          if (call.arguments['isBible'] != null) _ipcIsBible = call.arguments['isBible'] as bool;
-          if (call.arguments['fontSize'] != null) {
-            _ipcFontSize = (call.arguments['fontSize'] as num).toDouble();
+          if (args['text'] != null) _ipcText = args['text'] as String;
+          if (args['label'] != null) _ipcLabel = args['label'] as String;
+          if (args['isBible'] != null) _ipcIsBible = args['isBible'] as bool;
+          if (args['fontSize'] != null) {
+            _ipcFontSize = (args['fontSize'] as num).toDouble();
           }
-          if (call.arguments['slideLabels'] != null) {
+          if (args['slideLabels'] != null) {
             _ipcSlideLabels =
-                (call.arguments['slideLabels'] as List).cast<String>();
+                (args['slideLabels'] as List).cast<String>();
           }
-          if (call.arguments['currentIndex'] != null) {
-            _ipcCurrentIndex = (call.arguments['currentIndex'] as num).toInt();
+          if (args['currentIndex'] != null) {
+            _ipcCurrentIndex = (args['currentIndex'] as num).toInt();
           }
         });
       } else if (call.method == 'go_fullscreen') {

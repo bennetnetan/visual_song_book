@@ -449,7 +449,7 @@ class _BibleReadingViewState extends State<BibleReadingView> {
             final isBookmarked = widget.bookmarkedVerseIds.contains(v.verse);
             final isSelected = widget.selectedVerseIds.contains(v.id);
 
-            return Container(
+            return ColoredBox(
               key: isActive ? _activeVerseKey : null,
               color: isActive
                   ? colorScheme.primaryContainer.withValues(alpha: 0.3)

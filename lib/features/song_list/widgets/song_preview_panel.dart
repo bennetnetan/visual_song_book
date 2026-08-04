@@ -103,7 +103,7 @@ class SongPreviewPanel extends ConsumerWidget {
               color: Theme.of(
                 context,
               ).colorScheme.surfaceContainer.withValues(alpha: 0.3),
-              child: Container(
+              child: DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
                   gradient: LinearGradient(

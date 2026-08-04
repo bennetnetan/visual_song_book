@@ -646,7 +646,7 @@ class _LivePreviewPanel extends StatelessWidget {
             ),
           AspectRatio(
             aspectRatio: 16 / 9,
-            child: Container(
+            child: DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
@@ -790,7 +790,7 @@ class _LivePreviewPanel extends StatelessWidget {
         // 16:9 preview canvas
         Expanded(
           child: Center(
-            child: Container(
+            child: DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
