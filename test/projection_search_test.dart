@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:visual_song_book/core/models/source_mode.dart';
 import 'package:visual_song_book/data/db/bible_db.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/repositories/song_repository.dart';
@@ -46,6 +47,7 @@ class FakeSongRepository extends SongRepository {
   Future<List<Song>> searchSongs(
     String query, {
     String? sourcePath,
+    SourceMode? sourceMode,
   }) async =>
       const [];
 }

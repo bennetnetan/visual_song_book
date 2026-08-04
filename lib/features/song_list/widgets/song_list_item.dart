@@ -54,37 +54,46 @@ class SongListItem extends StatelessWidget {
                   horizontal: 16.0,
                   vertical: 4.0,
                 ),
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    gradient: isSelected
-                        ? LinearGradient(
-                            colors: [
-                              Theme.of(context).colorScheme.primary,
-                              Theme.of(context).colorScheme.secondary,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          )
-                        : null,
-                    color: isSelected
-                        ? null
-                        : Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Text(
-                      song.songNum.toString(),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
+                leading: Stack(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: isSelected
+                            ? LinearGradient(
+                                colors: [
+                                  Theme.of(context).colorScheme.primary,
+                                  Theme.of(context).colorScheme.secondary,
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : null,
                         color: isSelected
-                            ? Theme.of(context).colorScheme.onPrimary
-                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                            ? null
+                            : Theme.of(context).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(
+                          song.songNum.toString(),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.onPrimary
+                                : Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    Positioned(
+                      bottom: 2,
+                      right: 2,
+                      child: _SourceIndicator(sourceFormat: song.sourceFormat),
+                    ),
+                  ],
                 ),
                 title: Text(
                   song.title,
@@ -239,6 +248,40 @@ class SongListItem extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SourceIndicator extends StatelessWidget {
+  final String? sourceFormat;
+
+  const _SourceIndicator({required this.sourceFormat});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    Color color;
+    switch (sourceFormat) {
+      case 'bundled_json':
+        color = theme.colorScheme.primary;
+        break;
+      case 'vsbook_linked':
+        color = theme.colorScheme.tertiary;
+        break;
+      case 'vsb':
+        color = theme.colorScheme.secondary;
+        break;
+      default:
+        color = theme.colorScheme.outline;
+    }
+
+    return Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
       ),
     );
   }

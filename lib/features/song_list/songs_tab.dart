@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:visual_song_book/core/models/source_mode.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/song_list/main_dashboard_page.dart';
 import 'package:visual_song_book/features/song_list/song_list_controller.dart';
@@ -321,54 +322,91 @@ class _SongsTabState extends ConsumerState<SongsTab> {
                                   const AddMenuButton(isExpanded: false),
                                   const SizedBox(width: 8),
                                 ],
-                          bottom: listState.sourcePaths.length > 1
-                              ? PreferredSize(
-                                  preferredSize: const Size.fromHeight(48),
-                                  child: SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16.0,
-                                      vertical: 4.0,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.only(right: 8.0),
-                                          child: Icon(
-                                            Icons.library_books_outlined,
-                                            size: 14,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurfaceVariant
-                                                .withValues(alpha: 0.6),
-                                          ),
-                                        ),
-                                        _buildSourceChip(
-                                          context,
-                                          label: 'All Books',
-                                          selected: listState.selectedSourcePath == null,
-                                          onSelected: () => listNotifier.selectSource(null),
-                                        ),
-                                        ...listState.sourcePaths.map(
-                                          (source) => Padding(
-                                            padding: const EdgeInsets.only(left: 8.0),
-                                            child: _buildSourceChip(
-                                              context,
-                                              label: _getSourceDisplayName(source.path),
-                                              subtitle: '${source.count}',
-                                              selected: listState.selectedSourcePath == source.path,
-                                              onSelected: () => listNotifier.selectSource(source.path),
+                          bottom: PreferredSize(
+                            preferredSize: const Size.fromHeight(92),
+                            child: Column(
+                              children: [
+                                if (listState.sourcePaths.length > 1)
+                                  SizedBox(
+                                    height: 48,
+                                    child: SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16.0,
+                                        vertical: 4.0,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.only(right: 8.0),
+                                            child: Icon(
+                                              Icons.library_books_outlined,
+                                              size: 14,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurfaceVariant
+                                                  .withValues(alpha: 0.6),
                                             ),
                                           ),
-                                        ),
-                                      ],
+                                          _buildSourceChip(
+                                            context,
+                                            label: 'All Books',
+                                            selected: listState.selectedSourcePath == null,
+                                            onSelected: () => listNotifier.selectSource(null),
+                                          ),
+                                          ...listState.sourcePaths.map(
+                                            (source) => Padding(
+                                              padding: const EdgeInsets.only(left: 8.0),
+                                              child: _buildSourceChip(
+                                                context,
+                                                label: _getSourceDisplayName(source.path),
+                                                subtitle: '${source.count}',
+                                                selected: listState.selectedSourcePath == source.path,
+                                                onSelected: () => listNotifier.selectSource(source.path),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                )
-                              : const PreferredSize(
-                                  preferredSize: Size.fromHeight(8),
-                                  child: SizedBox(height: 8),
+                                SizedBox(
+                                  height: 44,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16.0,
+                                      vertical: 8.0,
+                                    ),
+                                    child: SegmentedButton<SourceMode>(
+                                      segments: const [
+                                        ButtonSegment(
+                                          value: SourceMode.bundled,
+                                          label: Text('Bundled'),
+                                          icon: Icon(Icons.library_books, size: 14),
+                                        ),
+                                        ButtonSegment(
+                                          value: SourceMode.linked,
+                                          label: Text('Linked'),
+                                          icon: Icon(Icons.link, size: 14),
+                                        ),
+                                        ButtonSegment(
+                                          value: SourceMode.unified,
+                                          label: Text('All'),
+                                          icon: Icon(Icons.layers, size: 14),
+                                        ),
+                                      ],
+                                      selected: {listState.selectedSourceMode},
+                                      onSelectionChanged: (Set<SourceMode> selection) {
+                                        if (selection.isNotEmpty) {
+                                          listNotifier.setSourceMode(selection.first);
+                                        }
+                                      },
+                                    ),
+                                  ),
                                 ),
+                              ],
+                            ),
+                          ),
                         ),
                       ];
                     },

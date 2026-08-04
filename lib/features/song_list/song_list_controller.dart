@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:visual_song_book/core/models/source_mode.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/importers/bundled_json_importer.dart';
@@ -16,6 +17,7 @@ class SongListState {
   final List<Category> categories;
   final List<({String path, int count})> sourcePaths;
   final String? selectedSourcePath;
+  final SourceMode selectedSourceMode;
   final bool isLoading;
   final String? error;
   final SongSortMode sortMode;
@@ -28,6 +30,7 @@ class SongListState {
     required this.categories,
     required this.sourcePaths,
     this.selectedSourcePath,
+    this.selectedSourceMode = SourceMode.unified,
     required this.isLoading,
     required this.error,
     required this.sortMode,
@@ -42,6 +45,8 @@ class SongListState {
     List<({String path, int count})>? sourcePaths,
     String? selectedSourcePath,
     bool? clearSourcePath = false,
+    SourceMode? selectedSourceMode,
+    bool? clearSourceMode = false,
     bool? isLoading,
     String? error,
     SongSortMode? sortMode,
@@ -57,6 +62,9 @@ class SongListState {
       selectedSourcePath: clearSourcePath == true
           ? null
           : (selectedSourcePath ?? this.selectedSourcePath),
+      selectedSourceMode: clearSourceMode == true
+          ? SourceMode.unified
+          : (selectedSourceMode ?? this.selectedSourceMode),
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
       sortMode: sortMode ?? this.sortMode,
@@ -72,6 +80,7 @@ class SongListState {
       categories: [],
       sourcePaths: [],
       selectedSourcePath: null,
+      selectedSourceMode: SourceMode.unified,
       isLoading: true,
       error: null,
       sortMode: SongSortMode.byNumber,
@@ -183,6 +192,13 @@ class SongListController extends StateNotifier<SongListState> {
     fetchSongs();
   }
 
+  /// Sets the source mode filter (bundled, linked, or unified)
+  void setSourceMode(SourceMode mode) {
+    if (state.selectedSourceMode == mode) return;
+    state = state.copyWith(selectedSourceMode: mode);
+    fetchSongs();
+  }
+
   Future<void> deleteCategory(int categoryId) async {
     await _repository.deleteCategory(categoryId);
     if (state.selectedCategoryId == categoryId) {
@@ -202,6 +218,7 @@ class SongListController extends StateNotifier<SongListState> {
         final results = await _repository.searchSongs(
           state.query,
           sourcePath: state.selectedSourcePath,
+          sourceMode: state.selectedSourceMode,
         );
 
         // Filter search results locally based on selected category if necessary
@@ -228,16 +245,19 @@ class SongListController extends StateNotifier<SongListState> {
           stream = _repository.watchSongsByCategory(
             null,
             sourcePath: state.selectedSourcePath,
+            sourceMode: state.selectedSourceMode,
           );
         } else if (state.selectedCategoryId != null &&
             state.selectedCategoryId != -2) {
           stream = _repository.watchSongsByCategory(
             state.selectedCategoryId,
             sourcePath: state.selectedSourcePath,
+            sourceMode: state.selectedSourceMode,
           );
         } else {
           stream = _repository.watchSongsFiltered(
             sourcePath: state.selectedSourcePath,
+            sourceMode: state.selectedSourceMode,
           );
         }
 
