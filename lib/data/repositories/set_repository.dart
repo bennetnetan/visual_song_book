@@ -194,6 +194,13 @@ class SetRepository {
         .get();
   }
 
+  Stream<List<SetHistoryData>> watchSetHistory() {
+    return (db.select(db.setHistory)
+          ..orderBy([(t) => OrderingTerm.desc(t.accessedAt)])
+          ..limit(50))
+        .watch();
+  }
+
   Future<void> clearSetHistory() async {
     await db.delete(db.setHistory).go();
   }
@@ -217,6 +224,13 @@ class SetRepository {
           ..orderBy([(t) => OrderingTerm.desc(t.accessedAt)])
           ..limit(50))
         .get();
+  }
+
+  Stream<List<BibleHistoryData>> watchBibleHistory() {
+    return (db.select(db.bibleHistory)
+          ..orderBy([(t) => OrderingTerm.desc(t.accessedAt)])
+          ..limit(50))
+        .watch();
   }
 
   Future<void> clearBibleHistory() async {

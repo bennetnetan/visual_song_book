@@ -33,6 +33,14 @@ class HistoryTab extends ConsumerWidget {
                   style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
                 )
               : null,
+          actions: [
+            if (!state.isLoading && _canClear(selectedTab, state))
+              IconButton(
+                icon: const Icon(Icons.delete_sweep_outlined),
+                tooltip: 'Clear history',
+                onPressed: () => _confirmClearHistory(context, ref, selectedTab),
+              ),
+          ],
           bottom: TabBar(
             onTap: (i) => ref.read(_selectedHistoryTabProvider.notifier).state = HistoryTabType.values[i],
             isScrollable: false,
@@ -168,6 +176,74 @@ class HistoryTab extends ConsumerWidget {
                   );
                 },
               );
+    }
+  }
+
+  bool _canClear(HistoryTabType tab, HistoryState state) {
+    switch (tab) {
+      case HistoryTabType.songs:
+        return state.songs.isNotEmpty;
+      case HistoryTabType.sets:
+        return state.sets.isNotEmpty;
+      case HistoryTabType.bible:
+        return state.bible.isNotEmpty;
+      case HistoryTabType.bookmarks:
+        return false;
+    }
+  }
+
+  String _clearLabel(HistoryTabType tab) {
+    switch (tab) {
+      case HistoryTabType.songs:
+        return 'song';
+      case HistoryTabType.sets:
+        return 'set';
+      case HistoryTabType.bible:
+        return 'Bible passage';
+      case HistoryTabType.bookmarks:
+        return '';
+    }
+  }
+
+  Future<void> _clearHistory(WidgetRef ref, HistoryTabType tab) {
+    final notifier = ref.read(historyControllerProvider.notifier);
+    switch (tab) {
+      case HistoryTabType.songs:
+        return notifier.clearSongHistory();
+      case HistoryTabType.sets:
+        return notifier.clearSetHistory();
+      case HistoryTabType.bible:
+        return notifier.clearBibleHistory();
+      case HistoryTabType.bookmarks:
+        return Future.value();
+    }
+  }
+
+  Future<void> _confirmClearHistory(
+    BuildContext context,
+    WidgetRef ref,
+    HistoryTabType tab,
+  ) async {
+    final label = _clearLabel(tab);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear history'),
+        content: Text('Clear all $label history? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _clearHistory(ref, tab);
     }
   }
 

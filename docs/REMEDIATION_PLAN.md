@@ -232,6 +232,8 @@ nullyfies stale refs. Optionally register the currently-dead `onWindowClose()`.
 
 ## Phase 6 — History: live refresh + clear affordances (MAJOR #10 & #12)
 
+**Status:** ✅ DONE.
+
 1. `history_controller.dart:57-61`: replace the one-shot `getSetHistory()`/`getBibleHistory()`
    with stream-based watches (`watchSetHistory`/`watchBibleHistory` — add to repos if
    missing), matching the live songs path (`watchHistory` at line 54), so new projections
@@ -241,6 +243,15 @@ nullyfies stale refs. Optionally register the currently-dead `onWindowClose()`.
    `clearBibleHistory`.
 
 **Verify:** project a set → History/Sets shows it immediately; clearing empties each tab.
+
+**Done:** `watchSetHistory`/`watchBibleHistory` added to `set_repository.dart`; controller
+now subscribes streams for all four sources (songs, sets, bible, bookmarks) and the redundant
+manual `copyWith` resets in the clear methods were dropped (streams now drive the refresh);
+`history_tab.dart` gained a contextual AppBar "Clear history" action (delete icon) on the
+Songs/Sets/Bible tabs (shown only when the list is non-empty) behind a confirm dialog wired to
+`clearSongHistory`/`clearSetHistory`/`clearBibleHistory`. New `test/history_controller_test.dart`
+(2 tests: live refresh + clear for sets/bible; new projections appear without manual refresh).
+`flutter analyze` baseline unchanged (18), `flutter test` 32 pass.
 
 ---
 
