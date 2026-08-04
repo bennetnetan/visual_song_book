@@ -163,7 +163,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     } catch (_) {}
   }
 
-  void setSong(Song song) {
+  void setSong(Song song) => _setSong(song);
+
+  void _setSong(Song song, {bool recordHistory = true}) {
     final parsedVerses = VerseParser.parse(song.body);
     final sequence = VerseParser.buildSlideSequence(
       parsedVerses,
@@ -178,7 +180,11 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       contentTitle: () => song.title,
     );
 
-    _songRepository.addToHistory(song.id);
+    // Re-projection triggered by a settings toggle (e.g. auto-chorus) must
+    // not pollute the history with a duplicate entry.
+    if (recordHistory) {
+      _songRepository.addToHistory(song.id);
+    }
     _syncSecondaryWindow();
   }
 
@@ -227,8 +233,14 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     final clamped = size.clamp(16.0, 160.0);
     if (state.fontSize == clamped) return;
     state = state.copyWith(fontSize: clamped);
-    _prefs?.setDouble('projection_font_size', clamped);
     _syncSecondaryWindow();
+  }
+
+  /// Persists the current font size. Kept separate from [setFontSize] so
+  /// pinch-to-zoom gestures don't write SharedPreferences on every frame;
+  /// callers flush once when the gesture ends.
+  Future<void> persistFontSize() async {
+    await _prefs?.setDouble('projection_font_size', state.fontSize);
   }
 
   Future<void> setAutoInsertChorus(bool value) async {
@@ -236,7 +248,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     await _prefs?.setBool('projection_auto_chorus', value);
 
     if (state.currentSong != null) {
-      setSong(state.currentSong!);
+      _setSong(state.currentSong!, recordHistory: false);
     }
   }
 
@@ -337,12 +349,26 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       final targetVerse = direction < 0 ? await _lastVerse(nextBook.id, targetChapter) : null;
       await _loadChapter(nextBook.id, targetChapter, targetVerse: targetVerse);
     }
+    _recordChapterHistory();
+  }
+
+  void _recordChapterHistory() {
+    final bookName = state.bibleBookName;
+    final chapter = state.bibleChapter;
+    if (bookName == null || chapter == null) return;
+    ref
+        .read(setRepositoryProvider)
+        .recordBibleProjection('$bookName $chapter', state.currentSlide?.text ?? '');
   }
 
   void goToNextChapter() => _advanceChapter(1);
   void goToPrevChapter() => _advanceChapter(-1);
 
-  Future<void> projectSongSet(int setId, List<SongSetItem> items) async {
+  Future<void> projectSongSet(
+    int setId,
+    String setName,
+    List<SongSetItem> items,
+  ) async {
     if (items.isEmpty) return;
 
     final slides = <Verse>[];
@@ -358,6 +384,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         if (sequence.isNotEmpty) {
           slides.addAll(sequence);
         }
+        _songRepository.addToHistory(song.id);
       }
     }
 
@@ -367,7 +394,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       slides: slides,
       currentSlideIndex: 0,
       isBibleMode: false,
+      contentTitle: () => setName,
     );
+    ref.read(setRepositoryProvider).recordSetProjection(setId, setName);
     _syncSecondaryWindow();
   }
 

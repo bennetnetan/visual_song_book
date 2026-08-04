@@ -367,7 +367,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
           }
         },
         onScaleEnd: (details) {
-          if (!_pinchActive) {
+          if (_pinchActive) {
+            notifier.persistFontSize();
+          } else {
             // Check horizontal swipe gesture threshold
             if (_panDeltaX.abs() > 60.0) {
               if (_panDeltaX < 0) {
@@ -561,7 +563,10 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                                     icon: Icons.text_decrease,
                                     tooltip: 'Smaller font',
                                     onPressed: state.fontSize > 16
-                                        ? () => notifier.setFontSize(state.fontSize - 4)
+                                        ? () {
+                                            notifier.setFontSize(state.fontSize - 4);
+                                            notifier.persistFontSize();
+                                          }
                                         : null,
                                   ),
                                   Padding(
@@ -578,8 +583,11 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                                   _FontSizeButton(
                                     icon: Icons.text_increase,
                                     tooltip: 'Larger font',
-                                    onPressed: state.fontSize < 96
-                                        ? () => notifier.setFontSize(state.fontSize + 4)
+                                    onPressed: state.fontSize < 160
+                                        ? () {
+                                            notifier.setFontSize(state.fontSize + 4);
+                                            notifier.persistFontSize();
+                                          }
                                         : null,
                                   ),
                                 ],

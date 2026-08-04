@@ -947,7 +947,10 @@ class _LivePreviewPanel extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.remove, size: 18),
                   onPressed: state.fontSize > 16
-                      ? () => notifier.setFontSize(state.fontSize - 4)
+                      ? () {
+                          notifier.setFontSize(state.fontSize - 4);
+                          notifier.persistFontSize();
+                        }
                       : null,
                   tooltip: 'Decrease (${state.fontSize - 4})',
                   constraints: const BoxConstraints(),
@@ -967,8 +970,11 @@ class _LivePreviewPanel extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.add, size: 18),
-                  onPressed: state.fontSize < 96
-                      ? () => notifier.setFontSize(state.fontSize + 4)
+                  onPressed: state.fontSize < 160
+                      ? () {
+                          notifier.setFontSize(state.fontSize + 4);
+                          notifier.persistFontSize();
+                        }
                       : null,
                   tooltip: 'Increase (${state.fontSize + 4})',
                   constraints: const BoxConstraints(),
@@ -1313,6 +1319,7 @@ class _ProjectionSearchAnchor extends ConsumerStatefulWidget {
 
 class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor> {
   final SearchController _searchController = SearchController();
+  final ValueNotifier<int> _selectedIndex = ValueNotifier<int>(0);
 
   @override
   void initState() {
@@ -1324,6 +1331,7 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
   void dispose() {
     _searchController.removeListener(_onQueryChanged);
     _searchController.dispose();
+    _selectedIndex.dispose();
     super.dispose();
   }
 
@@ -1389,7 +1397,8 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
             ...searchState.bibleResults,
           ];
           if (results.isNotEmpty) {
-            final v = results.first;
+            final idx = _selectedIndex.value.clamp(0, results.length - 1);
+            final v = results[idx];
             widget.notifier.projectVerse(
               v.bookId, v.chapter, v.verse, v.bookName ?? '',
             );
@@ -1400,7 +1409,8 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
         } else {
           final songs = searchState.songResults;
           if (songs.isNotEmpty) {
-            widget.notifier.setSong(songs.first);
+            final idx = _selectedIndex.value.clamp(0, songs.length - 1);
+            widget.notifier.setSong(songs[idx]);
             ref.read(projectionSearchProvider.notifier).clear();
             _searchController.closeView(null);
           }
@@ -1491,6 +1501,7 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
           _SuggestionsList(
             controller: controller,
             notifier: widget.notifier,
+            selectedIndex: _selectedIndex,
           ),
         ];
       },
@@ -1501,10 +1512,12 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
 class _SuggestionsList extends ConsumerStatefulWidget {
   final SearchController controller;
   final ProjectionController notifier;
+  final ValueNotifier<int> selectedIndex;
 
   const _SuggestionsList({
     required this.controller,
     required this.notifier,
+    required this.selectedIndex,
   });
 
   @override
@@ -1512,7 +1525,6 @@ class _SuggestionsList extends ConsumerStatefulWidget {
 }
 
 class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
-  int _selectedIndex = 0;
   final Map<int, GlobalKey> _itemKeys = {};
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode(debugLabel: 'SearchSuggestionsFocus');
@@ -1600,7 +1612,7 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
           : searchState.songResults.length;
       if (totalItems > 0) {
         // Clamp selected index in case results changed since last interaction.
-        final safeIndex = _selectedIndex.clamp(0, totalItems - 1);
+        final safeIndex = widget.selectedIndex.value.clamp(0, totalItems - 1);
         _pickItem(safeIndex, searchState);
         return KeyEventResult.handled;
       }
@@ -1619,9 +1631,9 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
 
     if (key == LogicalKeyboardKey.arrowDown ||
         key == LogicalKeyboardKey.arrowRight) {
-      final next = (_selectedIndex + 1).clamp(0, totalItems - 1);
-      if (next != _selectedIndex) {
-        setState(() => _selectedIndex = next);
+      final next = (widget.selectedIndex.value + 1).clamp(0, totalItems - 1);
+      if (next != widget.selectedIndex.value) {
+        setState(() => widget.selectedIndex.value = next);
         _scrollToSelected(next);
       }
       // Consume — do NOT propagate to the projection screen.
@@ -1630,9 +1642,9 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
 
     if (key == LogicalKeyboardKey.arrowUp ||
         key == LogicalKeyboardKey.arrowLeft) {
-      final prev = (_selectedIndex - 1).clamp(0, totalItems - 1);
-      if (prev != _selectedIndex) {
-        setState(() => _selectedIndex = prev);
+      final prev = (widget.selectedIndex.value - 1).clamp(0, totalItems - 1);
+      if (prev != widget.selectedIndex.value) {
+        setState(() => widget.selectedIndex.value = prev);
         _scrollToSelected(prev);
       }
       return KeyEventResult.handled;
@@ -1664,7 +1676,7 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
       if (prev?.bibleResults != next.bibleResults ||
           prev?.songResults != next.songResults ||
           prev?.exactMatch != next.exactMatch) {
-        if (mounted) setState(() => _selectedIndex = 0);
+        if (mounted) setState(() => widget.selectedIndex.value = 0);
       }
     });
 
@@ -1745,7 +1757,7 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
             }
             final v = results[index];
             final isExact = v == searchState.exactMatch;
-            final isSelected = index == _selectedIndex;
+            final isSelected = index == widget.selectedIndex.value;
             return Card(
               key: _itemKey(index),
               elevation: 0,
@@ -1867,7 +1879,7 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
           itemCount: searchState.songResults.length,
           itemBuilder: (context, index) {
             final s = searchState.songResults[index];
-            final isSelected = index == _selectedIndex;
+            final isSelected = index == widget.selectedIndex.value;
             return Card(
               key: _itemKey(index),
               elevation: 0,
