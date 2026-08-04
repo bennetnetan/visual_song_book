@@ -20,8 +20,7 @@ class ProjectionOutputView extends ConsumerStatefulWidget {
       _ProjectionOutputViewState();
 }
 
-class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
-    with SingleTickerProviderStateMixin {
+class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
   String _ipcText = '';
   String _ipcLabel = '';
   bool _ipcIsBible = false;
@@ -29,7 +28,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
   List<String> _ipcSlideLabels = const [];
   int _ipcCurrentIndex = 0;
   bool _isSecondaryWindow = false;
-  late AnimationController _fadeController;
   late final FocusNode _focusNode;
   bool _isClosing = false;
   bool _isHovering = false;
@@ -51,12 +49,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
     super.initState();
 
     _focusNode = FocusNode(debugLabel: 'ProjectionOutputFocus');
-
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-    _fadeController.forward();
 
     // On Mobile/Web, hide the status/navigation bar for a fully immersive experience
     if (kIsWeb || (!kIsWeb && (Platform.isAndroid || Platform.isIOS))) {
@@ -284,7 +276,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
       _focusNode.removeListener(_focusListener!);
     }
     _focusNode.dispose();
-    _fadeController.dispose();
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       SystemChrome.setPreferredOrientations([

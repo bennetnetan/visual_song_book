@@ -133,28 +133,6 @@ class SongRepository {
     );
   }
 
-  /// Soft-delete all songs from a source path (mark as inactive)
-  Future<void> deactivateSongsBySource(String sourcePath) async {
-    await (db.update(db.songs)..where((t) => t.sourcePath.equals(sourcePath))).write(
-      const SongsCompanion(isActive: Value(false)),
-    );
-  }
-
-  /// Re-activate all songs from a source path
-  Future<void> activateSongsBySource(String sourcePath) async {
-    await (db.update(db.songs)..where((t) => t.sourcePath.equals(sourcePath))).write(
-      const SongsCompanion(isActive: Value(true)),
-    );
-  }
-
-  /// Returns all inactive (soft-deleted) songs
-  Future<List<Song>> getDeactivatedSongs() {
-    return (db.select(db.songs)
-          ..where((t) => t.isActive.equals(false))
-          ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
-        .get();
-  }
-
   // === Categories ===
 
   Future<List<Category>> getCategories() {

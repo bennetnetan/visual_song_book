@@ -101,10 +101,6 @@ class Win32WindowHelper {
   static final _enumWindowsNative = _user32
       .lookupFunction<EnumWindowsNative, EnumWindowsDart>('EnumWindows');
 
-  static int getActiveWindowHandle() {
-    return _getForegroundWindow();
-  }
-
   static bool maximizeWindow(int hwnd) {
     return _showWindow(hwnd, swMaximize);
   }
@@ -134,17 +130,6 @@ class Win32WindowHelper {
           width,
           height,
           flags);
-  }
-
-  static bool fullscreenWindow(int hwnd, {bool topmost = false}) {
-    return _setWindowPos(
-          hwnd,
-          topmost ? hwndTopmost : hwndTop,
-          0,
-          0,
-          1920,
-          1080,
-          swpShowWindow);
   }
 
   // Monitor detection FFI

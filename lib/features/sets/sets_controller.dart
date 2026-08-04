@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
-import 'package:visual_song_book/core/utils/debug_logger.dart';
 import 'package:visual_song_book/core/utils/uuid_generator.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/repositories/set_repository.dart';
@@ -287,7 +286,7 @@ class SetsController extends StateNotifier<SetsState> {
       // Select the newly imported set in the UI
       selectSet(newSet.id);
     } catch (e) {
-      DebugLogger.error('Error importing set', error: e);
+      _log.severe('Error importing set', e);
       rethrow;
     }
   }

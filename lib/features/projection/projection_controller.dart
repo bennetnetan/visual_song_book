@@ -551,10 +551,6 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     }
   }
 
-  void syncCurrentSlide() {
-    _syncSecondaryWindow();
-  }
-
   /// Sends the current slide to the secondary projector window.
   /// Returns true if the window was updated successfully.
   Future<bool> _syncSecondaryWindow() async {
