@@ -84,7 +84,10 @@ flutter build linux --release
 ./scripts/package_appimage.sh          # → build/Visual_Song_Book-*.AppImage
 
 # Android per-ABI
-flutter build apk --split-per-abi --release
+# versionCode comes from --build-number; pass an explicit number so it
+# doesn't stay at 1 between releases.
+flutter build apk --split-per-abi --release \
+  --build-name 1.7.1 --build-number 12
 
 # Run
 flutter run -d linux
