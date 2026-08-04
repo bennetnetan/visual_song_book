@@ -3,6 +3,7 @@ import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:logging/logging.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
@@ -16,6 +17,10 @@ import 'package:window_manager/window_manager.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // All fonts used via GoogleFonts.* are bundled in assets/fonts; never
+  // fetch them at runtime (throws loudly if a used variant is missing).
+  GoogleFonts.config.allowRuntimeFetching = false;
 
   // Initialise logging — ALL levels in debug, WARNING+ in release.
   AppLogger.init(level: kReleaseMode ? Level.WARNING : Level.ALL);
