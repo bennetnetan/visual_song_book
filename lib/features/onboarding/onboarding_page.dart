@@ -264,10 +264,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           ),
           const SizedBox(height: 32),
           const _ThemeSelector(),
-          if (isDesktop) ...[
-            const SizedBox(height: 24),
-            const _ProjectionModeSelector(),
-          ],
         ],
       ),
     );
@@ -389,88 +385,3 @@ class _ThemeSelector extends ConsumerWidget {
   }
 }
 
-class _ProjectionModeSelector extends ConsumerStatefulWidget {
-  const _ProjectionModeSelector();
-
-  @override
-  ConsumerState<_ProjectionModeSelector> createState() => _ProjectionModeSelectorState();
-}
-
-class _ProjectionModeSelectorState extends ConsumerState<_ProjectionModeSelector> {
-  String _selectedMode = 'extended';
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      children: [
-        Text(
-          'Projection Display',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(
-              value: 'single',
-              icon: Icon(Icons.computer),
-              label: Text('Single'),
-            ),
-            ButtonSegment(
-              value: 'duplicate',
-              icon: Icon(Icons.content_copy),
-              label: Text('Duplicate'),
-            ),
-            ButtonSegment(
-              value: 'extended',
-              icon: Icon(Icons.desktop_windows),
-              label: Text('Extended'),
-            ),
-          ],
-          selected: {_selectedMode},
-          onSelectionChanged: (modes) async {
-            if (modes.first == 'duplicate') {
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Duplicate projection is coming soon. '
-                      'Single and Extended are available now.',
-                    ),
-                  ),
-                );
-              return;
-            }
-            setState(() => _selectedMode = modes.first);
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setString('projection_mode', modes.first);
-          },
-        ),
-        const SizedBox(height: 8),
-        Text(
-          _getProjectionModeDescription(_selectedMode),
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
-  String _getProjectionModeDescription(String mode) {
-    switch (mode) {
-      case 'single':
-        return 'Project on the same screen as your controls';
-      case 'duplicate':
-        return 'Mirror your controls on the projector';
-      case 'extended':
-        return 'Use a second screen for projection';
-      default:
-        return '';
-    }
-  }
-}
