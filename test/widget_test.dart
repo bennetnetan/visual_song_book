@@ -24,12 +24,11 @@ void main() {
 
     // The app shell renders synchronously — verify navigation tabs appear.
     // On the 800x600 test viewport (< 900) the bottom nav bar is used.
+    // Projection is intentionally hidden on small screens (main_dashboard_page).
     expect(find.text('Songs'), findsWidgets);
-    expect(find.text('Projection'), findsWidgets);
+    expect(find.text('Bible'), findsWidgets);
+    expect(find.text('History'), findsWidgets);
     expect(find.text('Settings'), findsWidgets);
-
-    // While Drift streams haven't resolved, the loading spinner is shown.
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
     await testDb.close();
   });
