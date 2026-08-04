@@ -389,6 +389,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         await _secondaryWindow!.show();
         debugPrint('Showing existing projector window: ${_secondaryWindow!.windowId}');
         state = state.copyWith(isSecondaryWindowOpen: true);
+        // Re-assert fullscreen after a hide/show cycle (Windows restores the
+        // original window style on manual close).
+        _placeOnSecondScreenAndFullscreen();
         _syncSecondaryWindow();
         return true;
       } catch (e) {
@@ -503,6 +506,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         } else if (call.method == 'close_secondary_window') {
           // On Linux, the secondary window can't close itself via window_manager
           // (it would crash), so it asks us to do it via WindowController.hide().
+          // We keep the reference after hiding so openProjectorWindow() can
+          // re-show the same hidden engine instead of leaking a new one per
+          // close. Native X-close is handled by onWindowsChanged below.
           debugPrint('Main window received request to close secondary window.');
           if (_secondaryWindow != null) {
             try {
