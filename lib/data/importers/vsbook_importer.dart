@@ -8,6 +8,28 @@ import 'package:sqlite3/sqlite3.dart' as sqlite3;
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/importers/vsb_importer.dart';
 
+/// Drift stores `DateTime` columns as INTEGER unix-seconds by default, but
+/// older `.vsbook` exports (and JSON payloads) may carry ISO-8601 strings.
+/// Accept both so imports never crash on a `String`/`int` type mismatch.
+DateTime? _parseModified(Object? value) {
+  if (value is int) {
+    return DateTime.fromMillisecondsSinceEpoch(value * 1000);
+  }
+  if (value is String) {
+    return DateTime.tryParse(value);
+  }
+  return null;
+}
+
+/// Reads a Drift `bool` column (stored as INTEGER 0/1) from a raw sqlite row.
+/// Returns `Value.absent()` when the column is missing so the schema default
+/// (active) applies instead of forcibly re-activating a soft-deleted song.
+Value<bool> _parseIsActive(Object? value) {
+  if (value is int) return Value(value == 1);
+  if (value is bool) return Value(value);
+  return const Value<bool>.absent();
+}
+
 class VsBookImporter implements SongbookImporter {
   final AppDatabase db;
 
@@ -127,7 +149,7 @@ class VsBookImporter implements SongbookImporter {
       // Read Songs
       final List<SongsCompanion> songCompanions = [];
       final songRows = tempDb.select('''
-        SELECT song_num, title, key, body, modified, search, copyright, author, category_id, source_song_id, source_path, source_format 
+        SELECT song_num, title, key, body, modified, search, copyright, author, category_id, source_song_id, source_path, source_format, is_active 
         FROM songs
       ''');
 
@@ -139,7 +161,7 @@ class VsBookImporter implements SongbookImporter {
         if (songNum == null || title == null || body == null) continue;
 
         final key = row['key'] as String?;
-        final modifiedStr = row['modified'] as String?;
+        final parsedModified = _parseModified(row['modified']);
         final search = row['search'] as String?;
         final copyright = row['copyright'] as String?;
         final author = row['author'] as String?;
@@ -147,10 +169,6 @@ class VsBookImporter implements SongbookImporter {
         final sourceSongId = row['source_song_id'] as int?;
         final sourcePath = row['source_path'] as String?;
         final sourceFormat = row['source_format'] as String?;
-
-        final parsedModified = modifiedStr != null
-            ? DateTime.tryParse(modifiedStr)
-            : null;
 
         songCompanions.add(
           SongsCompanion.insert(
@@ -165,6 +183,7 @@ class VsBookImporter implements SongbookImporter {
             categoryId: categoryId != null
                 ? Value(categoryId)
                 : const Value<int?>.absent(),
+            isActive: _parseIsActive(row['is_active']),
             sourceSongId: Value(sourceSongId),
             sourcePath: Value(sourcePath),
             sourceFormat: Value(sourceFormat),
@@ -299,7 +318,7 @@ class VsBookImporter implements SongbookImporter {
       final List<SongsCompanion> songCompanions = [];
       final songRows = tempDb.select('''
         SELECT song_num, title, key, body, modified, search, copyright, author, 
-               category_id, source_song_id, source_path, source_format 
+               category_id, source_song_id, source_path, source_format, is_active 
         FROM songs
       ''');
 
@@ -315,17 +334,14 @@ class VsBookImporter implements SongbookImporter {
             title: title,
             body: body,
             key: Value(row['key'] as String?),
-            modified: Value(
-              row['modified'] != null
-                  ? DateTime.tryParse(row['modified'] as String)
-                  : null,
-            ),
+            modified: Value(_parseModified(row['modified'])),
             search: Value(row['search'] as String?),
             copyright: Value(row['copyright'] as String?),
             author: Value(row['author'] as String?),
             categoryId: row['category_id'] != null
                 ? Value(row['category_id'] as int)
                 : const Value<int?>.absent(),
+            isActive: _parseIsActive(row['is_active']),
             sourceSongId: Value(row['source_song_id'] as int?),
             sourcePath: Value(sourceFilePath),
             sourceFormat: const Value('vsbook_linked'),
@@ -397,11 +413,7 @@ class VsBookImporter implements SongbookImporter {
           title: title,
           body: body,
           key: Value(item['key'] as String?),
-          modified: Value(
-            item['modified'] != null
-                ? DateTime.tryParse(item['modified'] as String)
-                : null,
-          ),
+          modified: Value(_parseModified(item['modified'])),
           search: Value(item['search'] as String?),
           copyright: Value(item['copyright'] as String?),
           author: Value(item['author'] as String?),
@@ -470,7 +482,7 @@ class VsBookImporter implements SongbookImporter {
       if (songNum == null || title == null || body == null) continue;
 
       final key = item['key'] as String?;
-      final modifiedStr = item['modified'] as String?;
+      final parsedModified = _parseModified(item['modified']);
       final search = item['search'] as String?;
       final copyright = item['copyright'] as String?;
       final author = item['author'] as String?;
@@ -478,10 +490,6 @@ class VsBookImporter implements SongbookImporter {
       final sourceSongId = item['source_song_id'] as int?;
       final sourcePath = item['source_path'] as String?;
       final sourceFormat = item['source_format'] as String?;
-
-      final parsedModified = modifiedStr != null
-          ? DateTime.tryParse(modifiedStr)
-          : null;
 
       songCompanions.add(
         SongsCompanion.insert(
