@@ -170,15 +170,21 @@ platform.
 
 ### 4d. Non-hermetic test + CI (MAJOR #15 & #16)
 
-1. Rewrite `test/populate_db_test.dart`: in-memory Drift (`NativeDatabase.memory()`) + temp
-   dirs via `getTemporaryDirectory()`; no `~/Documents` paths. If a dev DB seeding flow is
-   still wanted, extract it to `tool/seed_dev_db.dart`.
-2. Add `.github/workflows/ci.yml`: `flutter pub get`, `dart format --set-exit-if-changed`
-   (optional), `flutter analyze`, `flutter test`, `flutter build linux --release`
-   (job-level matrix later).
+**Status:** ✅ DONE (commit `8493856`).
+
+1. ✅ Rewrote `test/populate_db_test.dart`: in-memory Drift (`AppDatabase.forTesting()` →
+   `NativeDatabase.memory()`), imports the bundled `.vsb` assets directly; no `~/Documents`
+   writes. A dev seeding flow already exists as `tool/seed_database.dart` (raw sqlite3 +
+   `mdb-export`).
+2. ✅ Added `.github/workflows/ci.yml`: `flutter pub get`, `dart format --set-exit-if-changed`
+   (non-blocking for now), `flutter analyze`, `flutter test` (installs `mdbtools`), and
+   `flutter build linux --release`.
 
 **Verify:** `flutter test` passes on a clean checkout without touching `~/Documents`;
 CI runs green on the fix branch.
+
+> Note: an old run of `populate_db_test.dart` left a stray `~/Documents/songs_db.sqlite`
+> on the dev machine (safe to delete; the app itself stores under `~/.visual_song_book`).
 
 ---
 
