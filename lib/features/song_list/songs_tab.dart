@@ -103,6 +103,71 @@ class _SongsTabState extends ConsumerState<SongsTab> {
     return path;
   }
 
+  Widget _buildCategoryFilterButton(
+    BuildContext context,
+    SongListState listState,
+    SongListController listNotifier,
+  ) {
+    final isFilterActive = listState.showUncategorizedOnly ||
+        (listState.selectedCategoryId != null &&
+            listState.selectedCategoryId != -2);
+    final activeName = isFilterActive ? _categoryFilterName(listState) : null;
+    return PopupMenuButton<String>(
+      icon: Icon(
+        Icons.filter_alt_outlined,
+        color: isFilterActive ? Theme.of(context).colorScheme.primary : null,
+      ),
+      tooltip: isFilterActive ? 'Filter: $activeName' : 'Filter by Collection',
+      initialValue: _categoryFilterValue(listState),
+      onSelected: (value) {
+        switch (value) {
+          case 'all':
+            listNotifier.selectCategory(-2);
+          case 'uncategorized':
+            listNotifier.selectCategory(null, uncategorizedOnly: true);
+          default:
+            final id = int.tryParse(value.substring(4));
+            if (id != null) listNotifier.selectCategory(id);
+        }
+      },
+      itemBuilder: (context) => [
+        CheckedPopupMenuItem(
+          value: 'all',
+          checked: _categoryFilterValue(listState) == 'all',
+          child: const Text('All Collections'),
+        ),
+        CheckedPopupMenuItem(
+          value: 'uncategorized',
+          checked: _categoryFilterValue(listState) == 'uncategorized',
+          child: const Text('Uncategorized'),
+        ),
+        if (listState.categories.isNotEmpty) const PopupMenuDivider(),
+        ...listState.categories.map(
+          (category) => CheckedPopupMenuItem(
+            value: 'cat-${category.id}',
+            checked: _categoryFilterValue(listState) == 'cat-${category.id}',
+            child: Text(category.name),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String? _categoryFilterValue(SongListState state) {
+    if (state.showUncategorizedOnly) return 'uncategorized';
+    if (state.selectedCategoryId == null || state.selectedCategoryId == -2) {
+      return 'all';
+    }
+    return 'cat-${state.selectedCategoryId}';
+  }
+
+  String _categoryFilterName(SongListState state) {
+    if (state.showUncategorizedOnly) return 'Uncategorized';
+    final id = state.selectedCategoryId;
+    if (id == null || id == -2) return 'All';
+    return state.categories.where((c) => c.id == id).firstOrNull?.name ?? 'Collection';
+  }
+
   @override
   Widget build(BuildContext context) {
     final listState = ref.watch(songListControllerProvider);
@@ -215,6 +280,7 @@ class _SongsTabState extends ConsumerState<SongsTab> {
                                       _searchFocusNode.requestFocus();
                                     },
                                   ),
+                                  _buildCategoryFilterButton(context, listState, listNotifier),
                                   PopupMenuButton<SongSortMode>(
                                     icon: const Icon(Icons.sort),
                                     tooltip: 'Sort By',

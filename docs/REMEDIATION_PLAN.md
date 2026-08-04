@@ -257,6 +257,8 @@ Songs/Sets/Bible tabs (shown only when the list is non-empty) behind a confirm d
 
 ## Phase 7 — Complete the category feature (MAJOR #11)
 
+**Status:** ✅ DONE.
+
 **Root cause:** categories can be created/assigned but `selectCategory`/`deleteCategory`
 (`song_list_controller.dart:157,186`) have no UI callers; `selectedCategoryId` is never set.
 
@@ -267,6 +269,17 @@ Songs/Sets/Bible tabs (shown only when the list is non-empty) behind a confirm d
    reassignment or cascade for its songs (confirm desired behavior during implementation).
 
 **Verify:** create collection → assign songs → filter by it → delete it.
+
+**Decided:** deleting a collection reassigns its songs to Uncategorized (songs kept). ✅
+
+**Done:** Songs tab AppBar gained a "Filter by Collection" dropdown (checked items:
+All Collections / Uncategorized / each category) wired to `selectCategory`; Settings →
+Library gained a "Song Collections" card listing categories with song counts and a delete
+button (confirm dialog) calling `deleteCategory`. `deleteCategory` in `song_repository.dart`
+now sets `categoryId = null` on its songs instead of hard-deleting them; the controller reset
+bug (`copyWith(selectedCategoryId: null)` was a no-op) fixed by calling `selectCategory(-2)`.
+New `test/song_list_controller_test.dart` (2 tests). Analyze baseline unchanged (18),
+`flutter test` 34 pass.
 
 ---
 
@@ -365,7 +378,8 @@ Prioritize regression tests for the criticals:
 2. macOS: disable sandbox (recommended) or move storage into the container? — **P4a** ✅ DECIDED
    (disable sandbox, commit `fdbe94d`)
 3. Application ID / org for all platforms — **P4c** ⏸️ DEFERRED 2026-08-04 (awaiting product owner)
-4. Category deletion: reassign songs or cascade-delete them? — **P7**
+4. Category deletion: reassign songs or cascade-delete them? — **P7** ✅ DECIDED (reassign to
+   Uncategorized, commit in Phase 7)
 5. `projectionMode` "duplicate": full mirroring or gated/deferred? — **P8**
 6. License type (if any) — **P10**
 7. Font files for Plus Jakarta Sans / EB Garamond (bundling) — **P4b** ✅ DONE (commit `b60aba4`)

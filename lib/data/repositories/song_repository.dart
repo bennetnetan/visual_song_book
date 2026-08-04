@@ -183,9 +183,11 @@ class SongRepository {
 
   Future<void> deleteCategory(int categoryId) async {
     await db.transaction(() async {
-      await (db.delete(
+      await (db.update(
         db.songs,
-      )..where((t) => t.categoryId.equals(categoryId))).go();
+      )..where((t) => t.categoryId.equals(categoryId))).write(
+        const SongsCompanion(categoryId: Value(null)),
+      );
       await (db.delete(
         db.categories,
       )..where((t) => t.id.equals(categoryId))).go();
