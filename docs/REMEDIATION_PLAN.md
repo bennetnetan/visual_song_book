@@ -193,6 +193,10 @@ CI runs green on the fix branch.
 
 ## Phase 5 — Projection: secondary-window controls + close leak (MAJOR #7 & #9)
 
+**Status:** ✅ DONE (commits `e923383` [5b], `a2bfe75` [5a]). Runtime verify still pending on a
+Linux/Windows box (open projector window → chevrons/dots render and navigate; open/close 5× →
+single hidden engine).
+
 ### 5a. In-window controls are dead in the secondary engine
 
 **Root cause:** the secondary engine never receives the slide list (`state.slides == []`),
@@ -210,6 +214,8 @@ Main window keeps using controller state.
 clicking navigates both windows in sync.
 
 ### 5b. Close leaks a hidden engine
+
+**Status:** ✅ DONE (commit `e923383`).
 
 **Root cause:** `close_secondary_window` handler hides the window then nulls
 `_secondaryWindow` (`projection_controller.dart:503-515`); the hidden engine survives and the
