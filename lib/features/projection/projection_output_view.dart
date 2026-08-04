@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 
 import 'package:go_router/go_router.dart';
+import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/win32_window_helper.dart';
 import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
@@ -66,8 +67,16 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
       }
     }
 
-    if (!kIsWeb &&
-        (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    // Only the dedicated projection engine is a "secondary window". The main
+    // window also renders this view on the /projection route (small desktop
+    // windows, web, or when the secondary window fails to open) — in that case
+    // it must NOT claim the IPC channel (which would clobber the main window's
+    // handler), go fullscreen, or hide its chrome.
+    final isProjectionEngine = !kIsWeb &&
+        (Platform.isWindows || Platform.isLinux || Platform.isMacOS) &&
+        ref.read(isProjectionWindowProvider);
+
+    if (isProjectionEngine) {
       _setupSecondaryWindowChannel();
 
       // ── Windows: kick off decoration-strip as early as possible (before
