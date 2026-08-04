@@ -109,7 +109,13 @@ See [docs/SUPPORTED_PLATFORMS.md](docs/SUPPORTED_PLATFORMS.md) for details.
 
 ## Version
 
-Current: **v1.8.0** — see About → Changelog in the app for full history.
+Current: **v1.9.0** — see About → Changelog in the app for full history.
+
+### v1.9.0 Changes
+- Linked songbook separation with SourceMode enum (bundled/linked/unified)
+- LinkedSongbookRegistry DB table for persistent link metadata
+- Upsert reimport logic preserving song IDs across syncs
+- Non-tabbed grouped settings layout with footer (logo, version, creator)
 
 ---
 

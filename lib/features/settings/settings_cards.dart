@@ -351,7 +351,7 @@ class _ChangelogCardState extends State<ChangelogCard> {
 
     final recentEntries = [
       const _ChangelogEntry(
-        version: 'v1.8.0',
+        version: 'v1.9.0',
         date: '2026-08-04',
         changes: [
           'Projection mode — extended (secondary window) or single (in-window on primary display)',
@@ -650,7 +650,7 @@ class AboutCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Chip(
                   label: Text(
-                    'v1.8.0',
+                    'v1.9.0',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
