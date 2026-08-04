@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:visual_song_book/core/models/source_mode.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/importers/bundled_json_importer.dart';
@@ -11,6 +12,7 @@ final _log = AppLogger.get('SeedingService');
 /// on the next cold start (useful when the bundled JSON is updated).
 const _seedVersionKey = 'bundled_seed_version';
 const _currentSeedVersion = 1;
+const _defaultSourceModeKey = 'default_source_mode';
 
 /// Pre-bundled songbooks to import on first launch.
 /// Each entry: (assetPath, humanReadableBookName)
@@ -29,6 +31,14 @@ class SeedingService {
   /// [_seedVersionKey] guard makes it a no-op after the first successful run.
   Future<void> seedIfNeeded() async {
     final prefs = await SharedPreferences.getInstance();
+
+    // Check if user has chosen a source mode that excludes bundled songbooks
+    final sourceModeStr = prefs.getString(_defaultSourceModeKey);
+    if (sourceModeStr == SourceMode.linked.name) {
+      _log.fine('Source mode is "linked" — skipping bundled seed.');
+      return;
+    }
+
     int seeded = prefs.getInt(_seedVersionKey) ?? 0;
 
     if (seeded >= _currentSeedVersion) {

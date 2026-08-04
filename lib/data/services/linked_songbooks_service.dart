@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:visual_song_book/core/models/source_mode.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/data/importers/vsbook_importer.dart';
@@ -183,8 +184,16 @@ final linkedSongbooksProvider =
 /// Syncs all linked songbooks that have changed since last import.
 /// Called on app startup after seeding completes.
 final linkedSongbooksSyncProvider = FutureProvider<int>((ref) async {
-  final db = ref.watch(databaseProvider);
   final prefs = await SharedPreferences.getInstance();
+
+  // Check if user has chosen a source mode that excludes linked songbooks
+  final sourceModeStr = prefs.getString('default_source_mode');
+  if (sourceModeStr == SourceMode.bundled.name) {
+    _log.fine('Source mode is "bundled" — skipping linked songbook sync.');
+    return 0;
+  }
+
+  final db = ref.watch(databaseProvider);
   final raw = prefs.getString(_linkedSongbooksKey);
   if (raw == null) return 0;
 

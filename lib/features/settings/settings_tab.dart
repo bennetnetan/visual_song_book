@@ -354,6 +354,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
         return [const ProjectionPreferencesCard()];
       case 'Library':
         return [
+          const SourceModeCard(),
+          const SizedBox(height: 24),
           const LinkedSongbooksCard(),
           const SizedBox(height: 24),
           ImportExportCard(

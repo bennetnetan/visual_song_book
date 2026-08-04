@@ -4,6 +4,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:visual_song_book/core/models/source_mode.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
@@ -686,6 +688,125 @@ class AboutCard extends StatelessWidget {
           const SizedBox(height: 24),
         ],
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Source Mode Card — choose which song sources to load on startup
+// ─────────────────────────────────────────────────────────────────────────────
+class SourceModeCard extends ConsumerWidget {
+  const SourceModeCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    return SettingsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader(
+            icon: Icons.source,
+            title: 'Song Source',
+            color: Colors.blue,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Choose which songs to load on startup. '
+            'This setting determines whether bundled songbooks, linked files, or both are loaded.',
+            style: GoogleFonts.plusJakartaSans(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 20),
+          _SourceModeSelector(),
+        ],
+      ),
+    );
+  }
+}
+
+class _SourceModeSelector extends ConsumerStatefulWidget {
+  const _SourceModeSelector();
+
+  @override
+  ConsumerState<_SourceModeSelector> createState() => _SourceModeSelectorState();
+}
+
+class _SourceModeSelectorState extends ConsumerState<_SourceModeSelector> {
+  SourceMode _currentMode = SourceMode.unified;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentMode();
+  }
+
+  Future<void> _loadCurrentMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString('default_source_mode');
+    if (saved != null) {
+      setState(() => _currentMode = SourceMode.fromString(saved));
+    }
+  }
+
+  Future<void> _changeMode(SourceMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('default_source_mode', mode.name);
+    setState(() => _currentMode = mode);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Source mode changed to "${mode.label}". '
+            'Restart the app to apply.',
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        SegmentedButton<SourceMode>(
+          segments: const [
+            ButtonSegment(
+              value: SourceMode.bundled,
+              label: Text('Bundled'),
+              icon: Icon(Icons.library_books, size: 16),
+            ),
+            ButtonSegment(
+              value: SourceMode.linked,
+              label: Text('Linked'),
+              icon: Icon(Icons.link, size: 16),
+            ),
+            ButtonSegment(
+              value: SourceMode.unified,
+              label: Text('Both'),
+              icon: Icon(Icons.layers, size: 16),
+            ),
+          ],
+          selected: {_currentMode},
+          onSelectionChanged: (Set<SourceMode> selection) {
+            if (selection.isNotEmpty) {
+              _changeMode(selection.first);
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        Text(
+          _currentMode.description,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }
