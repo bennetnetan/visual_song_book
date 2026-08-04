@@ -165,13 +165,13 @@ The projection window listens on `WindowMethodChannel` and renders whatever text
 
 ## Supported Platforms
 
-| Platform | Song CRUD | Projection (secondary window) | MDB Import |
-|---|---|---|---|
-| Linux | ✅ | ✅ Multi-window | ✅ (mdb-tools) |
-| Windows | ✅ | ✅ Multi-window | ⚠️ (requires mdb-tools port) |
-| macOS | ✅ | ✅ Multi-window | ✅ (mdb-tools via Homebrew) |
-| Android | ✅ | ✅ Fullscreen immersive | ❌ |
-| iOS | ✅ | ✅ Fullscreen immersive | ❌ |
+| Platform | Minimum OS | Song CRUD | Projection (secondary window) | MDB Import |
+|---|---|---|---|---|
+| Linux | Ubuntu 20.04 / GLIBC 2.29 | ✅ | ✅ Multi-window | ✅ (mdb-tools) |
+| Windows | Windows 10 (1809+) | ✅ | ✅ Multi-window | ⚠️ (requires mdb-tools port) |
+| macOS | 11.0 (Big Sur) | ✅ | ✅ Multi-window | ✅ (mdb-tools via Homebrew) |
+| Android | API 21 (Android 5.0 Lollipop) | ✅ | ✅ Fullscreen immersive | ❌ |
+| iOS | 13.0 | ✅ | ✅ Fullscreen immersive | ❌ |
 
 ---
 

@@ -84,14 +84,26 @@ flutter build linux --release
 ./scripts/package_appimage.sh          # → build/Visual_Song_Book-*.AppImage
 
 # Android per-ABI
-# versionCode comes from --build-number; pass an explicit number so it
-# doesn't stay at 1 between releases.
+# versionCode comes from --build-number; pass an explicit --build-name and
+# --build-number so they don't stay at 1 between releases.
 flutter build apk --split-per-abi --release \
   --build-name 1.8.0 --build-number 12
 
 # Run
 flutter run -d linux
 ```
+
+## Supported Platforms
+
+| Platform | Minimum Version |
+|---|---|
+| Android | API 21 (Android 5.0 Lollipop) |
+| iOS | 13.0 |
+| macOS | 11.0 (Big Sur) |
+| Windows | Windows 10 (1809+) |
+| Linux | Ubuntu 20.04 / GLIBC 2.29 |
+
+See [docs/SUPPORTED_PLATFORMS.md](docs/SUPPORTED_PLATFORMS.md) for details.
 
 ---
 
