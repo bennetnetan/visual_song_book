@@ -42,7 +42,9 @@ Future<bool> _isPathAllowed(String path) async {
     final appStorage = await getAppStoragePath();
     final appStorageDir = p.normalize(appStorage);
     if (canonical == appStorageDir || canonical.startsWith('$appStorageDir${p.separator}')) return true;
-  } catch (_) {}
+  } catch (_) {
+    // ignore: app storage path not yet initialized
+  }
 
   return false;
 }

@@ -220,7 +220,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
         if (c.windowId == currentWindow.windowId) continue;
         await c.invokeMethod('navigate_slide', {'action': action});
       }
-    } catch (_) {}
+    } catch (_) {
+      // ignore: non-critical IPC navigation
+    }
   }
 
   void onWindowClose() async {
@@ -244,7 +246,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
         if (c.windowId == currentWindow.windowId) continue;
         await c.invokeMethod('secondary_window_closed');
       }
-    } catch (_) {}
+    } catch (_) {
+      // ignore: non-critical IPC close notification
+    }
   }
 
   Future<void> _handleManualClose() async {
@@ -264,7 +268,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
         if (c.windowId == currentWindow.windowId) continue;
         await c.invokeMethod('close_secondary_window');
       }
-    } catch (_) {}
+    } catch (_) {
+      // ignore: non-critical IPC close request
+    }
   }
 
   @override
