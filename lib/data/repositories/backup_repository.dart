@@ -10,9 +10,15 @@ class BackupRepository {
     return File(dbPath);
   }
 
-  /// Exports the current database to a [.vsbook] archive file at the specified [targetPath]
-  Future<void> exportBackup(String targetPath) async {
-    final dbFile = await _getDatabaseFile();
+  /// Exports the current database to a [.vsbook] archive file at the specified [targetPath].
+  ///
+  /// [databasePath] overrides the active database file location (used by tests
+  /// to keep the round-trip hermetic); when omitted the app-storage database
+  /// is used.
+  Future<void> exportBackup(String targetPath, {String? databasePath}) async {
+    final dbFile = databasePath != null
+        ? File(databasePath)
+        : await _getDatabaseFile();
     if (!await dbFile.exists()) {
       throw Exception('Active database file not found on disk.');
     }

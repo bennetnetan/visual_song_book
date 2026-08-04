@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -394,14 +396,15 @@ class BibleSearchResultsView extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.open_in_new),
-              title: const Text('Navigate to Verse'),
-              onTap: () {
-                Navigator.pop(context);
-                onNavigate(verse);
-              },
-            ),
+            if (kIsWeb || !Platform.isAndroid)
+              ListTile(
+                leading: const Icon(Icons.open_in_new),
+                title: const Text('Navigate to Verse'),
+                onTap: () {
+                  Navigator.pop(context);
+                  onNavigate(verse);
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.tv),
               title: const Text('Project'),

@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -123,6 +125,7 @@ class BibleReadingView extends StatefulWidget {
   final bool isLoadingVerses;
   final bool isLargeScreen;
   final ValueChanged<BibleVerse> onShowCrossRefs;
+  final ValueChanged<double>? onFontSizeChanged;
 
   const BibleReadingView({
     super.key,
@@ -144,6 +147,7 @@ class BibleReadingView extends StatefulWidget {
     required this.isLoadingVerses,
     required this.isLargeScreen,
     required this.onShowCrossRefs,
+    this.onFontSizeChanged,
   });
 
   @override
@@ -155,6 +159,7 @@ class _BibleReadingViewState extends State<BibleReadingView> {
   final _activeVerseKey = GlobalKey();
   final _verseJumpController = TextEditingController();
   bool _showJumpInput = false;
+  double _baseFontSize = 16.0;
 
   @override
   void initState() {
@@ -175,27 +180,48 @@ class _BibleReadingViewState extends State<BibleReadingView> {
     if (v == null) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) return;
+      if (!mounted) return;
 
       final currentContext = _activeVerseKey.currentContext;
-      if (currentContext != null) {
+      if (currentContext != null && _scrollController.hasClients) {
         Scrollable.ensureVisible(
           currentContext,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
+          alignment: 0.3,
         );
-      } else {
-        final index = widget.verses.indexWhere((verse) => verse.id == v.id);
-        if (index < 0) return;
-        const itemHeight = 60.0;
+        return;
+      }
+
+      if (!_scrollController.hasClients) return;
+      final index = widget.verses.indexWhere((verse) => verse.id == v.id);
+      if (index < 0) return;
+
+      Future.delayed(const Duration(milliseconds: 80), () {
+        if (!mounted || !_scrollController.hasClients) return;
+        final ctx = _activeVerseKey.currentContext;
+        if (ctx != null) {
+          Scrollable.ensureVisible(
+            ctx,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            alignment: 0.3,
+          );
+          return;
+        }
         final viewportHeight = _scrollController.position.viewportDimension;
-        final targetOffset = (index * itemHeight) - (viewportHeight * 0.3);
+        final headerHeight = kToolbarHeight +
+            MediaQuery.of(context).padding.top +
+            (widget.selectedChapter != null ? 52.0 : 0.0) +
+            (widget.selectionMode ? 48.0 : 0.0) +
+            24.0;
+        final targetOffset = (index * 60.0) - (viewportHeight * 0.3) + headerHeight;
         _scrollController.animateTo(
           targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         );
-      }
+      });
     });
   }
 
@@ -277,7 +303,7 @@ class _BibleReadingViewState extends State<BibleReadingView> {
                 ),
                 onPressed: () => showDialog(
                   context: context,
-                  builder: (context) => BibleNavigationDialog(),
+                  builder: (context) => const BibleNavigationDialog(),
                 ),
               ),
             ),
@@ -401,11 +427,21 @@ class _BibleReadingViewState extends State<BibleReadingView> {
   Widget _buildVerseList(ColorScheme colorScheme, String readingFont) {
     return Stack(
       children: [
-        ListView.builder(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          controller: _scrollController,
-          padding: EdgeInsets.fromLTRB(
-              24, 12, 24, MediaQuery.of(context).padding.bottom + 80),
+        GestureDetector(
+          onScaleStart: (details) {
+            _baseFontSize = widget.fontSize;
+          },
+          onScaleUpdate: (details) {
+            if (details.scale != 1.0) {
+              final newSize = (_baseFontSize * details.scale).clamp(12.0, 96.0);
+              widget.onFontSizeChanged?.call(newSize);
+            }
+          },
+          child: ListView.builder(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            controller: _scrollController,
+            padding: EdgeInsets.fromLTRB(
+                24, 12, 24, MediaQuery.of(context).padding.bottom + 80),
           itemCount: widget.verses.length,
           itemBuilder: (context, index) {
             final v = widget.verses[index];
@@ -413,7 +449,7 @@ class _BibleReadingViewState extends State<BibleReadingView> {
             final isBookmarked = widget.bookmarkedVerseIds.contains(v.verse);
             final isSelected = widget.selectedVerseIds.contains(v.id);
 
-            return Container(
+            return ColoredBox(
               key: isActive ? _activeVerseKey : null,
               color: isActive
                   ? colorScheme.primaryContainer.withValues(alpha: 0.3)
@@ -521,6 +557,7 @@ class _BibleReadingViewState extends State<BibleReadingView> {
             );
           },
         ),
+        ),
         if (widget.verses.length > 30)
           Positioned(
             right: 16,
@@ -592,14 +629,15 @@ class _BibleReadingViewState extends State<BibleReadingView> {
             dense: true,
           ),
         ),
-        const PopupMenuItem(
-          value: 'navigate',
-          child: ListTile(
-            leading: Icon(Icons.open_in_new, size: 18),
-            title: Text('Navigate to Verse', style: TextStyle(fontSize: 13)),
-            dense: true,
+        if (kIsWeb || !Platform.isAndroid)
+          const PopupMenuItem(
+            value: 'navigate',
+            child: ListTile(
+              leading: Icon(Icons.open_in_new, size: 18),
+              title: Text('Navigate to Verse', style: TextStyle(fontSize: 13)),
+              dense: true,
+            ),
           ),
-        ),
         PopupMenuItem(
           value: 'bookmark',
           child: ListTile(
@@ -676,8 +714,9 @@ class BibleVersePopupMenu extends StatelessWidget {
         ],
       ),
       onSelected: (action) {
-        if (action == 'project') onProject();
-        else if (action == 'bookmark') onBookmark();
+        if (action == 'project') {
+          onProject();
+        } else if (action == 'bookmark') onBookmark();
         else if (action == 'navigate') onNavigate();
       },
       itemBuilder: (context) => [
@@ -690,14 +729,15 @@ class BibleVersePopupMenu extends StatelessWidget {
             dense: true,
           ),
         ),
-        PopupMenuItem(
-          value: 'navigate',
-          child: const ListTile(
-            leading: Icon(Icons.open_in_new, size: 18),
-            title: Text('Navigate to Verse', style: TextStyle(fontSize: 13)),
-            dense: true,
+        if (kIsWeb || !Platform.isAndroid)
+          const PopupMenuItem(
+            value: 'navigate',
+            child: ListTile(
+              leading: Icon(Icons.open_in_new, size: 18),
+              title: Text('Navigate to Verse', style: TextStyle(fontSize: 13)),
+              dense: true,
+            ),
           ),
-        ),
         PopupMenuItem(
           value: 'bookmark',
           child: ListTile(

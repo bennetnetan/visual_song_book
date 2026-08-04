@@ -186,9 +186,10 @@ class SongListController extends StateNotifier<SongListState> {
   Future<void> deleteCategory(int categoryId) async {
     await _repository.deleteCategory(categoryId);
     if (state.selectedCategoryId == categoryId) {
-      state = state.copyWith(selectedCategoryId: null);
+      selectCategory(-2);
+    } else {
+      fetchSongs();
     }
-    fetchSongs();
   }
 
   Future<void> fetchSongs() async {

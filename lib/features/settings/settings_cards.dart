@@ -22,14 +22,13 @@ class SettingsCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
-          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+          color: Theme.of(
+            context,
+          ).colorScheme.outlineVariant.withValues(alpha: 0.4),
         ),
       ),
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: child,
-      ),
+      child: Padding(padding: const EdgeInsets.all(24), child: child),
     );
   }
 }
@@ -96,7 +95,10 @@ class ProjectionPreferencesCard extends ConsumerWidget {
           SwitchListTile(
             title: Text(
               'Prevent Screen Sleep',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 14),
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
             ),
             subtitle: Text(
               'Keep the display active during presentation',
@@ -146,6 +148,19 @@ class ProjectionPreferencesCard extends ConsumerWidget {
               ],
               selected: {state.projectionMode},
               onSelectionChanged: (val) {
+                if (val.first == 'duplicate') {
+                  ScaffoldMessenger.of(context)
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Duplicate projection is coming soon. '
+                          'Single Screen and Extended are available now.',
+                        ),
+                      ),
+                    );
+                  return;
+                }
                 notifier.setProjectionMode(val.first);
               },
               showSelectedIcon: false,
@@ -281,7 +296,9 @@ class ImportExportCard extends StatelessWidget {
                 label: const Text('Import Pre-installed Songbooks'),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -291,7 +308,9 @@ class ImportExportCard extends StatelessWidget {
                 label: const Text('Import from File (.vsbook / .mdb)'),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -301,7 +320,9 @@ class ImportExportCard extends StatelessWidget {
                 label: const Text('Export Backup (.vsbook)'),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ],
@@ -327,6 +348,16 @@ class _ChangelogCardState extends State<ChangelogCard> {
     final theme = Theme.of(context);
 
     final recentEntries = [
+      const _ChangelogEntry(
+        version: 'v1.7.1',
+        date: '2026-07-31',
+        changes: [
+          'Fixed projection crash caused by background enumeration on Windows',
+          'Eliminated title bar flash on secondary projection screen (Windows)',
+          'Improved Enter-key interaction and responsiveness for search results',
+          'Improved projection UI and controls visibility on Android/touch devices',
+        ],
+      ),
       const _ChangelogEntry(
         version: 'v1.7.0',
         date: '2026-07-28',
@@ -601,7 +632,7 @@ class AboutCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Chip(
                   label: Text(
-                    'v1.7.0',
+                    'v1.7.1',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -625,21 +656,22 @@ class AboutCard extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
-          Text(
-            'Made by BenjaNetan',
-            style: GoogleFonts.plusJakartaSans(
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+          Center(
+            child: Text(
+              'Made by BenjaNetan',
+              style: GoogleFonts.plusJakartaSans(
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
         ],
       ),
     );
   }
-
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -685,8 +717,9 @@ class LinkedSongbooksCard extends ConsumerWidget {
                         Icon(
                           Icons.link_off,
                           size: 40,
-                          color: theme.colorScheme.onSurfaceVariant
-                              .withValues(alpha: 0.4),
+                          color: theme.colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.4,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -721,8 +754,9 @@ class LinkedSongbooksCard extends ConsumerWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                       side: BorderSide(
-                        color: theme.colorScheme.outlineVariant
-                            .withValues(alpha: 0.5),
+                        color: theme.colorScheme.outlineVariant.withValues(
+                          alpha: 0.5,
+                        ),
                       ),
                     ),
                     child: ListTile(
@@ -735,14 +769,16 @@ class LinkedSongbooksCard extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: exists
                               ? (needsSync
-                                  ? Colors.orange.withValues(alpha: 0.1)
-                                  : Colors.green.withValues(alpha: 0.1))
+                                    ? Colors.orange.withValues(alpha: 0.1)
+                                    : Colors.green.withValues(alpha: 0.1))
                               : Colors.red.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
                           exists
-                              ? (needsSync ? Icons.sync : Icons.check_circle_outline)
+                              ? (needsSync
+                                    ? Icons.sync
+                                    : Icons.check_circle_outline)
                               : Icons.error_outline,
                           size: 20,
                           color: exists
@@ -890,7 +926,9 @@ class LinkedSongbooksCard extends ConsumerWidget {
 
   Future<void> _syncAll(BuildContext context, WidgetRef ref) async {
     final linked = ref.read(linkedSongbooksProvider).value ?? [];
-    final needsSync = linked.where((b) => b.hasChangedSinceLastImport && b.fileExists).toList();
+    final needsSync = linked
+        .where((b) => b.hasChangedSinceLastImport && b.fileExists)
+        .toList();
     if (needsSync.isEmpty) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -924,9 +962,9 @@ class LinkedSongbooksCard extends ConsumerWidget {
     }
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sync complete.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Sync complete.')));
     }
   }
 

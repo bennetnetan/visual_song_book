@@ -16,6 +16,9 @@ class BibleController extends StateNotifier<BibleState> {
   static const _recentSearchesKey = 'bible_recent_searches';
   static const _fontSizeKey = 'bible_font_size';
   static const _serifFontKey = 'bible_use_serif_font';
+  static const _lastReadBookKey = 'bible_last_read_book';
+  static const _lastReadChapterKey = 'bible_last_read_chapter';
+  static const _lastReadVerseKey = 'bible_last_read_verse';
   static const _maxRecentBooks = 5;
   static const _maxRecentSearches = 8;
 
@@ -30,6 +33,9 @@ class BibleController extends StateNotifier<BibleState> {
     final recentSearches = prefs.getStringList(_recentSearchesKey) ?? [];
     final fontSize = prefs.getDouble(_fontSizeKey) ?? 15.0;
     final useSerif = prefs.getBool(_serifFontKey) ?? false;
+    final lastReadBook = prefs.getInt(_lastReadBookKey);
+    final lastReadChapter = prefs.getInt(_lastReadChapterKey);
+    final lastReadVerse = prefs.getInt(_lastReadVerseKey);
 
     if (mounted) {
       state = state.copyWith(
@@ -40,7 +46,20 @@ class BibleController extends StateNotifier<BibleState> {
         recentSearches: recentSearches,
         bibleFontSize: fontSize,
         useSerifFont: useSerif,
+        lastReadBookId: () => lastReadBook,
+        lastReadChapter: () => lastReadChapter,
+        lastReadVerse: () => lastReadVerse,
       );
+
+      final hasLastRead =
+          lastReadBook != null &&
+          lastReadChapter != null &&
+          books.any((b) => b.id == lastReadBook);
+      if (hasLastRead) {
+        // Leave the reader empty so the "Continue Reading" card is visible.
+        return;
+      }
+
       final genesis = books.where((b) => b.name.toLowerCase() == 'genesis').firstOrNull;
       if (genesis != null) {
         await navigateToVerse(genesis.id, 1, 1);
@@ -91,8 +110,11 @@ class BibleController extends StateNotifier<BibleState> {
         verses: verses,
         bookmarkedVerseIds: bookmarked,
         isLoadingVerses: false,
+        lastReadBookId: () => bookId,
+        lastReadChapter: () => chapter,
       );
     }
+    await _persistLastRead(bookId, chapter);
   }
 
   Future<void> selectVerse(BibleVerse verse) async {
@@ -100,6 +122,9 @@ class BibleController extends StateNotifier<BibleState> {
       activeVerse: () => verse,
       isLoadingCrossReferences: true,
       activeCrossReferences: [],
+      lastReadBookId: () => verse.bookId,
+      lastReadChapter: () => verse.chapter,
+      lastReadVerse: () => verse.verse,
     );
     final refs = await _repo.getCrossReferences(verse.bookId, verse.chapter, verse.verse);
     if (mounted) {
@@ -107,6 +132,16 @@ class BibleController extends StateNotifier<BibleState> {
         activeCrossReferences: refs,
         isLoadingCrossReferences: false,
       );
+    }
+    await _persistLastRead(verse.bookId, verse.chapter, verse.verse);
+  }
+
+  Future<void> _persistLastRead(int bookId, int chapter, [int? verse]) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_lastReadBookKey, bookId);
+    await prefs.setInt(_lastReadChapterKey, chapter);
+    if (verse != null) {
+      await prefs.setInt(_lastReadVerseKey, verse);
     }
   }
 

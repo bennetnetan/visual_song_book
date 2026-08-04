@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 APP_DIR="build/AppDir"
 BUNDLE_DIR="build/linux/x64/release/bundle"
@@ -8,8 +8,15 @@ BUNDLE_DIR="build/linux/x64/release/bundle"
 APP_VERSION=$(grep '^version: ' pubspec.yaml | sed 's/version: //' | cut -d+ -f1)
 OUTPUT_APPIMAGE="build/Visual_Song_Book-${APP_VERSION}-x86_64.AppImage"
 
+# Flutter binary: honor FLUTTER_BIN override, else fall back to PATH.
+FLUTTER="${FLUTTER_BIN:-$(command -v flutter || true)}"
+if [ -z "$FLUTTER" ]; then
+  echo "Error: Flutter not found. Install Flutter or set FLUTTER_BIN." >&2
+  exit 1
+fi
+
 if [ ! -d "$BUNDLE_DIR" ]; then
-  echo "Error: $BUNDLE_DIR does not exist. Run 'flutter build linux --release' first."
+  echo "Error: $BUNDLE_DIR does not exist. Run 'flutter build linux --release' first." >&2
   exit 1
 fi
 
@@ -17,7 +24,14 @@ fi
 if [ ! -f "build/appimagetool" ]; then
   echo "Downloading appimagetool..."
   mkdir -p build
-  curl -sL "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" -o build/appimagetool
+  if command -v wget &>/dev/null; then
+    wget -q --show-progress \
+      "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" \
+      -O build/appimagetool
+  else
+    curl -sL "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" \
+      -o build/appimagetool
+  fi
   chmod +x build/appimagetool
 fi
 
@@ -63,6 +77,13 @@ EOF
 chmod +x "$APP_DIR/AppRun"
 
 echo "Building AppImage..."
-ARCH=x86_64 ./build/appimagetool --no-appstream "$APP_DIR" "$OUTPUT_APPIMAGE"
+# appimagetool requires FUSE; fall back to --appimage-extract-and-run when unavailable.
+EXTRA_ARGS=""
+if ! fusermount --version &>/dev/null 2>&1; then
+  EXTRA_ARGS="--appimage-extract-and-run"
+  echo "Warning: FUSE not available — using --appimage-extract-and-run fallback"
+fi
+
+ARCH=x86_64 ./build/appimagetool $EXTRA_ARGS --no-appstream "$APP_DIR" "$OUTPUT_APPIMAGE"
 
 echo "AppImage created successfully at: $OUTPUT_APPIMAGE"

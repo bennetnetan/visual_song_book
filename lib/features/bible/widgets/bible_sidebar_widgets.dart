@@ -38,7 +38,7 @@ class BibleRightSidebar extends ConsumerWidget {
             ],
             const _BibleSidebarLabel(title: 'Bookmarks'),
             const SizedBox(height: 16),
-            BibleBookmarkList(),
+            const BibleBookmarkList(),
           ],
         ),
       ),
@@ -114,6 +114,8 @@ class _BibleCrossReferenceListState extends State<BibleCrossReferenceList> {
 }
 
 class BibleBookmarkList extends ConsumerWidget {
+  const BibleBookmarkList({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);

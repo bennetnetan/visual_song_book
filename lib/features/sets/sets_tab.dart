@@ -310,13 +310,10 @@ class SetsTab extends ConsumerWidget {
       onProject: () async {
         await ref.read(projectionControllerProvider.notifier).projectSongSet(
               state.selectedSetId!,
+              notifier.selectedSet!.name,
               state.setItems,
             );
         if (!context.mounted) return;
-        ref.read(setRepositoryProvider).recordSetProjection(
-              state.selectedSetId!,
-              notifier.selectedSet!.name,
-            );
         await ref.read(projectionControllerProvider.notifier).triggerProjection(context, isLargeScreen);
       },
     );

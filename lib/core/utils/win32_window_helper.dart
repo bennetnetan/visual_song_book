@@ -101,10 +101,6 @@ class Win32WindowHelper {
   static final _enumWindowsNative = _user32
       .lookupFunction<EnumWindowsNative, EnumWindowsDart>('EnumWindows');
 
-  static int getActiveWindowHandle() {
-    return _getForegroundWindow();
-  }
-
   static bool maximizeWindow(int hwnd) {
     return _showWindow(hwnd, swMaximize);
   }
@@ -136,20 +132,18 @@ class Win32WindowHelper {
           flags);
   }
 
-  static bool fullscreenWindow(int hwnd, {bool topmost = false}) {
-    return _setWindowPos(
-          hwnd,
-          topmost ? hwndTopmost : hwndTop,
-          0,
-          0,
-          1920,
-          1080,
-          swpShowWindow);
-  }
+  // Monitor detection FFI
+  static final _monitorFromWindow = _user32.lookupFunction<
+      IntPtr Function(IntPtr hwnd, Uint32 dwFlags),
+      int Function(int hwnd, int dwFlags)>('MonitorFromWindow');
+
+  static final _getMonitorInfoW = _user32.lookupFunction<
+      Bool Function(IntPtr hMonitor, Pointer<Uint8> lpmi),
+      bool Function(int hMonitor, Pointer<Uint8> lpmi)>('GetMonitorInfoW');
 
   /// Enters true borderless fullscreen by stripping the title bar and
-  /// resizing the window to fill the screen. Returns the original window
-  /// style so it can be restored later.
+  /// resizing the window to fill the monitor containing the window.
+  /// Returns the original window style so it can be restored later.
   static int enterBorderlessFullscreen(int hwnd) {
     if (hwnd == 0) return 0;
     final originalStyle = getWindowStyle(hwnd);
@@ -160,12 +154,39 @@ class Win32WindowHelper {
         ~(wsCaption | wsThickframe | wsSysmenu | wsMaximizebox | wsMinimizebox);
     setWindowStyle(hwnd, newStyle);
 
-    // Get current monitor's screen dimensions
-    final screenWidth = getSystemMetrics(smCxscreen);
-    final screenHeight = getSystemMetrics(smCyscreen);
+    // Query display bounds dynamically using MonitorFromWindow
+    int screenWidth = getSystemMetrics(smCxscreen);
+    int screenHeight = getSystemMetrics(smCyscreen);
+    int screenX = 0;
+    int screenY = 0;
 
-    // Position at (0,0) covering the entire screen, with frame change
-    setWindowBounds(hwnd, 0, 0, screenWidth, screenHeight,
+    try {
+      final hMonitor = _monitorFromWindow(hwnd, 2); // MONITOR_DEFAULTTONEAREST = 2
+      if (hMonitor != 0) {
+        // Allocate space for MONITORINFO struct:
+        // cbSize (4 bytes) + rcMonitor (16 bytes: left, top, right, bottom) + rcWork (16 bytes) + dwFlags (4 bytes) = 40 bytes total.
+        final ptr = calloc<Uint8>(40);
+        try {
+          // Set cbSize to 40
+          ptr.cast<Uint32>()[0] = 40;
+          if (_getMonitorInfoW(hMonitor, ptr)) {
+            final monitorRect = ptr.cast<Int32>();
+            screenX = monitorRect[1]; // left
+            screenY = monitorRect[2]; // top
+            screenWidth = monitorRect[3] - screenX; // right - left
+            screenHeight = monitorRect[4] - screenY; // bottom - top
+            debugPrint('Detected monitor bounds: ($screenX, $screenY, $screenWidth, $screenHeight)');
+          }
+        } finally {
+          calloc.free(ptr);
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to query monitor bounds dynamically: $e. Falling back to primary metrics.');
+    }
+
+    // Position at monitor coordinates covering the screen area
+    setWindowBounds(hwnd, screenX, screenY, screenWidth, screenHeight,
         frameChanged: true);
 
     return originalStyle;
@@ -173,10 +194,35 @@ class Win32WindowHelper {
 
   /// Restores original window style after leaving borderless fullscreen.
   static void exitBorderlessFullscreen(int hwnd, int originalStyle) {
+    if (hwnd == 0) return;
     setWindowStyle(hwnd, originalStyle);
-    final screenWidth = getSystemMetrics(smCxscreen);
-    final screenHeight = getSystemMetrics(smCyscreen);
-    setWindowBounds(hwnd, 0, 0, screenWidth, screenHeight,
+
+    // Re-query monitor bounds to restore at correct coordinates
+    int screenWidth = getSystemMetrics(smCxscreen);
+    int screenHeight = getSystemMetrics(smCyscreen);
+    int screenX = 0;
+    int screenY = 0;
+
+    try {
+      final hMonitor = _monitorFromWindow(hwnd, 2);
+      if (hMonitor != 0) {
+        final ptr = calloc<Uint8>(40);
+        try {
+          ptr.cast<Uint32>()[0] = 40;
+          if (_getMonitorInfoW(hMonitor, ptr)) {
+            final monitorRect = ptr.cast<Int32>();
+            screenX = monitorRect[1];
+            screenY = monitorRect[2];
+            screenWidth = monitorRect[3] - screenX;
+            screenHeight = monitorRect[4] - screenY;
+          }
+        } finally {
+          calloc.free(ptr);
+        }
+      }
+    } catch (_) {}
+
+    setWindowBounds(hwnd, screenX, screenY, screenWidth, screenHeight,
         frameChanged: true);
   }
 

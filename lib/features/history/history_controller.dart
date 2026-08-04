@@ -43,6 +43,8 @@ class HistoryController extends StateNotifier<HistoryState> {
   final SongRepository _songRepository;
   final SetRepository _setRepository;
   StreamSubscription<List<Song>>? _songsSub;
+  StreamSubscription<List<SetHistoryData>>? _setHistorySub;
+  StreamSubscription<List<BibleHistoryData>>? _bibleHistorySub;
   StreamSubscription<List<BibleBookmark>>? _bookmarksSub;
 
   HistoryController(this._songRepository, this._setRepository)
@@ -54,10 +56,10 @@ class HistoryController extends StateNotifier<HistoryState> {
     _songsSub = _songRepository.watchHistory().listen((historyList) {
       state = state.copyWith(songs: historyList, isLoading: false);
     });
-    _setRepository.getSetHistory().then((setHistory) {
+    _setHistorySub = _setRepository.watchSetHistory().listen((setHistory) {
       state = state.copyWith(sets: setHistory);
     });
-    _setRepository.getBibleHistory().then((bibleHistory) {
+    _bibleHistorySub = _setRepository.watchBibleHistory().listen((bibleHistory) {
       state = state.copyWith(bible: bibleHistory);
     });
     _bookmarksSub = _setRepository.watchBookmarks().listen((bookmarksList) {
@@ -71,17 +73,17 @@ class HistoryController extends StateNotifier<HistoryState> {
 
   Future<void> clearSetHistory() async {
     await _setRepository.clearSetHistory();
-    state = state.copyWith(sets: []);
   }
 
   Future<void> clearBibleHistory() async {
     await _setRepository.clearBibleHistory();
-    state = state.copyWith(bible: []);
   }
 
   @override
   void dispose() {
     _songsSub?.cancel();
+    _setHistorySub?.cancel();
+    _bibleHistorySub?.cancel();
     _bookmarksSub?.cancel();
     super.dispose();
   }

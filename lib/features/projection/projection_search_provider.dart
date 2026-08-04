@@ -141,7 +141,7 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
 
   // ── Public API ─────────────────────────────────────────────────────────────
 
-  /// Atomically switch mode and restore from cache or fetch instantly (0 ms).
+  /// Switch mode and search, using debounce for cache misses to prevent blocking thread execution.
   void switchModeAndSearch(bool isBible, String query) {
     _debounce?.cancel();
     _activeRequestId++;
@@ -196,9 +196,11 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
       }
     }
 
-    // ── Cache miss: fetch from DB ────────────────────────────────────────────
+    // ── Cache miss: fetch from DB with debounce to avoid freezing UI ───────
     state = state.copyWith(isLoading: true);
-    _searchNow(query, requestId);
+    _debounce = Timer(const Duration(milliseconds: 250), () {
+      _searchNow(query, requestId);
+    });
   }
 
   /// Convenience alias — switch mode using the current query.

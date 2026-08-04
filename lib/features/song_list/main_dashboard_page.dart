@@ -59,7 +59,7 @@ class MainDashboardPage extends ConsumerWidget {
     final currentTitle = tabTitles[activeTab];
 
     return Scaffold(
-      appBar: !isLargeScreen
+      appBar: !isLargeScreen && activeTab != 0 && activeTab != 2
           ? AppBar(
               centerTitle: false,
               title: Row(
@@ -92,9 +92,6 @@ class MainDashboardPage extends ConsumerWidget {
                   ),
                 ],
               ),
-              actions: [
-                if (activeTab == 0) ...[const _AddMenuButton(isExpanded: false), const SizedBox(width: 8)],
-              ],
             )
           : null,
       body: Row(
@@ -138,7 +135,7 @@ class MainDashboardPage extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 20),
-                      _AddMenuButton(isExpanded: isExpanded),
+                      AddMenuButton(isExpanded: isExpanded),
                     ],
                   ),
                 ),
@@ -249,9 +246,9 @@ class MainDashboardPage extends ConsumerWidget {
   }
 }
 
-class _AddMenuButton extends ConsumerWidget {
+class AddMenuButton extends ConsumerWidget {
   final bool isExpanded;
-  const _AddMenuButton({this.isExpanded = true});
+  const AddMenuButton({super.key, this.isExpanded = true});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

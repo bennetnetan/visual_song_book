@@ -72,7 +72,7 @@ const bibleBookIdMap = <String, int>{
 
 /// Pattern matching "book chapter:verse" (e.g. "gen 1:1", "1jn 5:4", "rev 2:1").
 final _bibleRefPattern = RegExp(
-  r"^([1-3]?\s*[a-z]{2,})\s+(\d+)\s*[:–\-]\s*(\d+)$",
+  r'^([1-3]?\s*[a-z]{2,})\s+(\d+)\s*[:–\-]\s*(\d+)$',
   caseSensitive: false,
 );
 

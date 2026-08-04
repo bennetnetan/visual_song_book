@@ -145,12 +145,16 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       final savedKeepAwake = _prefs?.getBool('projection_keep_awake') ?? true;
       final savedAutoChorus = _prefs?.getBool('projection_auto_chorus') ?? true;
       final savedMode = _prefs?.getString('projection_mode') ?? 'extended';
+      // 'duplicate' is not implemented yet — fall back to 'extended'.
+      final effectiveMode = (savedMode == 'single' || savedMode == 'extended')
+          ? savedMode
+          : 'extended';
 
       state = state.copyWith(
         fontSize: savedFontSize,
         keepAwake: savedKeepAwake,
         autoInsertChorus: savedAutoChorus,
-        projectionMode: savedMode,
+        projectionMode: effectiveMode,
       );
 
       if (state.keepAwake) {
@@ -159,7 +163,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     } catch (_) {}
   }
 
-  void setSong(Song song) {
+  void setSong(Song song) => _setSong(song);
+
+  void _setSong(Song song, {bool recordHistory = true}) {
     final parsedVerses = VerseParser.parse(song.body);
     final sequence = VerseParser.buildSlideSequence(
       parsedVerses,
@@ -174,7 +180,11 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       contentTitle: () => song.title,
     );
 
-    _songRepository.addToHistory(song.id);
+    // Re-projection triggered by a settings toggle (e.g. auto-chorus) must
+    // not pollute the history with a duplicate entry.
+    if (recordHistory) {
+      _songRepository.addToHistory(song.id);
+    }
     _syncSecondaryWindow();
   }
 
@@ -223,8 +233,14 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     final clamped = size.clamp(16.0, 160.0);
     if (state.fontSize == clamped) return;
     state = state.copyWith(fontSize: clamped);
-    _prefs?.setDouble('projection_font_size', clamped);
     _syncSecondaryWindow();
+  }
+
+  /// Persists the current font size. Kept separate from [setFontSize] so
+  /// pinch-to-zoom gestures don't write SharedPreferences on every frame;
+  /// callers flush once when the gesture ends.
+  Future<void> persistFontSize() async {
+    await _prefs?.setDouble('projection_font_size', state.fontSize);
   }
 
   Future<void> setAutoInsertChorus(bool value) async {
@@ -232,7 +248,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     await _prefs?.setBool('projection_auto_chorus', value);
 
     if (state.currentSong != null) {
-      setSong(state.currentSong!);
+      _setSong(state.currentSong!, recordHistory: false);
     }
   }
 
@@ -333,12 +349,26 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       final targetVerse = direction < 0 ? await _lastVerse(nextBook.id, targetChapter) : null;
       await _loadChapter(nextBook.id, targetChapter, targetVerse: targetVerse);
     }
+    _recordChapterHistory();
+  }
+
+  void _recordChapterHistory() {
+    final bookName = state.bibleBookName;
+    final chapter = state.bibleChapter;
+    if (bookName == null || chapter == null) return;
+    ref
+        .read(setRepositoryProvider)
+        .recordBibleProjection('$bookName $chapter', state.currentSlide?.text ?? '');
   }
 
   void goToNextChapter() => _advanceChapter(1);
   void goToPrevChapter() => _advanceChapter(-1);
 
-  Future<void> projectSongSet(int setId, List<SongSetItem> items) async {
+  Future<void> projectSongSet(
+    int setId,
+    String setName,
+    List<SongSetItem> items,
+  ) async {
     if (items.isEmpty) return;
 
     final slides = <Verse>[];
@@ -354,6 +384,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         if (sequence.isNotEmpty) {
           slides.addAll(sequence);
         }
+        _songRepository.addToHistory(song.id);
       }
     }
 
@@ -363,9 +394,13 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       slides: slides,
       currentSlideIndex: 0,
       isBibleMode: false,
+      contentTitle: () => setName,
     );
+    ref.read(setRepositoryProvider).recordSetProjection(setId, setName);
     _syncSecondaryWindow();
   }
+
+  bool _isCreatingWindow = false;
 
   /// Opens a native projector window on a second display (if available).
   /// Returns true if a secondary window was created; false if the caller
@@ -374,6 +409,12 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     if (kIsWeb) return false;
     if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return false;
 
+    // Guard against concurrent initialization races.
+    if (_isCreatingWindow) {
+      debugPrint('Already in the process of creating a projector window. Ignoring request.');
+      return false;
+    }
+
     // If we already have a tracked secondary window from this session,
     // just show it and sync.
     if (_secondaryWindow != null) {
@@ -381,6 +422,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         await _secondaryWindow!.show();
         debugPrint('Showing existing projector window: ${_secondaryWindow!.windowId}');
         state = state.copyWith(isSecondaryWindowOpen: true);
+        // Re-assert fullscreen after a hide/show cycle (Windows restores the
+        // original window style on manual close).
+        _placeOnSecondScreenAndFullscreen();
         _syncSecondaryWindow();
         return true;
       } catch (e) {
@@ -389,12 +433,15 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       }
     }
 
+    _isCreatingWindow = true;
     try {
       // Always create a fresh window. We do NOT use WindowController.getAll()
       // to find existing windows because it returns stale handles from
       // previous app sessions whose channels are unregistered.
       final window = await WindowController.create(
-        const WindowConfiguration(arguments: 'Projection Output'),
+        WindowConfiguration(
+          arguments: 'Projection Output:${state.projectionMode}',
+        ),
       );
       await window.show();
       _secondaryWindow = window;
@@ -405,8 +452,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       // Auto-place on second screen and go fullscreen.
       // We send an IPC message to the new window and handle it in
       // _ProjectionOutputViewState._setupSecondaryWindowChannel().
-      // As a best-effort here, also try to read screen list from window_manager.
-      _placeOnSecondScreenAndFullscreen();
+      // This is now triggered on the 'secondary_window_ready' handshake.
 
       // Do NOT start syncing immediately — the secondary window's IPC handler
       // is not registered yet. Instead, wait for the 'secondary_window_ready'
@@ -416,6 +462,8 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     } catch (e) {
       debugPrint('Failed to open projector window: $e');
       return false;
+    } finally {
+      _isCreatingWindow = false;
     }
   }
 
@@ -425,11 +473,10 @@ class ProjectionController extends StateNotifier<ProjectionState> {
   /// so this method is only kept as a fallback re-trigger via IPC.
   Future<void> _placeOnSecondScreenAndFullscreen() async {
     if (_secondaryWindow == null) return;
+    // In 'single' mode the window stays a normal decorated window on the
+    // primary display — no auto-move and no fullscreen.
+    if (state.projectionMode == 'single') return;
     try {
-      // Give the window's IPC handler time to register (initState + fromCurrentEngine).
-      await Future.delayed(const Duration(milliseconds: 1200));
-      if (_secondaryWindow == null) return;
-
       await _secondaryWindow!.invokeMethod('go_fullscreen', {});
       debugPrint('Sent go_fullscreen IPC to secondary window.');
     } catch (e) {
@@ -491,11 +538,15 @@ class ProjectionController extends StateNotifier<ProjectionState> {
           _secondaryWindow = null;
           setSecondaryWindowOpen(false);
         } else if (call.method == 'secondary_window_ready') {
-          debugPrint('Secondary window reported ready. Syncing current slide...');
+          debugPrint('Secondary window reported ready. Placing and syncing current slide...');
+          _placeOnSecondScreenAndFullscreen();
           _syncSecondaryWindowWithRetry();
         } else if (call.method == 'close_secondary_window') {
           // On Linux, the secondary window can't close itself via window_manager
           // (it would crash), so it asks us to do it via WindowController.hide().
+          // We keep the reference after hiding so openProjectorWindow() can
+          // re-show the same hidden engine instead of leaking a new one per
+          // close. Native X-close is handled by onWindowsChanged below.
           debugPrint('Main window received request to close secondary window.');
           if (_secondaryWindow != null) {
             try {
@@ -503,7 +554,6 @@ class ProjectionController extends StateNotifier<ProjectionState> {
             } catch (e) {
               debugPrint('Failed to hide secondary window: $e');
             }
-            _secondaryWindow = null;
           }
           setSecondaryWindowOpen(false);
         }
@@ -530,10 +580,6 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     }
   }
 
-  void syncCurrentSlide() {
-    _syncSecondaryWindow();
-  }
-
   /// Sends the current slide to the secondary projector window.
   /// Returns true if the window was updated successfully.
   Future<bool> _syncSecondaryWindow() async {
@@ -553,6 +599,11 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         'label': label,
         'fontSize': fontSize,
         'isBible': isBible,
+        // Slide list + position so the secondary engine can render its own
+        // in-window navigation (chevrons/dots) — its ProjectionController
+        // state is never populated.
+        'slideLabels': state.slides.map((v) => v.label).toList(),
+        'currentIndex': state.currentSlideIndex,
       });
       return true;
     } catch (e) {
