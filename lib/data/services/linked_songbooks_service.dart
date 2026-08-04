@@ -1,18 +1,18 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:drift/drift.dart';
 import 'package:path/path.dart' as p;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:visual_song_book/core/models/source_mode.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
+import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/importers/vsbook_importer.dart';
 import 'package:visual_song_book/data/services/app_storage.dart';
 
 final _log = AppLogger.get('LinkedSongbooks');
-
-const _linkedSongbooksKey = 'linked_songbooks';
 
 String _canonicalizePath(String path) {
   try {
@@ -87,6 +87,22 @@ class LinkedSongbook {
     );
   }
 
+  factory LinkedSongbook.fromRegistry(LinkedSongbookRegistryData registry) {
+    return LinkedSongbook(
+      path: registry.path,
+      name: registry.name,
+      lastImportedAt: registry.lastImportedAt,
+    );
+  }
+
+  LinkedSongbookRegistryCompanion toCompanion() {
+    return LinkedSongbookRegistryCompanion.insert(
+      path: path,
+      name: name,
+      lastImportedAt: Value(lastImportedAt),
+    );
+  }
+
   DateTime? get fileLastModified {
     try {
       return File(path).statSync().modified;
@@ -115,24 +131,41 @@ class LinkedSongbooksService extends AutoDisposeAsyncNotifier<List<LinkedSongboo
 
   @override
   Future<List<LinkedSongbook>> build() async {
+    final db = ref.watch(databaseProvider);
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_prefsKey);
-    if (raw == null) return [];
-    try {
-      final list = json.decode(raw) as List<dynamic>;
-      return list
-          .map((e) => LinkedSongbook.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      _log.warning('Failed to parse linked songbooks: $e');
-      return [];
+
+    // Check if we need to migrate from SharedPreferences
+    final legacyRaw = prefs.getString(_prefsKey);
+    final dbCount = await db.countLinkedSongbooks();
+
+    if (dbCount == 0 && legacyRaw != null) {
+      try {
+        final list = json.decode(legacyRaw) as List<dynamic>;
+        final legacyBooks = list
+            .map((e) => LinkedSongbook.fromJson(e as Map<String, dynamic>))
+            .toList();
+
+        await db.transaction(() async {
+          for (final book in legacyBooks) {
+            await db.insertLinkedSongbook(book.toCompanion());
+          }
+        });
+
+        await prefs.remove(_prefsKey);
+        _log.info('Migrated ${legacyBooks.length} linked songbook(s) from SharedPreferences to database.');
+      } catch (e) {
+        _log.warning('Failed to migrate linked songbooks from SharedPreferences: $e');
+      }
     }
+
+    final registries = await db.getAllLinkedSongbooks();
+    return registries.map(LinkedSongbook.fromRegistry).toList();
   }
 
-  Future<void> _save(List<LinkedSongbook> list) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, json.encode(list.map((e) => e.toJson()).toList()));
-    state = AsyncData(list);
+  Future<void> _refresh() async {
+    final db = ref.watch(databaseProvider);
+    final registries = await db.getAllLinkedSongbooks();
+    state = AsyncData(registries.map(LinkedSongbook.fromRegistry).toList());
   }
 
   Future<void> add(String path, {String? name}) async {
@@ -141,28 +174,40 @@ class LinkedSongbooksService extends AutoDisposeAsyncNotifier<List<LinkedSongboo
       _log.warning('Refusing to link disallowed path: $path');
       return;
     }
+
     final current = state.value ?? [];
     if (current.any((s) => s.path == canonical)) return;
+
+    final db = ref.watch(databaseProvider);
     final bookName = name ?? _nameFromPath(canonical);
-    final updated = [...current, LinkedSongbook(path: canonical, name: bookName)];
-    await _save(updated);
+
+    await db.insertLinkedSongbook(
+      LinkedSongbookRegistryCompanion.insert(
+        path: canonical,
+        name: bookName,
+      ),
+    );
+
+    await _refresh();
     _log.info('Linked songbook: $bookName ($canonical)');
   }
 
   Future<void> remove(String path) async {
-    final current = state.value ?? [];
-    final updated = current.where((s) => s.path != path).toList();
-    await _save(updated);
+    final db = ref.watch(databaseProvider);
+    await db.deleteLinkedSongbookByPath(path);
+    await _refresh();
     _log.info('Unlinked songbook: $path');
   }
 
   Future<void> markImported(String path) async {
-    final current = state.value ?? [];
-    final updated = current.map((s) {
-      if (s.path == path) return s.copyWith(lastImportedAt: DateTime.now());
-      return s;
-    }).toList();
-    await _save(updated);
+    final db = ref.watch(databaseProvider);
+    await db.updateLinkedSongbookByPath(
+      path,
+      const LinkedSongbookRegistryCompanion(
+        lastImportedAt: Value.absent(),
+      ).copyWith(lastImportedAt: Value(DateTime.now())),
+    );
+    await _refresh();
   }
 
   List<LinkedSongbook> getFilesNeedingSync() {
@@ -194,20 +239,10 @@ final linkedSongbooksSyncProvider = FutureProvider<int>((ref) async {
   }
 
   final db = ref.watch(databaseProvider);
-  final raw = prefs.getString(_linkedSongbooksKey);
-  if (raw == null) return 0;
+  final linkedRegistries = await db.getAllLinkedSongbooks();
+  if (linkedRegistries.isEmpty) return 0;
 
-  List<LinkedSongbook> linked;
-  try {
-    final list = json.decode(raw) as List<dynamic>;
-    linked = list
-        .map((e) => LinkedSongbook.fromJson(e as Map<String, dynamic>))
-        .toList();
-  } catch (e) {
-    _log.warning('Failed to parse linked songbooks for sync: $e');
-    return 0;
-  }
-
+  final linked = linkedRegistries.map(LinkedSongbook.fromRegistry).toList();
   final needingSync =
       linked.where((s) => s.hasChangedSinceLastImport && s.fileExists).toList();
   if (needingSync.isEmpty) return 0;
@@ -247,20 +282,14 @@ final linkedSongbooksSyncProvider = FutureProvider<int>((ref) async {
   }
 
   if (synced > 0) {
-    final updatedRaw = prefs.getString(_linkedSongbooksKey);
-    if (updatedRaw != null) {
-      try {
-        final list = json.decode(updatedRaw) as List<dynamic>;
-        final now = DateTime.now().toIso8601String();
-        final updatedList = list.map((e) {
-          final m = e as Map<String, dynamic>;
-          final path = m['path'] as String;
-          final needsUpdate = needingSync.any((b) => b.path == path);
-          if (needsUpdate) m['lastImportedAt'] = now;
-          return m;
-        }).toList();
-        await prefs.setString(_linkedSongbooksKey, json.encode(updatedList));
-      } catch (_) {}
+    final now = DateTime.now();
+    for (final book in needingSync) {
+      await db.updateLinkedSongbookByPath(
+        book.path,
+        const LinkedSongbookRegistryCompanion(
+          lastImportedAt: Value.absent(),
+        ).copyWith(lastImportedAt: Value(now)),
+      );
     }
     _log.info('Linked songbooks sync complete: $synced file(s) updated.');
   }

@@ -37,6 +37,16 @@ class Songs extends Table {
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
 }
 
+class LinkedSongbookRegistry extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get path => text()();
+  TextColumn get name => text().withLength(max: 200)();
+  DateTimeColumn get lastImportedAt => dateTime().nullable()();
+
+  @override
+  List<String> get customConstraints => ['UNIQUE(path)'];
+}
+
 class SongBooks extends Table {
   IntColumn get id => integer()();
   TextColumn get title => text().withLength(max: 100)();
@@ -99,6 +109,7 @@ class BibleBookmarks extends Table {
 @DriftDatabase(
   tables: [
     Categories,
+    LinkedSongbookRegistry,
     Songs,
     SongBooks,
     History,
@@ -118,7 +129,30 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
+
+  // Linked songbooks helpers
+
+  Future<List<LinkedSongbookRegistryData>> getAllLinkedSongbooks() =>
+      (select(linkedSongbookRegistry)..orderBy([(t) => OrderingTerm.asc(t.path)])).get();
+
+  Stream<List<LinkedSongbookRegistryData>> watchAllLinkedSongbooks() =>
+      (select(linkedSongbookRegistry)..orderBy([(t) => OrderingTerm.asc(t.path)])).watch();
+
+  Future<LinkedSongbookRegistryData?> getLinkedSongbookByPath(String path) =>
+      (select(linkedSongbookRegistry)..where((t) => t.path.equals(path))).getSingleOrNull();
+
+  Future<int> insertLinkedSongbook(LinkedSongbookRegistryCompanion entry) =>
+      into(linkedSongbookRegistry).insert(entry);
+
+  Future<int> updateLinkedSongbookByPath(String path, LinkedSongbookRegistryCompanion entry) =>
+      (update(linkedSongbookRegistry)..where((t) => t.path.equals(path))).write(entry);
+
+  Future<int> deleteLinkedSongbookByPath(String path) =>
+      (delete(linkedSongbookRegistry)..where((t) => t.path.equals(path))).go();
+
+  Future<int> countLinkedSongbooks() async =>
+      (await select(linkedSongbookRegistry).get()).length;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -155,6 +189,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 9) {
         await m.database.customStatement('CREATE INDEX IF NOT EXISTS idx_songs_active_category ON songs (is_active, category_id, song_num)');
+      }
+      if (from < 10) {
+        await m.createTable(linkedSongbookRegistry);
       }
     },
   );
