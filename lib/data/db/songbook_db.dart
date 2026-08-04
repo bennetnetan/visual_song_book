@@ -118,11 +118,14 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (m) => m.createAll(),
+    onCreate: (m) async {
+      await m.createAll();
+      await m.database.customStatement('CREATE UNIQUE INDEX IF NOT EXISTS idx_songs_title_num ON songs (LOWER(title), song_num) WHERE is_active = 1');
+    },
     onUpgrade: (m, from, to) async {
       if (from < 2) {
         await m.createTable(songSets);
@@ -141,6 +144,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 6) {
         await m.addColumn(songSetItems, songSetItems.key);
+      }
+      if (from < 7) {
+        await m.database.customStatement('CREATE UNIQUE INDEX IF NOT EXISTS idx_songs_title_num ON songs (LOWER(title), song_num) WHERE is_active = 1');
       }
     },
   );

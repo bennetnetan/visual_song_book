@@ -13,7 +13,8 @@ import 'package:visual_song_book/data/importers/vsb_importer.dart';
 /// Accept both so imports never crash on a `String`/`int` type mismatch.
 DateTime? _parseModified(Object? value) {
   if (value is int) {
-    return DateTime.fromMillisecondsSinceEpoch(value * 1000);
+    final ms = value > 1_000_000_000_000 ? value : value * 1000;
+    return DateTime.fromMillisecondsSinceEpoch(ms);
   }
   if (value is String) {
     return DateTime.tryParse(value);
