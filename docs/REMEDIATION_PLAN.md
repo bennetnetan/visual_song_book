@@ -353,6 +353,22 @@ Linux/Windows desktop box.
 
 **Verify:** `flutter analyze` clean, `flutter test` green, app smoke-tested on Linux.
 
+**Done:** Dead code removed (commit `6d7a006`): `syncCurrentSlide()`, `_fadeController` +
+`SingleTickerProviderStateMixin`, `Win32WindowHelper.getActiveWindowHandle()`/`fullscreenWindow()`,
+`appFontSizeProvider`/`AppFontSizeNotifier` (file deleted), `neomorphic_widgets.dart` (deleted),
+source activation/deactivation + `getDeactivatedSongs`, `DebugLogger` (migrated to
+`_log.severe`). The `SongBooks` table is kept (reserved, documented). Minor behavior fixes
+(commit `e74de83`): `setAutoInsertChorus` re-projects via `_setSong(..., recordHistory: false)`;
+`_advanceChapter` records Bible history via `_recordChapterHistory`; `projectSongSet` now takes
+the set name, sets `contentTitle` to it, records each member song + the set projection (the
+duplicate manual `recordSetProjection` in `sets_tab.dart` was removed); `viewOnSubmitted`
+projects the keyboard-highlighted item (selection lifted into a shared `ValueNotifier`);
+font-size steppers raised to the 160 cap used by pinch zoom; `setFontSize` no longer writes
+SharedPreferences every tick — persistence split into `persistFontSize()`, flushed on pinch
+gesture end and stepper use. Unused deps removed (commit `3bd6412`): `cupertino_icons`,
+`riverpod_annotation`, `screen_retriever`, `riverpod_generator`; `drift_flutter` kept per the
+P4b defer-web decision. Analyze baseline unchanged (18), `flutter test` 36 pass.
+
 ---
 
 ## Phase 10 — Docs, scripts, release metadata
