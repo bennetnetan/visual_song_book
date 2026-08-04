@@ -118,33 +118,41 @@ created and fonts load.
 
 ### 4b. Web platform + runtime Google Fonts (CRITICAL #5 & #6)
 
+**Status:** ✅ Google Fonts bundling done (commit `b60aba4`). ⏸️ Web platform **deferred**
+(product decision, 2026-08-04): web is not scaffolded (`flutter create --platforms web` never run;
+`web/index.html` missing, `manifest.json` 0-byte), and a real port spans 18 `dart:io` files
+(importers, backups, projection, `app_storage.dart`), a `bible_db.dart` rewrite off raw `sqlite3`
+FFI, gating desktop-only features (secondary-window projection, linked-file import, backups),
+plus `sqlite3.wasm`/`drift_worker.js` assets and OPFS/IndexedDB persistence — all unverifiable in
+a browser on the Linux host. The `drift_flutter` dependency stays for a future web effort.
+
 **Web decision — requires product call.** The app's data layer is native `sqlite3`
 (`songbook_db.dart:152`, `bible_db.dart`); web needs a WASM sqlite backend
 (`drift_flutter`'s `driftDatabase` is the intended path — note `drift_flutter` is already a
 dependency but unused). Options:
-- **A. Drop web (recommended):** delete `web/`, remove the README `web/` mention,
-  drop `flutter_launcher_icons.web` + `flutter_native_splash.web` config. Smallest correct
-  outcome; app remains Linux/Windows/Android-first.
-- **B. Invest in web:** switch DB open to `drift_flutter.driftDatabase()` with a web
+- **A. Drop web:** delete `web/`, remove the README `web/` mention, drop
+  `flutter_launcher_icons.web` + `flutter_native_splash.web` config. Smallest correct outcome.
+- **B. Invest in web (deferred):** switch DB open to `drift_flutter.driftDatabase()` with a web
   backend, bundle sqlite3 WASM, verify all `kIsWeb` guards, then scaffold a real
   `web/index.html` + valid `manifest.json`. Substantial effort.
 
-**Google Fonts bundling (applies regardless of web decision):**
-`GoogleFonts.plusJakartaSans` (~60 uses in `settings_tab.dart`, `settings_cards.dart`,
-`neomorphic_widgets.dart`) and `GoogleFonts.ebGaramond` (`bible_search_widgets.dart:338,499`,
-`bible_mobile_sheet.dart:47`) are runtime-fetched and fail offline / on Android release
+**Google Fonts bundling — DONE (commit `b60aba4`):**
+`GoogleFonts.plusJakartaSans` (40 uses in `settings_tab.dart`, `settings_cards.dart`,
+`neomorphic_widgets.dart`) and `GoogleFonts.ebGaramond` (5 uses in `bible_search_widgets.dart`,
+`bible_mobile_sheet.dart`) were runtime-fetched and fail offline / on Android release
 (no INTERNET permission) / macOS (no network entitlement).
-1. Add the two TTF families to `assets/fonts/` and declare them in `pubspec.yaml` fonts
-   (weight 400/500/600/700 as used).
-2. Replace `GoogleFonts.plusJakartaSans(...)` → `TextStyle(fontFamily: 'PlusJakartaSans', ...)`
-   and `GoogleFonts.ebGaramond(...)` → `TextStyle(fontFamily: 'EBGaramond', ...)` preserving
-   args (mechanical; a small helper `AppFonts` avoids repetition). Requires downloading the
-   font files (user-provided or from Google Fonts).
-3. Add `<uses-permission android:name="android.permission.INTERNET"/>` to the main Android
-   manifest only if runtime fetching is kept (not needed once bundled).
+1. ✅ Downloaded static TTFs (byte-exact vs google_fonts' expected SHA-256 hashes) for every
+   weight/style used: `PlusJakartaSans-{Regular,Italic,Medium,SemiBold,Bold}.ttf` and
+   `EBGaramond-{Regular,Medium,Bold}.ttf` → `assets/fonts/`.
+2. ✅ Declared them in `pubspec.yaml` fonts. Because files are named exactly
+   `Family-Variant.ttf`, google_fonts auto-loads them from the asset manifest
+   (`_findFamilyWithVariantAssetPath`) — no call-site replacement needed.
+3. ✅ Set `GoogleFonts.config.allowRuntimeFetching = false` in `main()` — any used-but-unbundled
+   variant now throws loudly instead of silently hitting the network.
+4. (Not needed once fonts are bundled.)
 
-**Verify:** `flutter build apk --release` + Linux release run offline → correct fonts, no
-fallback.
+**Verify:** `flutter analyze` clean of new issues; `flutter test` 30 pass; `flutter build bundle`
+shows all 8 new TTFs in `AssetManifest.bin`.
 
 ### 4c. Release signing + app identity (MAJOR #14)
 
@@ -326,10 +334,12 @@ Prioritize regression tests for the criticals:
 
 ## Decisions needed from the product owner
 
-1. Web: invest (option B) or drop (option A)? — **P4b**
-2. macOS: disable sandbox (recommended) or move storage into the container? — **P4a**
+1. Web: invest (option B) or drop (option A)? — **P4b** ✅ DECIDED 2026-08-04: defer web
+   (neither drop nor invest now); keep `drift_flutter` dep for a future effort.
+2. macOS: disable sandbox (recommended) or move storage into the container? — **P4a** ✅ DECIDED
+   (disable sandbox, commit `fdbe94d`)
 3. Application ID / org for all platforms — **P4c**
 4. Category deletion: reassign songs or cascade-delete them? — **P7**
 5. `projectionMode` "duplicate": full mirroring or gated/deferred? — **P8**
 6. License type (if any) — **P10**
-7. Font files for Plus Jakarta Sans / EB Garamond (bundling) — **P4b**
+7. Font files for Plus Jakarta Sans / EB Garamond (bundling) — **P4b** ✅ DONE (commit `b60aba4`)
