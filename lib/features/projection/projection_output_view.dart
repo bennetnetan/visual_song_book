@@ -26,7 +26,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
   bool _ipcIsBible = false;
   double? _ipcFontSize;
   List<String> _ipcSlideLabels = const [];
-  int _ipcCurrentIndex = 0;
   bool _isSecondaryWindow = false;
   late final FocusNode _focusNode;
   bool _isClosing = false;
@@ -144,9 +143,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
           if (args['slideLabels'] != null) {
             _ipcSlideLabels =
                 (args['slideLabels'] as List).cast<String>();
-          }
-          if (args['currentIndex'] != null) {
-            _ipcCurrentIndex = (args['currentIndex'] as num).toInt();
           }
         });
       } else if (call.method == 'go_fullscreen') {
@@ -326,9 +322,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
     final int slideCount = _isSecondaryWindow
         ? _ipcSlideLabels.length
         : state.slides.length;
-    final int slideIndex = _isSecondaryWindow
-        ? _ipcCurrentIndex
-        : state.currentSlideIndex;
 
     return PopScope(
       canPop: false,
@@ -483,29 +476,26 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                 ),
               ),
 
-              // Navigation arrows:
-              //   • Desktop  — hover-gated (hidden until mouse moves over)
-              //   • Mobile   — always visible at low opacity, always interactive,
-              //                with larger hit-targets for touch
-              if (slideCount > 0)
+              // Navigation arrows — mobile fullscreen only.
+              // Desktop projection screens stay clean: the operator navigates
+              // from the main window (buttons / keyboard), so no overlay arrows.
+              if (slideCount > 0 && _isMobile)
                 IgnorePointer(
-                  // Mobile: always interactive. Desktop: gate on hover.
-                  ignoring: _isMobile ? false : !_isHovering,
                   child: AnimatedOpacity(
-                    opacity: _isMobile ? 0.38 : (_isHovering ? 0.35 : 0.0),
+                    opacity: 0.38,
                     duration: const Duration(milliseconds: 400),
                     child: Stack(
                       children: [
                         // Prev arrow — left edge
                         Positioned(
-                          left: _isMobile ? 0 : 8,
+                          left: 0,
                           top: 0,
                           bottom: 0,
                           child: Center(
                             child: IconButton(
-                              icon: Icon(
+                              icon: const Icon(
                                 Icons.chevron_left,
-                                size: _isMobile ? 44 : 36,
+                                size: 44,
                                 color: Colors.white,
                               ),
                               onPressed: () {
@@ -515,24 +505,21 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                                   notifier.prevSlide();
                                 }
                               },
-                              splashRadius: _isMobile ? 32 : 22,
-                              padding: _isMobile
-                                  ? const EdgeInsets.all(12)
-                                  : const EdgeInsets.all(8),
-                              hoverColor: Colors.white.withValues(alpha: 0.1),
+                              splashRadius: 32,
+                              padding: const EdgeInsets.all(12),
                             ),
                           ),
                         ),
                         // Next arrow — right edge
                         Positioned(
-                          right: _isMobile ? 0 : 8,
+                          right: 0,
                           top: 0,
                           bottom: 0,
                           child: Center(
                             child: IconButton(
-                              icon: Icon(
+                              icon: const Icon(
                                 Icons.chevron_right,
-                                size: _isMobile ? 44 : 36,
+                                size: 44,
                                 color: Colors.white,
                               ),
                               onPressed: () {
@@ -542,60 +529,65 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                                   notifier.nextSlide();
                                 }
                               },
-                              splashRadius: _isMobile ? 32 : 22,
-                              padding: _isMobile
-                                  ? const EdgeInsets.all(12)
-                                  : const EdgeInsets.all(8),
-                              hoverColor: Colors.white.withValues(alpha: 0.1),
+                              splashRadius: 32,
+                              padding: const EdgeInsets.all(12),
                             ),
                           ),
                         ),
-                        // Font size controls — desktop only (top-right, hover-gated).
-                        // Mobile has its own always-visible font bar below.
-                        if (!_isSecondaryWindow && !_isMobile)
-                          Positioned(
-                            top: 0,
-                            right: 48,
-                            child: SafeArea(
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _FontSizeButton(
-                                    icon: Icons.text_decrease,
-                                    tooltip: 'Smaller font',
-                                    onPressed: state.fontSize > 16
-                                        ? () {
-                                            notifier.setFontSize(state.fontSize - 4);
-                                            notifier.persistFontSize();
-                                          }
-                                        : null,
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                                    child: Text(
-                                      '${state.fontSize.toInt()}',
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.4),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                  _FontSizeButton(
-                                    icon: Icons.text_increase,
-                                    tooltip: 'Larger font',
-                                    onPressed: state.fontSize < 160
-                                        ? () {
-                                            notifier.setFontSize(state.fontSize + 4);
-                                            notifier.persistFontSize();
-                                          }
-                                        : null,
-                                  ),
-                                ],
+                      ],
+                    ),
+                  ),
+                ),
+
+              // Font size controls — desktop only (top-right, hover-gated).
+              // Mobile uses pinch-to-zoom instead.
+              if (!_isSecondaryWindow && !_isMobile)
+                Positioned(
+                  top: 0,
+                  right: 48,
+                  child: SafeArea(
+                    child: IgnorePointer(
+                      ignoring: !_isHovering,
+                      child: AnimatedOpacity(
+                        opacity: _isHovering ? 0.4 : 0.0,
+                        duration: const Duration(milliseconds: 300),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _FontSizeButton(
+                              icon: Icons.text_decrease,
+                              tooltip: 'Smaller font',
+                              onPressed: state.fontSize > 16
+                                  ? () {
+                                      notifier.setFontSize(state.fontSize - 4);
+                                      notifier.persistFontSize();
+                                    }
+                                  : null,
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                              child: Text(
+                                '${state.fontSize.toInt()}',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.4),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
-                          ),
-                      ],
+                            _FontSizeButton(
+                              icon: Icons.text_increase,
+                              tooltip: 'Larger font',
+                              onPressed: state.fontSize < 160
+                                  ? () {
+                                      notifier.setFontSize(state.fontSize + 4);
+                                      notifier.persistFontSize();
+                                    }
+                                  : null,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -629,31 +621,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                   ),
                 ),
 
-              // Slide indicator dots / timeline:
-              //   • Secondary desktop window — dot row, hover-gated
-              //   • Desktop main  — text timeline, hover-gated but always faintly visible
-              //   • Mobile        — text timeline hidden (replaced by bottom bar above)
-              if (slideCount > 0 && !(_isMobile && !_isSecondaryWindow))
-                Positioned(
-                  bottom: _isSecondaryWindow ? 96 : 14,
-                  left: 0,
-                  right: 0,
-                  child: AnimatedOpacity(
-                    opacity: _isSecondaryWindow
-                        ? (_isHovering ? 0.4 : 0.0)
-                        : (_isHovering ? 0.65 : 0.18),
-                    duration: const Duration(milliseconds: 300),
-                    child: _isSecondaryWindow
-                        ? _SlideIndicator(
-                            count: slideCount,
-                            current: slideIndex,
-                          )
-                        : _SlideTextTimeline(
-                            slides: state.slides,
-                            current: state.currentSlideIndex,
-                          ),
-                  ),
-                ),
+              // Position indicator — mobile fullscreen only (bottom bar above).
+              // Hidden on desktop (Linux / macOS / Windows) so the projection
+              // screen shows lyrics alone.
             ],
           ),
         ),
@@ -689,169 +659,5 @@ class _FontSizeButton extends StatelessWidget {
     );
   }
 }
-
-/// Small dot indicators showing slide position — like a presentation slideshow
-class _SlideIndicator extends StatelessWidget {
-  final int count;
-  final int current;
-
-  const _SlideIndicator({required this.count, required this.current});
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(count, (index) {
-        final isActive = index == current;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          width: isActive ? 24 : 8,
-          height: 8,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(4),
-            color: isActive
-                ? const Color(0xFF00E5CC)
-                : Colors.white.withValues(alpha: 0.25),
-          ),
-        );
-      }),
-    ),
-    );
-  }
-}
-
-/// Creative horizontal timeline displaying short labels for verses/slides
-class _SlideTextTimeline extends StatefulWidget {
-  final List<dynamic> slides;
-  final int current;
-
-  const _SlideTextTimeline({required this.slides, required this.current});
-
-  @override
-  State<_SlideTextTimeline> createState() => _SlideTextTimelineState();
-}
-
-class _SlideTextTimelineState extends State<_SlideTextTimeline> {
-  final ScrollController _scrollController = ScrollController();
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didUpdateWidget(covariant _SlideTextTimeline oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.current != widget.current) {
-      _scrollToCurrent();
-    }
-  }
-
-  void _scrollToCurrent() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) return;
-
-      const itemWidth = 80.0;
-      const horizontalMargin = 8.0; // 4.0 on left, 4.0 on right
-      const totalItemWidth = itemWidth + horizontalMargin;
-
-      // Center of the active item
-      final centerOfItem = (widget.current * totalItemWidth) + (totalItemWidth / 2);
-
-      // Get the width of the scroll view viewport
-      final double viewportWidth = _scrollController.position.viewportDimension;
-      final maxScroll = _scrollController.position.maxScrollExtent;
-
-      final targetOffset = (centerOfItem - (viewportWidth / 2)).clamp(0.0, maxScroll);
-
-      _scrollController.animateTo(
-        targetOffset,
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
-      );
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Scroll to current on first build to center the initial slide
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToCurrent());
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const itemWidth = 80.0;
-        const totalItemWidth = 88.0; // 80 + 8
-        final double horizontalPadding = (constraints.maxWidth - totalItemWidth) / 2;
-
-        return SingleChildScrollView(
-          controller: _scrollController,
-          scrollDirection: Axis.horizontal,
-          padding: EdgeInsets.symmetric(
-            horizontal: horizontalPadding > 0 ? horizontalPadding : 32.0,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(widget.slides.length, (index) {
-              final isActive = index == widget.current;
-              final slide = widget.slides[index];
-
-              String shortLabel = slide.label;
-              if (shortLabel.toLowerCase().startsWith('verse')) {
-                final parts = shortLabel.split(' ');
-                shortLabel = parts.length > 1 ? 'V${parts[1]}' : 'Verse';
-              } else if (shortLabel.toLowerCase().startsWith('chorus')) {
-                shortLabel = 'Chorus';
-              } else if (shortLabel.toLowerCase().startsWith('refrain')) {
-                shortLabel = 'Ref';
-              } else {
-                // For Bible references, e.g. "Genesis 1:1" -> "v1" or "1"
-                final colonIdx = shortLabel.lastIndexOf(':');
-                if (colonIdx != -1) {
-                  shortLabel = 'v${shortLabel.substring(colonIdx + 1)}';
-                }
-              }
-
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                width: itemWidth,
-                height: 28,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: isActive
-                      ? const Color(0xFF00E5CC).withValues(alpha: 0.15)
-                      : Colors.white.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: isActive
-                        ? const Color(0xFF00E5CC).withValues(alpha: 0.4)
-                        : Colors.white.withValues(alpha: 0.1),
-                    width: 0.8,
-                  ),
-                ),
-                child: Text(
-                  shortLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: isActive ? const Color(0xFF00E5CC) : Colors.white70,
-                    fontSize: 11,
-                    fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              );
-            }),
-          ),
-        );
-      },
-    );
-  }
-}
-
 
 /// Scrollable chapter reference panel with auto-center and edge fades.
