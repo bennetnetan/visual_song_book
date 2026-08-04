@@ -151,12 +151,12 @@ class SongRepository {
     return db.into(db.categories).insertOnConflictUpdate(companion);
   }
 
-  Future<int> getSongCountByCategory(int categoryId) {
-    return (db.select(db.songs)
-          ..where((t) => t.categoryId.equals(categoryId) & t.isActive.equals(true)))
-        .map((row) => row.id)
-        .get()
-        .then((ids) => ids.length);
+  Future<int> getSongCountByCategory(int categoryId) async {
+    final result = await (db.selectOnly(db.songs)
+          ..addColumns([db.songs.id.count()])
+          ..where(db.songs.categoryId.equals(categoryId) & db.songs.isActive.equals(true)))
+        .getSingle();
+    return result.read(db.songs.id.count()) ?? 0;
   }
 
   Future<void> deleteCategory(int categoryId) async {

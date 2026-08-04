@@ -1,15 +1,51 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/data/importers/vsbook_importer.dart';
+import 'package:visual_song_book/data/services/app_storage.dart';
 
 final _log = AppLogger.get('LinkedSongbooks');
 
 const _linkedSongbooksKey = 'linked_songbooks';
+
+String _canonicalizePath(String path) {
+  try {
+    final file = File(path);
+    if (file.existsSync()) {
+      return file.resolveSymbolicLinksSync();
+    }
+  } on IOException catch (_) {}
+  return path;
+}
+
+Future<bool> _isPathAllowed(String path) async {
+  String canonical;
+  try {
+    canonical = File(path).resolveSymbolicLinksSync();
+  } on IOException catch (_) {
+    canonical = path;
+  }
+  canonical = p.normalize(canonical);
+
+  final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? '';
+  if (home.isNotEmpty) {
+    final homeDir = p.normalize(home);
+    if (canonical == homeDir || canonical.startsWith('$homeDir${p.separator}')) return true;
+  }
+
+  try {
+    final appStorage = await getAppStoragePath();
+    final appStorageDir = p.normalize(appStorage);
+    if (canonical == appStorageDir || canonical.startsWith('$appStorageDir${p.separator}')) return true;
+  } catch (_) {}
+
+  return false;
+}
 
 class LinkedSongbook {
   final String path;
@@ -37,8 +73,10 @@ class LinkedSongbook {
       };
 
   factory LinkedSongbook.fromJson(Map<String, dynamic> json) {
+    final rawPath = json['path'] as String;
+    final path = _canonicalizePath(rawPath);
     return LinkedSongbook(
-      path: json['path'] as String,
+      path: path,
       name: json['name'] as String,
       lastImportedAt: json['lastImportedAt'] != null
           ? DateTime.tryParse(json['lastImportedAt'] as String)
@@ -95,12 +133,17 @@ class LinkedSongbooksService extends AutoDisposeAsyncNotifier<List<LinkedSongboo
   }
 
   Future<void> add(String path, {String? name}) async {
+    final canonical = _canonicalizePath(path);
+    if (!await _isPathAllowed(canonical)) {
+      _log.warning('Refusing to link disallowed path: $path');
+      return;
+    }
     final current = state.value ?? [];
-    if (current.any((s) => s.path == path)) return;
-    final bookName = name ?? _nameFromPath(path);
-    final updated = [...current, LinkedSongbook(path: path, name: bookName)];
+    if (current.any((s) => s.path == canonical)) return;
+    final bookName = name ?? _nameFromPath(canonical);
+    final updated = [...current, LinkedSongbook(path: canonical, name: bookName)];
     await _save(updated);
-    _log.info('Linked songbook: $bookName ($path)');
+    _log.info('Linked songbook: $bookName ($canonical)');
   }
 
   Future<void> remove(String path) async {
@@ -163,6 +206,10 @@ final linkedSongbooksSyncProvider = FutureProvider<int>((ref) async {
   int synced = 0;
 
   for (final book in needingSync) {
+    if (!await _isPathAllowed(book.path)) {
+      _log.warning('Skipping disallowed path during sync: ${book.path}');
+      continue;
+    }
     final lower = book.path.toLowerCase();
     if (lower.endsWith('.vsbook')) {
       try {
