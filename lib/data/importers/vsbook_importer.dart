@@ -372,19 +372,7 @@ class VsBookImporter implements SongbookImporter {
         );
       }
 
-      await db.transaction(() async {
-        for (final category in categoryCompanions) {
-          await db.into(db.categories).insertOnConflictUpdate(category);
-        }
-
-        await (db.delete(db.songs)
-              ..where((t) => t.sourcePath.equals(sourceFilePath)))
-            .go();
-
-        await db.batch((batch) {
-          batch.insertAllOnConflictUpdate(db.songs, dedupedSongs);
-        });
-      });
+      await _upsertSongs(sourceFilePath, dedupedSongs);
 
       return ImportResult.success(
         songs: dedupedSongs.length,
@@ -461,19 +449,13 @@ class VsBookImporter implements SongbookImporter {
       );
     }
 
-    await db.transaction(() async {
-      for (final category in categoryCompanions) {
-        await db.into(db.categories).insertOnConflictUpdate(category);
-      }
+      await db.transaction(() async {
+        for (final category in categoryCompanions) {
+          await db.into(db.categories).insertOnConflictUpdate(category);
+        }
 
-      await (db.delete(db.songs)
-            ..where((t) => t.sourcePath.equals(sourceFilePath)))
-          .go();
-
-      await db.batch((batch) {
-        batch.insertAll(db.songs, dedupedSongs);
+        await _upsertSongs(sourceFilePath, dedupedSongs);
       });
-    });
 
     return ImportResult.success(
       songs: dedupedSongs.length,
@@ -598,5 +580,74 @@ class VsBookImporter implements SongbookImporter {
       alreadyExisted: alreadyExisted,
       newTitles: newSongTitles,
     );
+  }
+
+  Future<void> _upsertSongs(
+    String sourceFilePath,
+    List<SongsCompanion> companions,
+  ) async {
+    final existing = await (db.select(db.songs)
+          ..where((t) => t.sourcePath.equals(sourceFilePath))
+          ..orderBy([(t) => OrderingTerm.asc(t.id)]))
+        .get();
+
+    final bySourceSongId = <int, Song>{};
+    final byTitleNum = <String, Song>{};
+    for (final song in existing) {
+      if (song.sourceSongId != null) {
+        bySourceSongId[song.sourceSongId!] = song;
+      }
+      final key = '${song.title.toLowerCase().trim()}|${song.songNum}';
+      byTitleNum[key] = song;
+    }
+
+    final toUpdate = <SongsCompanion>[];
+    final toInsert = <SongsCompanion>[];
+    final incomingTitleNums = <String>{};
+    final incomingSourceIds = <int?>{};
+
+    for (final companion in companions) {
+      final title = companion.title.value;
+      final songNum = companion.songNum.value;
+      final key = '${title.toLowerCase().trim()}|$songNum';
+      incomingTitleNums.add(key);
+
+      final sourceId = companion.sourceSongId.value;
+      incomingSourceIds.add(sourceId);
+
+      Song? match;
+      if (sourceId != null && bySourceSongId.containsKey(sourceId)) {
+        match = bySourceSongId[sourceId];
+      } else if (byTitleNum.containsKey(key)) {
+        match = byTitleNum[key];
+      }
+
+      if (match != null) {
+        toUpdate.add(companion.copyWith(id: Value(match.id)));
+      } else {
+        toInsert.add(companion);
+      }
+    }
+
+    final toDelete = existing.where((s) {
+      final key = '${s.title.toLowerCase().trim()}|${s.songNum}';
+      return !incomingTitleNums.contains(key);
+    }).toList();
+
+    await db.transaction(() async {
+      for (final song in toDelete) {
+        await (db.delete(db.songs)..where((t) => t.id.equals(song.id))).go();
+      }
+
+      for (final song in toUpdate) {
+        await db.update(db.songs).replace(song);
+      }
+
+      if (toInsert.isNotEmpty) {
+        await db.batch((batch) {
+          batch.insertAllOnConflictUpdate(db.songs, toInsert);
+        });
+      }
+    });
   }
 }
