@@ -26,6 +26,8 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
   String _ipcLabel = '';
   bool _ipcIsBible = false;
   double? _ipcFontSize;
+  List<String> _ipcSlideLabels = const [];
+  int _ipcCurrentIndex = 0;
   bool _isSecondaryWindow = false;
   late AnimationController _fadeController;
   late final FocusNode _focusNode;
@@ -137,6 +139,13 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
           if (call.arguments['isBible'] != null) _ipcIsBible = call.arguments['isBible'] as bool;
           if (call.arguments['fontSize'] != null) {
             _ipcFontSize = (call.arguments['fontSize'] as num).toDouble();
+          }
+          if (call.arguments['slideLabels'] != null) {
+            _ipcSlideLabels =
+                (call.arguments['slideLabels'] as List).cast<String>();
+          }
+          if (call.arguments['currentIndex'] != null) {
+            _ipcCurrentIndex = (call.arguments['currentIndex'] as num).toInt();
           }
         });
       } else if (call.method == 'go_fullscreen') {
@@ -309,6 +318,15 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
         ? 'ipc_${_ipcText.hashCode}'
         : '${state.currentSong?.id}_${state.currentSlideIndex}';
 
+    // Slide list length/position. In the secondary engine the projection
+    // controller is never populated, so we use the values relayed over IPC.
+    final int slideCount = _isSecondaryWindow
+        ? _ipcSlideLabels.length
+        : state.slides.length;
+    final int slideIndex = _isSecondaryWindow
+        ? _ipcCurrentIndex
+        : state.currentSlideIndex;
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -464,7 +482,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
               //   • Desktop  — hover-gated (hidden until mouse moves over)
               //   • Mobile   — always visible at low opacity, always interactive,
               //                with larger hit-targets for touch
-              if (state.slides.isNotEmpty)
+              if (slideCount > 0)
                 IgnorePointer(
                   // Mobile: always interactive. Desktop: gate on hover.
                   ignoring: _isMobile ? false : !_isHovering,
@@ -604,7 +622,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
               //   • Secondary desktop window — dot row, hover-gated
               //   • Desktop main  — text timeline, hover-gated but always faintly visible
               //   • Mobile        — text timeline hidden (replaced by bottom bar above)
-              if (state.slides.isNotEmpty && !(_isMobile && !_isSecondaryWindow))
+              if (slideCount > 0 && !(_isMobile && !_isSecondaryWindow))
                 Positioned(
                   bottom: _isSecondaryWindow ? 96 : 14,
                   left: 0,
@@ -616,8 +634,8 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView>
                     duration: const Duration(milliseconds: 300),
                     child: _isSecondaryWindow
                         ? _SlideIndicator(
-                            count: state.slides.length,
-                            current: state.currentSlideIndex,
+                            count: slideCount,
+                            current: slideIndex,
                           )
                         : _SlideTextTimeline(
                             slides: state.slides,

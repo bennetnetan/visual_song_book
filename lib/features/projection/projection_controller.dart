@@ -516,7 +516,6 @@ class ProjectionController extends StateNotifier<ProjectionState> {
             } catch (e) {
               debugPrint('Failed to hide secondary window: $e');
             }
-            _secondaryWindow = null;
           }
           setSecondaryWindowOpen(false);
         }
@@ -566,6 +565,11 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         'label': label,
         'fontSize': fontSize,
         'isBible': isBible,
+        // Slide list + position so the secondary engine can render its own
+        // in-window navigation (chevrons/dots) — its ProjectionController
+        // state is never populated.
+        'slideLabels': state.slides.map((v) => v.label).toList(),
+        'currentIndex': state.currentSlideIndex,
       });
       return true;
     } catch (e) {
