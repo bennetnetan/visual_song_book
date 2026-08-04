@@ -419,6 +419,21 @@ Prioritize regression tests for the criticals:
 - Category filter/delete controller paths.
 - Hermetic DB seeding.
 
+**Done:** Coverage already existed for `.vsbook` modified parsing + `is_active`
+(`test/vsbook_importer_test.dart`), Bible `lastRead*` persistence/hydration
+(`test/bible_controller_test.dart`), history live-refresh (`test/history_controller_test.dart`),
+category filter/delete (`test/song_list_controller_test.dart`), and hermetic DB seeding
+(`test/populate_db_test.dart`). Added this phase:
+- `test/projection_window_args_test.dart` (7 tests): the window-classification gate was extracted
+  from `main.dart` into a pure `parseProjectionWindowArgs` helper
+  (`lib/core/utils/projection_window_args.dart`) and unit-tested (null/unrelated args, legacy
+  `multi_window`, `Projection Output:<mode>` for extended/single/no-colon/future modes).
+- `test/backup_repository_test.dart` (1 test): a true `.vsbook` export → import round-trip via
+  the real `BackupRepository.exportBackup` (now accepts an optional `databasePath` override) and
+  `VsBookImporter`, asserting `modified` (unix-seconds int) and `is_active=false` survive.
+
+`flutter analyze` baseline unchanged (18), `flutter test` 44 pass (was 36).
+
 ---
 
 ## Decisions needed from the product owner
