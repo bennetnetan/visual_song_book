@@ -389,6 +389,24 @@ P4b defer-web decision. Analyze baseline unchanged (18), `flutter test` 36 pass.
 
 **Verify:** fresh AppImage build succeeds; `flutter analyze` clean; version/CHANGELOG consistent.
 
+**Done:** `scripts/package_appimage.sh` is the single AppImage entry point — it now detects Flutter
+via `FLUTTER_BIN`/PATH (no hardcoded path), downloads appimagetool with wget/curl, and falls back
+to `--appimage-extract-and-run` when FUSE is unavailable; the broken
+`linux/runner/resources/my_application.png` reference was removed with the redundant root
+`build_appimage.sh` (deleted). README build section updated (Linux AppImage + Android
+`--build-name`/`--build-number` note). `docs/song_book_plus/README.md` no longer claims
+`riverpod_annotation` (removed dep); `drift_flutter` noted as reserved for a future web effort;
+neomorphic-widgets reference dropped; font-size range corrected to 16–160; category filtering,
+projection window modes, and history clear actions added; changelog synced through v1.7.1.
+Root `CHANGELOG.md` added (v1.0.0 → v1.7.1) and `LICENSE` added (**MIT**, user decision
+2026-08-04). Tracked `temp_fonts/Inter.zip` removed. `analysis_options.yaml` replaced with
+explicit rules (`prefer_single_quotes`, `unnecessary_late`, `use_colored_box`,
+`use_decorated_box`, `use_full_hex_values_for_flutter_colors`) and the surfaced issues fixed
+(2 quote fixes, 3 `DecoratedBox`, 1 `ColoredBox`, IPC args cast). `avoid_dynamic_calls` was
+tried but dropped — it flags ~50 legitimate dynamic-parsing sites in the importers. macOS
+deployment target bumped 10.15 → 11.0. Analyze baseline unchanged (18), `flutter test` 36 pass.
+Fresh AppImage build (appimagetool) still needs a desktop box to verify end-to-end.
+
 ---
 
 ## Phase 11 — Test coverage for fixed areas
