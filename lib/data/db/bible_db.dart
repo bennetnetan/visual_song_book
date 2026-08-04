@@ -61,13 +61,16 @@ class BibleDatabase {
   ]) {
     final resultSet = db.select(sql, params);
     final columns = resultSet.columnNames;
-    return resultSet.map((row) {
+    final result = <Map<String, dynamic>>[];
+    for (final Row row in resultSet) {
       final map = <String, dynamic>{};
       for (var i = 0; i < columns.length; i++) {
+        // ignore: collection_methods_unrelated_type
         map[columns[i]] = row[i];
       }
-      return map;
-    }).toList();
+      result.add(map);
+    }
+    return result;
   }
 
   Future<List<Map<String, dynamic>>> queryAsync(

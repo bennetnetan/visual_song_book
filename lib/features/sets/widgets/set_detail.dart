@@ -475,7 +475,7 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                   buildDefaultDragHandles: false,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   itemCount: widget.items.length,
-                  onReorder: (oldIndex, newIndex) {
+                  onReorderItem: (oldIndex, newIndex) {
                     ref.read(setsControllerProvider.notifier).reorderSongs(
                       widget.selectedSetId,
                       oldIndex,
