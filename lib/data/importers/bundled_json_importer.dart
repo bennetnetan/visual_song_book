@@ -84,44 +84,41 @@ class BundledJsonImporter implements SongbookImporter {
       }
 
       // Snapshot existing songs to detect duplicates.
-      // Keyed by title (lowercase, trimmed) so cross-book duplicates with
-      // different song numbers are still caught. Also updated during insertion
-      // to handle within-file duplicate titles.
-      final preExistingTitles = (await (db.select(db.songs)
+      final preExistingKeys = (await (db.select(db.songs)
                   ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
               .get())
-          .map((s) => s.title.toLowerCase().trim())
+          .map((s) => '${s.songNum}|${s.title.toLowerCase().trim()}')
           .toSet();
 
-      final seenThisBatch = <String>{};
+      // Deduplicate source data to survive unique index on (LOWER(title), song_num)
+      final dedupResult = deduplicateSongs(songCompanions);
+      final dedupedSongs = dedupResult.deduplicated;
+      if (dedupResult.duplicatesRemoved > 0) {
+        // ignore: avoid_print
+        print(
+          'Deduplicated ${dedupResult.duplicatesRemoved} duplicate songs from bundled JSON '
+          '(kept ${dedupedSongs.length} unique entries).',
+        );
+      }
 
-      // Insert data
-      await db.transaction(() async {
-        for (final song in songCompanions) {
-          final titleKey = song.title.value.toLowerCase().trim();
-          // Skip if already in DB from a previous seed
-          if (preExistingTitles.contains(titleKey)) continue;
-          // Skip if already inserted earlier in this same batch
-          if (!seenThisBatch.add(titleKey)) continue;
+      // Insert data (skip songs already present from a previous seed)
+      final toInsert = dedupedSongs.where((song) {
+        final key =
+            '${song.songNum.value}|${song.title.value.toLowerCase().trim()}';
+        return !preExistingKeys.contains(key);
+      }).toList();
 
-          await db.into(db.songs).insert(song);
-        }
+      await db.batch((batch) {
+        batch.insertAllOnConflictUpdate(db.songs, toInsert);
       });
 
       // Calculate stats
-      final newSongTitles = <String>[];
-      int alreadyExisted = 0;
-      for (final companion in songCompanions) {
-        final titleKey = companion.title.value.toLowerCase().trim();
-        if (preExistingTitles.contains(titleKey) || !seenThisBatch.contains(titleKey)) {
-          alreadyExisted++;
-        } else {
-          newSongTitles.add(companion.title.value);
-        }
-      }
+      final newSongTitles = toInsert.map((s) => s.title.value).toList();
+      final alreadyExisted =
+          dedupedSongs.length - toInsert.length + dedupResult.duplicatesRemoved;
 
       return ImportResult.success(
-        songs: songCompanions.length,
+        songs: dedupedSongs.length,
         categories: 1,
         added: newSongTitles.length,
         alreadyExisted: alreadyExisted,
