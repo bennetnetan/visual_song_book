@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:visual_song_book/core/models/source_mode.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 
 class SongRepository {
@@ -25,7 +26,7 @@ class SongRepository {
   }
 
   /// Searches active songs by title, body, author, or song number
-  Future<List<Song>> searchSongs(String query, {String? sourcePath}) {
+  Future<List<Song>> searchSongs(String query, {String? sourcePath, SourceMode? sourceMode}) {
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
       return getSongs();
@@ -37,6 +38,12 @@ class SongRepository {
     final statement = db.select(db.songs)
       ..where((t) {
         Expression<bool> activeFilter = t.isActive.equals(true);
+
+        if (sourceMode == SourceMode.bundled) {
+          activeFilter = activeFilter & t.sourcePath.isNotNull() & t.sourcePath.isNotIn(['']);
+        } else if (sourceMode == SourceMode.linked) {
+          activeFilter = activeFilter & t.sourceFormat.equals('vsbook_linked');
+        }
 
         if (sourcePath != null) {
           activeFilter = activeFilter & t.sourcePath.equals(sourcePath);
@@ -59,11 +66,16 @@ class SongRepository {
   }
 
   /// Watches active songs in a specific category
-  Stream<List<Song>> watchSongsByCategory(int? categoryId, {String? sourcePath}) {
+  Stream<List<Song>> watchSongsByCategory(int? categoryId, {String? sourcePath, SourceMode? sourceMode}) {
     if (categoryId == null) {
       return (db.select(db.songs)
             ..where((t) {
               Expression<bool> expr = t.isActive.equals(true) & t.categoryId.isNull();
+              if (sourceMode == SourceMode.bundled) {
+                expr = expr & t.sourcePath.isNotNull() & t.sourcePath.isNotIn(['']);
+              } else if (sourceMode == SourceMode.linked) {
+                expr = expr & t.sourceFormat.equals('vsbook_linked');
+              }
               if (sourcePath != null) {
                 expr = expr & t.sourcePath.equals(sourcePath);
               }
@@ -75,6 +87,11 @@ class SongRepository {
     return (db.select(db.songs)
           ..where((t) {
             Expression<bool> expr = t.isActive.equals(true) & t.categoryId.equals(categoryId);
+            if (sourceMode == SourceMode.bundled) {
+              expr = expr & t.sourcePath.isNotNull() & t.sourcePath.isNotIn(['']);
+            } else if (sourceMode == SourceMode.linked) {
+              expr = expr & t.sourceFormat.equals('vsbook_linked');
+            }
             if (sourcePath != null) {
               expr = expr & t.sourcePath.equals(sourcePath);
             }
@@ -84,11 +101,16 @@ class SongRepository {
         .watch();
   }
 
-  /// Watches all active songs, optionally filtered by source path
-  Stream<List<Song>> watchSongsFiltered({String? sourcePath}) {
+  /// Watches all active songs, optionally filtered by source path and source mode
+  Stream<List<Song>> watchSongsFiltered({String? sourcePath, SourceMode? sourceMode}) {
     return (db.select(db.songs)
           ..where((t) {
             Expression<bool> expr = t.isActive.equals(true);
+            if (sourceMode == SourceMode.bundled) {
+              expr = expr & t.sourcePath.isNotNull() & t.sourcePath.isNotIn(['']);
+            } else if (sourceMode == SourceMode.linked) {
+              expr = expr & t.sourceFormat.equals('vsbook_linked');
+            }
             if (sourcePath != null) {
               expr = expr & t.sourcePath.equals(sourcePath);
             }
@@ -151,12 +173,24 @@ class SongRepository {
     return db.into(db.categories).insertOnConflictUpdate(companion);
   }
 
-  Future<int> getSongCountByCategory(int categoryId) {
-    return (db.select(db.songs)
-          ..where((t) => t.categoryId.equals(categoryId) & t.isActive.equals(true)))
-        .map((row) => row.id)
-        .get()
-        .then((ids) => ids.length);
+  Future<int> getSongCountByCategory(int categoryId) async {
+    final result = await (db.selectOnly(db.songs)
+          ..addColumns([db.songs.id.count()])
+          ..where(db.songs.categoryId.equals(categoryId) & db.songs.isActive.equals(true)))
+        .getSingle();
+    return result.read(db.songs.id.count()) ?? 0;
+  }
+
+  Future<Map<int, int>> getSongCountsByCategory() async {
+    final result = await (db.selectOnly(db.songs)
+          ..addColumns([db.songs.categoryId, db.songs.id.count()])
+          ..where(db.songs.isActive.equals(true))
+          ..groupBy([db.songs.categoryId])
+    ).get();
+    return {
+      for (var row in result)
+        row.read(db.songs.categoryId)!: row.read(db.songs.id)!,
+    };
   }
 
   Future<void> deleteCategory(int categoryId) async {

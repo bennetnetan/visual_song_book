@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:visual_song_book/core/models/source_mode.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
@@ -31,6 +32,12 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
         curve: Curves.easeInOut,
       );
     }
+  }
+
+  Future<void> _selectSourceMode(SourceMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('default_source_mode', mode.name);
+    _nextPage();
   }
 
   Future<void> _completeOnboarding() async {
@@ -202,7 +209,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Choose Your Experience',
+            'Choose Your Song Source',
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -210,27 +217,29 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            'How would you like to get started?',
+            'Select which songs to load. You can change this later in Settings.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
-          _ExperienceCard(
+          _SourceChoiceCard(
             icon: Icons.library_books_outlined,
-            title: 'Use Pre-installed Songbooks',
+            title: 'Pre-installed Songbooks',
             subtitle: 'Full Song Book & Injili Song Book are ready to use',
-            onTap: _nextPage,
+            onTap: () => _selectSourceMode(SourceMode.bundled),
           ),
           const SizedBox(height: 16),
-          _ExperienceCard(
+          _SourceChoiceCard(
             icon: Icons.link_outlined,
-            title: 'Link Songbook Files',
+            title: 'Link Your Own Songbooks',
             subtitle: 'Connect .vsbook files from Google Drive or local storage',
             onTap: () async {
-              await _linkSongbookFiles();
-              _nextPage();
+              await _selectSourceMode(SourceMode.linked);
+              if (mounted) {
+                await _linkSongbookFiles();
+              }
             },
           ),
         ],
@@ -264,23 +273,19 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           ),
           const SizedBox(height: 32),
           const _ThemeSelector(),
-          if (isDesktop) ...[
-            const SizedBox(height: 24),
-            const _ProjectionModeSelector(),
-          ],
         ],
       ),
     );
   }
 }
 
-class _ExperienceCard extends StatelessWidget {
+class _SourceChoiceCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
 
-  const _ExperienceCard({
+  const _SourceChoiceCard({
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -327,7 +332,7 @@ class _ExperienceCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: theme.textTheme.bodySmall?.copyWith(
+                      style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -335,8 +340,9 @@ class _ExperienceCard extends StatelessWidget {
                 ),
               ),
               Icon(
-                Icons.chevron_right,
-                color: theme.colorScheme.onSurfaceVariant,
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
               ),
             ],
           ),
@@ -389,88 +395,3 @@ class _ThemeSelector extends ConsumerWidget {
   }
 }
 
-class _ProjectionModeSelector extends ConsumerStatefulWidget {
-  const _ProjectionModeSelector();
-
-  @override
-  ConsumerState<_ProjectionModeSelector> createState() => _ProjectionModeSelectorState();
-}
-
-class _ProjectionModeSelectorState extends ConsumerState<_ProjectionModeSelector> {
-  String _selectedMode = 'extended';
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      children: [
-        Text(
-          'Projection Display',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(
-              value: 'single',
-              icon: Icon(Icons.computer),
-              label: Text('Single'),
-            ),
-            ButtonSegment(
-              value: 'duplicate',
-              icon: Icon(Icons.content_copy),
-              label: Text('Duplicate'),
-            ),
-            ButtonSegment(
-              value: 'extended',
-              icon: Icon(Icons.desktop_windows),
-              label: Text('Extended'),
-            ),
-          ],
-          selected: {_selectedMode},
-          onSelectionChanged: (modes) async {
-            if (modes.first == 'duplicate') {
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Duplicate projection is coming soon. '
-                      'Single and Extended are available now.',
-                    ),
-                  ),
-                );
-              return;
-            }
-            setState(() => _selectedMode = modes.first);
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setString('projection_mode', modes.first);
-          },
-        ),
-        const SizedBox(height: 8),
-        Text(
-          _getProjectionModeDescription(_selectedMode),
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
-  String _getProjectionModeDescription(String mode) {
-    switch (mode) {
-      case 'single':
-        return 'Project on the same screen as your controls';
-      case 'duplicate':
-        return 'Mirror your controls on the projector';
-      case 'extended':
-        return 'Use a second screen for projection';
-      default:
-        return '';
-    }
-  }
-}

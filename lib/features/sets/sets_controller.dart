@@ -145,7 +145,6 @@ class SetsController extends StateNotifier<SetsState> {
 
   Future<void> reorderSongs(int setId, int oldIndex, int newIndex) async {
     final list = List<SongSetItem>.from(state.setItems);
-    if (newIndex > oldIndex) newIndex -= 1;
     final item = list.removeAt(oldIndex);
     list.insert(newIndex, item);
 

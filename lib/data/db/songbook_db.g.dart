@@ -187,6 +187,319 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   }
 }
 
+class $LinkedSongbookRegistryTable extends LinkedSongbookRegistry
+    with TableInfo<$LinkedSongbookRegistryTable, LinkedSongbookRegistryData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LinkedSongbookRegistryTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _pathMeta = const VerificationMeta('path');
+  @override
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+    'path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 200),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastImportedAtMeta = const VerificationMeta(
+    'lastImportedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastImportedAt =
+      GeneratedColumn<DateTime>(
+        'last_imported_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [id, path, name, lastImportedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'linked_songbook_registry';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LinkedSongbookRegistryData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('path')) {
+      context.handle(
+        _pathMeta,
+        path.isAcceptableOrUnknown(data['path']!, _pathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pathMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('last_imported_at')) {
+      context.handle(
+        _lastImportedAtMeta,
+        lastImportedAt.isAcceptableOrUnknown(
+          data['last_imported_at']!,
+          _lastImportedAtMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LinkedSongbookRegistryData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LinkedSongbookRegistryData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      path: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}path'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      lastImportedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_imported_at'],
+      ),
+    );
+  }
+
+  @override
+  $LinkedSongbookRegistryTable createAlias(String alias) {
+    return $LinkedSongbookRegistryTable(attachedDatabase, alias);
+  }
+}
+
+class LinkedSongbookRegistryData extends DataClass
+    implements Insertable<LinkedSongbookRegistryData> {
+  final int id;
+  final String path;
+  final String name;
+  final DateTime? lastImportedAt;
+  const LinkedSongbookRegistryData({
+    required this.id,
+    required this.path,
+    required this.name,
+    this.lastImportedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['path'] = Variable<String>(path);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || lastImportedAt != null) {
+      map['last_imported_at'] = Variable<DateTime>(lastImportedAt);
+    }
+    return map;
+  }
+
+  LinkedSongbookRegistryCompanion toCompanion(bool nullToAbsent) {
+    return LinkedSongbookRegistryCompanion(
+      id: Value(id),
+      path: Value(path),
+      name: Value(name),
+      lastImportedAt: lastImportedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastImportedAt),
+    );
+  }
+
+  factory LinkedSongbookRegistryData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LinkedSongbookRegistryData(
+      id: serializer.fromJson<int>(json['id']),
+      path: serializer.fromJson<String>(json['path']),
+      name: serializer.fromJson<String>(json['name']),
+      lastImportedAt: serializer.fromJson<DateTime?>(json['lastImportedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'path': serializer.toJson<String>(path),
+      'name': serializer.toJson<String>(name),
+      'lastImportedAt': serializer.toJson<DateTime?>(lastImportedAt),
+    };
+  }
+
+  LinkedSongbookRegistryData copyWith({
+    int? id,
+    String? path,
+    String? name,
+    Value<DateTime?> lastImportedAt = const Value.absent(),
+  }) => LinkedSongbookRegistryData(
+    id: id ?? this.id,
+    path: path ?? this.path,
+    name: name ?? this.name,
+    lastImportedAt: lastImportedAt.present
+        ? lastImportedAt.value
+        : this.lastImportedAt,
+  );
+  LinkedSongbookRegistryData copyWithCompanion(
+    LinkedSongbookRegistryCompanion data,
+  ) {
+    return LinkedSongbookRegistryData(
+      id: data.id.present ? data.id.value : this.id,
+      path: data.path.present ? data.path.value : this.path,
+      name: data.name.present ? data.name.value : this.name,
+      lastImportedAt: data.lastImportedAt.present
+          ? data.lastImportedAt.value
+          : this.lastImportedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LinkedSongbookRegistryData(')
+          ..write('id: $id, ')
+          ..write('path: $path, ')
+          ..write('name: $name, ')
+          ..write('lastImportedAt: $lastImportedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, path, name, lastImportedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LinkedSongbookRegistryData &&
+          other.id == this.id &&
+          other.path == this.path &&
+          other.name == this.name &&
+          other.lastImportedAt == this.lastImportedAt);
+}
+
+class LinkedSongbookRegistryCompanion
+    extends UpdateCompanion<LinkedSongbookRegistryData> {
+  final Value<int> id;
+  final Value<String> path;
+  final Value<String> name;
+  final Value<DateTime?> lastImportedAt;
+  const LinkedSongbookRegistryCompanion({
+    this.id = const Value.absent(),
+    this.path = const Value.absent(),
+    this.name = const Value.absent(),
+    this.lastImportedAt = const Value.absent(),
+  });
+  LinkedSongbookRegistryCompanion.insert({
+    this.id = const Value.absent(),
+    required String path,
+    required String name,
+    this.lastImportedAt = const Value.absent(),
+  }) : path = Value(path),
+       name = Value(name);
+  static Insertable<LinkedSongbookRegistryData> custom({
+    Expression<int>? id,
+    Expression<String>? path,
+    Expression<String>? name,
+    Expression<DateTime>? lastImportedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (path != null) 'path': path,
+      if (name != null) 'name': name,
+      if (lastImportedAt != null) 'last_imported_at': lastImportedAt,
+    });
+  }
+
+  LinkedSongbookRegistryCompanion copyWith({
+    Value<int>? id,
+    Value<String>? path,
+    Value<String>? name,
+    Value<DateTime?>? lastImportedAt,
+  }) {
+    return LinkedSongbookRegistryCompanion(
+      id: id ?? this.id,
+      path: path ?? this.path,
+      name: name ?? this.name,
+      lastImportedAt: lastImportedAt ?? this.lastImportedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (lastImportedAt.present) {
+      map['last_imported_at'] = Variable<DateTime>(lastImportedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LinkedSongbookRegistryCompanion(')
+          ..write('id: $id, ')
+          ..write('path: $path, ')
+          ..write('name: $name, ')
+          ..write('lastImportedAt: $lastImportedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -242,6 +555,7 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
     'body',
     aliasedName,
     false,
+    additionalChecks: GeneratedColumn.checkTextLength(maxTextLength: 1000000),
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
@@ -3466,6 +3780,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $CategoriesTable categories = $CategoriesTable(this);
+  late final $LinkedSongbookRegistryTable linkedSongbookRegistry =
+      $LinkedSongbookRegistryTable(this);
   late final $SongsTable songs = $SongsTable(this);
   late final $SongBooksTable songBooks = $SongBooksTable(this);
   late final $HistoryTable history = $HistoryTable(this);
@@ -3480,6 +3796,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     categories,
+    linkedSongbookRegistry,
     songs,
     songBooks,
     history,
@@ -3707,6 +4024,202 @@ typedef $$CategoriesTableProcessedTableManager =
       (Category, $$CategoriesTableReferences),
       Category,
       PrefetchHooks Function({bool songsRefs})
+    >;
+typedef $$LinkedSongbookRegistryTableCreateCompanionBuilder =
+    LinkedSongbookRegistryCompanion Function({
+      Value<int> id,
+      required String path,
+      required String name,
+      Value<DateTime?> lastImportedAt,
+    });
+typedef $$LinkedSongbookRegistryTableUpdateCompanionBuilder =
+    LinkedSongbookRegistryCompanion Function({
+      Value<int> id,
+      Value<String> path,
+      Value<String> name,
+      Value<DateTime?> lastImportedAt,
+    });
+
+class $$LinkedSongbookRegistryTableFilterComposer
+    extends Composer<_$AppDatabase, $LinkedSongbookRegistryTable> {
+  $$LinkedSongbookRegistryTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastImportedAt => $composableBuilder(
+    column: $table.lastImportedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LinkedSongbookRegistryTableOrderingComposer
+    extends Composer<_$AppDatabase, $LinkedSongbookRegistryTable> {
+  $$LinkedSongbookRegistryTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastImportedAt => $composableBuilder(
+    column: $table.lastImportedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LinkedSongbookRegistryTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LinkedSongbookRegistryTable> {
+  $$LinkedSongbookRegistryTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get path =>
+      $composableBuilder(column: $table.path, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastImportedAt => $composableBuilder(
+    column: $table.lastImportedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$LinkedSongbookRegistryTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LinkedSongbookRegistryTable,
+          LinkedSongbookRegistryData,
+          $$LinkedSongbookRegistryTableFilterComposer,
+          $$LinkedSongbookRegistryTableOrderingComposer,
+          $$LinkedSongbookRegistryTableAnnotationComposer,
+          $$LinkedSongbookRegistryTableCreateCompanionBuilder,
+          $$LinkedSongbookRegistryTableUpdateCompanionBuilder,
+          (
+            LinkedSongbookRegistryData,
+            BaseReferences<
+              _$AppDatabase,
+              $LinkedSongbookRegistryTable,
+              LinkedSongbookRegistryData
+            >,
+          ),
+          LinkedSongbookRegistryData,
+          PrefetchHooks Function()
+        > {
+  $$LinkedSongbookRegistryTableTableManager(
+    _$AppDatabase db,
+    $LinkedSongbookRegistryTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LinkedSongbookRegistryTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$LinkedSongbookRegistryTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$LinkedSongbookRegistryTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> path = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<DateTime?> lastImportedAt = const Value.absent(),
+              }) => LinkedSongbookRegistryCompanion(
+                id: id,
+                path: path,
+                name: name,
+                lastImportedAt: lastImportedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String path,
+                required String name,
+                Value<DateTime?> lastImportedAt = const Value.absent(),
+              }) => LinkedSongbookRegistryCompanion.insert(
+                id: id,
+                path: path,
+                name: name,
+                lastImportedAt: lastImportedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LinkedSongbookRegistryTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LinkedSongbookRegistryTable,
+      LinkedSongbookRegistryData,
+      $$LinkedSongbookRegistryTableFilterComposer,
+      $$LinkedSongbookRegistryTableOrderingComposer,
+      $$LinkedSongbookRegistryTableAnnotationComposer,
+      $$LinkedSongbookRegistryTableCreateCompanionBuilder,
+      $$LinkedSongbookRegistryTableUpdateCompanionBuilder,
+      (
+        LinkedSongbookRegistryData,
+        BaseReferences<
+          _$AppDatabase,
+          $LinkedSongbookRegistryTable,
+          LinkedSongbookRegistryData
+        >,
+      ),
+      LinkedSongbookRegistryData,
+      PrefetchHooks Function()
     >;
 typedef $$SongsTableCreateCompanionBuilder =
     SongsCompanion Function({
@@ -6389,6 +6902,11 @@ class $AppDatabaseManager {
   $AppDatabaseManager(this._db);
   $$CategoriesTableTableManager get categories =>
       $$CategoriesTableTableManager(_db, _db.categories);
+  $$LinkedSongbookRegistryTableTableManager get linkedSongbookRegistry =>
+      $$LinkedSongbookRegistryTableTableManager(
+        _db,
+        _db.linkedSongbookRegistry,
+      );
   $$SongsTableTableManager get songs =>
       $$SongsTableTableManager(_db, _db.songs);
   $$SongBooksTableTableManager get songBooks =>

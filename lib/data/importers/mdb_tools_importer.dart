@@ -245,6 +245,17 @@ class MdbToolsImporter implements SongbookImporter {
           .toSet();
 
       // Execute in a transaction for maximum speed and integrity
+      // Deduplicate source data to survive unique index on (LOWER(title), song_num)
+      final dedupResult = deduplicateSongs(songCompanions);
+      final dedupedSongs = dedupResult.deduplicated;
+      if (dedupResult.duplicatesRemoved > 0) {
+        // ignore: avoid_print
+        print(
+          'Deduplicated ${dedupResult.duplicatesRemoved} duplicate songs from .vsb import '
+          '(kept ${dedupedSongs.length} unique entries).',
+        );
+      }
+
       await db.transaction(() async {
         // Delete only history and songs that were previously imported from this exact file path
         final songsToDelete = db.select(db.songs)
@@ -266,9 +277,22 @@ class MdbToolsImporter implements SongbookImporter {
           await db.into(db.categories).insertOnConflictUpdate(companion);
         }
 
-        // Insert songs
+        // Snapshot remaining songs to skip duplicates already present from other sources
+        final remaining = await (db.select(db.songs)
+              ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
+            .get();
+        final existingKeys = remaining
+            .map((s) => '${s.songNum}|${s.title.toLowerCase().trim()}')
+            .toSet();
+
+        final toInsert = dedupedSongs.where((song) {
+          final key =
+              '${song.songNum.value}|${song.title.value.toLowerCase().trim()}';
+          return !existingKeys.contains(key);
+        }).toList();
+
         await db.batch((batch) {
-          batch.insertAll(db.songs, songCompanions);
+          batch.insertAll(db.songs, toInsert);
         });
       });
 
@@ -283,7 +307,7 @@ class MdbToolsImporter implements SongbookImporter {
       // Compare imported songs against what existed before
       final newSongTitles = <String>[];
       int alreadyExisted = 0;
-      for (final companion in songCompanions) {
+      for (final companion in dedupedSongs) {
         final key =
             '${companion.songNum.value}|${companion.title.value.toLowerCase().trim()}';
         if (preExistingKeys.contains(key)) {
@@ -294,7 +318,7 @@ class MdbToolsImporter implements SongbookImporter {
       }
 
       return ImportResult.success(
-        songs: songCompanions.length,
+        songs: dedupedSongs.length,
         categories: categoryIdMap.length,
         added: newSongTitles.length,
         alreadyExisted: alreadyExisted,

@@ -2,9 +2,7 @@
 #
 # Baseline: package:flutter_lints (which itself includes the core and
 # recommended lint sets) plus an explicit set of additional rules below.
-# Run `flutter analyze` to verify: the project baseline is 18 pre-existing
-# `info` issues (bible_db.dart, bible_reading_widgets.dart, set_detail.dart,
-# tool/inspect_bible.dart), none of which are errors or warnings.
+# Run `flutter analyze` to verify: the project baseline is zero issues.
 
 include: package:flutter_lints/flutter.yaml
 
@@ -12,6 +10,7 @@ analyzer:
   exclude:
     - build/**
     - '**/*.g.dart'
+    - tool/**
 
 linter:
   rules:

@@ -13,7 +13,8 @@ import 'package:visual_song_book/data/importers/vsb_importer.dart';
 /// Accept both so imports never crash on a `String`/`int` type mismatch.
 DateTime? _parseModified(Object? value) {
   if (value is int) {
-    return DateTime.fromMillisecondsSinceEpoch(value * 1000);
+    final ms = value > 1_000_000_000_000 ? value : value * 1000;
+    return DateTime.fromMillisecondsSinceEpoch(ms);
   }
   if (value is String) {
     return DateTime.tryParse(value);
@@ -199,6 +200,17 @@ class VsBookImporter implements SongbookImporter {
           .map((s) => '${s.songNum}|${s.title.toLowerCase().trim()}')
           .toSet();
 
+      // Deduplicate source data to survive unique index on (LOWER(title), song_num)
+      final dedupResult = deduplicateSongs(songCompanions);
+      final dedupedSongs = dedupResult.deduplicated;
+      if (dedupResult.duplicatesRemoved > 0) {
+        // ignore: avoid_print
+        print(
+          'Deduplicated ${dedupResult.duplicatesRemoved} duplicate songs from .vsbook import '
+          '(kept ${dedupedSongs.length} unique entries).',
+        );
+      }
+
       // Insert into our active database
       await db.transaction(() async {
         await db.delete(db.history).go();
@@ -210,14 +222,14 @@ class VsBookImporter implements SongbookImporter {
         }
 
         await db.batch((batch) {
-          batch.insertAll(db.songs, songCompanions);
+          batch.insertAllOnConflictUpdate(db.songs, dedupedSongs);
         });
       });
 
       // Compare imported songs against what existed before
       final newSongTitles = <String>[];
       int alreadyExisted = 0;
-      for (final companion in songCompanions) {
+      for (final companion in dedupedSongs) {
         final key =
             '${companion.songNum.value}|${companion.title.value.toLowerCase().trim()}';
         if (preExistingKeys.contains(key)) {
@@ -228,7 +240,7 @@ class VsBookImporter implements SongbookImporter {
       }
 
       return ImportResult.success(
-        songs: songCompanions.length,
+        songs: dedupedSongs.length,
         categories: categoryCompanions.length,
         added: newSongTitles.length,
         alreadyExisted: alreadyExisted,
@@ -349,24 +361,23 @@ class VsBookImporter implements SongbookImporter {
         );
       }
 
-      await db.transaction(() async {
-        for (final category in categoryCompanions) {
-          await db.into(db.categories).insertOnConflictUpdate(category);
-        }
+      // Deduplicate source data to survive unique index on (LOWER(title), song_num)
+      final dedupResult = deduplicateSongs(songCompanions);
+      final dedupedSongs = dedupResult.deduplicated;
+      if (dedupResult.duplicatesRemoved > 0) {
+        // ignore: avoid_print
+        print(
+          'Deduplicated ${dedupResult.duplicatesRemoved} duplicate songs from .vsbook reimport '
+          '(kept ${dedupedSongs.length} unique entries).',
+        );
+      }
 
-        await (db.delete(db.songs)
-              ..where((t) => t.sourcePath.equals(sourceFilePath)))
-            .go();
-
-        await db.batch((batch) {
-          batch.insertAll(db.songs, songCompanions);
-        });
-      });
+      await _upsertSongs(sourceFilePath, dedupedSongs);
 
       return ImportResult.success(
-        songs: songCompanions.length,
+        songs: dedupedSongs.length,
         categories: categoryCompanions.length,
-        added: songCompanions.length,
+        added: dedupedSongs.length,
       );
     } finally {
       tempDb?.dispose();
@@ -427,24 +438,29 @@ class VsBookImporter implements SongbookImporter {
       );
     }
 
-    await db.transaction(() async {
-      for (final category in categoryCompanions) {
-        await db.into(db.categories).insertOnConflictUpdate(category);
-      }
+    // Deduplicate source data to survive unique index on (LOWER(title), song_num)
+    final dedupResult = deduplicateSongs(songCompanions);
+    final dedupedSongs = dedupResult.deduplicated;
+    if (dedupResult.duplicatesRemoved > 0) {
+      // ignore: avoid_print
+      print(
+        'Deduplicated ${dedupResult.duplicatesRemoved} duplicate songs from .vsbook reimport '
+        '(kept ${dedupedSongs.length} unique entries).',
+      );
+    }
 
-      await (db.delete(db.songs)
-            ..where((t) => t.sourcePath.equals(sourceFilePath)))
-          .go();
+      await db.transaction(() async {
+        for (final category in categoryCompanions) {
+          await db.into(db.categories).insertOnConflictUpdate(category);
+        }
 
-      await db.batch((batch) {
-        batch.insertAll(db.songs, songCompanions);
+        await _upsertSongs(sourceFilePath, dedupedSongs);
       });
-    });
 
     return ImportResult.success(
-      songs: songCompanions.length,
+      songs: dedupedSongs.length,
       categories: categoryCompanions.length,
-      added: songCompanions.length,
+      added: dedupedSongs.length,
     );
   }
 
@@ -519,6 +535,17 @@ class VsBookImporter implements SongbookImporter {
         .map((s) => '${s.songNum}|${s.title.toLowerCase().trim()}')
         .toSet();
 
+    // Deduplicate source data to survive unique index on (LOWER(title), song_num)
+    final dedupResult = deduplicateSongs(songCompanions);
+    final dedupedSongs = dedupResult.deduplicated;
+    if (dedupResult.duplicatesRemoved > 0) {
+      // ignore: avoid_print
+      print(
+        'Deduplicated ${dedupResult.duplicatesRemoved} duplicate songs from .vsbook import '
+        '(kept ${dedupedSongs.length} unique entries).',
+      );
+    }
+
     await db.transaction(() async {
       await db.delete(db.history).go();
       await db.delete(db.songs).go();
@@ -529,14 +556,14 @@ class VsBookImporter implements SongbookImporter {
       }
 
       await db.batch((batch) {
-        batch.insertAll(db.songs, songCompanions);
+        batch.insertAllOnConflictUpdate(db.songs, dedupedSongs);
       });
     });
 
     // Compare imported songs against what existed before
     final newSongTitles = <String>[];
     int alreadyExisted = 0;
-    for (final companion in songCompanions) {
+    for (final companion in dedupedSongs) {
       final key =
           '${companion.songNum.value}|${companion.title.value.toLowerCase().trim()}';
       if (preExistingKeys.contains(key)) {
@@ -547,11 +574,80 @@ class VsBookImporter implements SongbookImporter {
     }
 
     return ImportResult.success(
-      songs: songCompanions.length,
+      songs: dedupedSongs.length,
       categories: categoryCompanions.length,
       added: newSongTitles.length,
       alreadyExisted: alreadyExisted,
       newTitles: newSongTitles,
     );
+  }
+
+  Future<void> _upsertSongs(
+    String sourceFilePath,
+    List<SongsCompanion> companions,
+  ) async {
+    final existing = await (db.select(db.songs)
+          ..where((t) => t.sourcePath.equals(sourceFilePath))
+          ..orderBy([(t) => OrderingTerm.asc(t.id)]))
+        .get();
+
+    final bySourceSongId = <int, Song>{};
+    final byTitleNum = <String, Song>{};
+    for (final song in existing) {
+      if (song.sourceSongId != null) {
+        bySourceSongId[song.sourceSongId!] = song;
+      }
+      final key = '${song.title.toLowerCase().trim()}|${song.songNum}';
+      byTitleNum[key] = song;
+    }
+
+    final toUpdate = <SongsCompanion>[];
+    final toInsert = <SongsCompanion>[];
+    final incomingTitleNums = <String>{};
+    final incomingSourceIds = <int?>{};
+
+    for (final companion in companions) {
+      final title = companion.title.value;
+      final songNum = companion.songNum.value;
+      final key = '${title.toLowerCase().trim()}|$songNum';
+      incomingTitleNums.add(key);
+
+      final sourceId = companion.sourceSongId.value;
+      incomingSourceIds.add(sourceId);
+
+      Song? match;
+      if (sourceId != null && bySourceSongId.containsKey(sourceId)) {
+        match = bySourceSongId[sourceId];
+      } else if (byTitleNum.containsKey(key)) {
+        match = byTitleNum[key];
+      }
+
+      if (match != null) {
+        toUpdate.add(companion.copyWith(id: Value(match.id)));
+      } else {
+        toInsert.add(companion);
+      }
+    }
+
+    final toDelete = existing.where((s) {
+      final key = '${s.title.toLowerCase().trim()}|${s.songNum}';
+      return !incomingTitleNums.contains(key);
+    }).toList();
+
+    await db.transaction(() async {
+      for (final song in toDelete) {
+        await (db.delete(db.songs)..where((t) => t.id.equals(song.id))).go();
+      }
+
+      for (final song in toUpdate) {
+        await db.update(db.songs).replace(song);
+      }
+
+      if (toInsert.isNotEmpty) {
+        await db.batch((batch) {
+          batch.insertAllOnConflictUpdate(db.songs, toInsert);
+        });
+      }
+    });
   }
 }

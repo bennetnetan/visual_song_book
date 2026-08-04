@@ -7,12 +7,15 @@ import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
+import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/core/utils/verse_parser.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/models/verse.dart';
 import 'package:visual_song_book/data/repositories/song_repository.dart';
 import 'package:visual_song_book/features/bible/bible_repository.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+
+final _log = AppLogger.get('ProjectionController');
 
 class ProjectionState {
   final Song? currentSong;
@@ -160,7 +163,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       if (state.keepAwake) {
         WakelockPlus.enable();
       }
-    } catch (_) {}
+    } catch (_) {
+      // ignore: missing prefs on first launch
+    }
   }
 
   void setSong(Song song) => _setSong(song);
@@ -411,7 +416,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
 
     // Guard against concurrent initialization races.
     if (_isCreatingWindow) {
-      debugPrint('Already in the process of creating a projector window. Ignoring request.');
+      _log.warning('Already in the process of creating a projector window. Ignoring request.');
       return false;
     }
 
@@ -420,7 +425,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     if (_secondaryWindow != null) {
       try {
         await _secondaryWindow!.show();
-        debugPrint('Showing existing projector window: ${_secondaryWindow!.windowId}');
+        _log.fine('Showing existing projector window: ${_secondaryWindow!.windowId}');
         state = state.copyWith(isSecondaryWindowOpen: true);
         // Re-assert fullscreen after a hide/show cycle (Windows restores the
         // original window style on manual close).
@@ -428,7 +433,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         _syncSecondaryWindow();
         return true;
       } catch (e) {
-        debugPrint('Tracked secondary window is dead: $e. Will create a new one.');
+        _log.warning('Tracked secondary window is dead: $e. Will create a new one.');
         _secondaryWindow = null;
       }
     }
@@ -445,7 +450,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       );
       await window.show();
       _secondaryWindow = window;
-      debugPrint('Created new projector window: ${window.windowId}');
+      _log.fine('Created new projector window: ${window.windowId}');
 
       state = state.copyWith(isSecondaryWindowOpen: true);
 
@@ -460,7 +465,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
 
       return true;
     } catch (e) {
-      debugPrint('Failed to open projector window: $e');
+      _log.warning('Failed to open projector window: $e');
       return false;
     } finally {
       _isCreatingWindow = false;
@@ -478,9 +483,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     if (state.projectionMode == 'single') return;
     try {
       await _secondaryWindow!.invokeMethod('go_fullscreen', {});
-      debugPrint('Sent go_fullscreen IPC to secondary window.');
+      _log.fine('Sent go_fullscreen IPC to secondary window.');
     } catch (e) {
-      debugPrint('_placeOnSecondScreenAndFullscreen: $e');
+      _log.warning('_placeOnSecondScreenAndFullscreen: $e');
     }
   }
 
@@ -505,12 +510,14 @@ class ProjectionController extends StateNotifier<ProjectionState> {
 
   Future<void> _syncSecondaryWindowWithRetry() async {
     for (var attempt = 0; attempt < 10; attempt++) {
+      if (_secondaryWindow == null) return;
       await Future.delayed(const Duration(milliseconds: 300));
       if (await _syncSecondaryWindow()) {
-        debugPrint('Secondary window synced on attempt $attempt');
-        break;
+        _log.fine('Secondary window synced on attempt $attempt');
+        return;
       }
     }
+    _log.warning('Secondary window sync timed out after 10 attempts.');
   }
 
   void setSecondaryWindowOpen(bool isOpen) {
@@ -525,7 +532,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     try {
       final controller = await WindowController.fromCurrentEngine();
       controller.setWindowMethodHandler((call) async {
-        debugPrint('Main window received IPC call: ${call.method}');
+        _log.fine('Main window received IPC call: ${call.method}');
         if (call.method == 'navigate_slide') {
           final action = call.arguments['action'] as String?;
           if (action == 'prev') {
@@ -534,11 +541,11 @@ class ProjectionController extends StateNotifier<ProjectionState> {
             nextSlide();
           }
         } else if (call.method == 'secondary_window_closed') {
-          debugPrint('Secondary window reported closed.');
+          _log.fine('Secondary window reported closed.');
           _secondaryWindow = null;
           setSecondaryWindowOpen(false);
         } else if (call.method == 'secondary_window_ready') {
-          debugPrint('Secondary window reported ready. Placing and syncing current slide...');
+          _log.fine('Secondary window reported ready. Placing and syncing current slide...');
           _placeOnSecondScreenAndFullscreen();
           _syncSecondaryWindowWithRetry();
         } else if (call.method == 'close_secondary_window') {
@@ -547,12 +554,12 @@ class ProjectionController extends StateNotifier<ProjectionState> {
           // We keep the reference after hiding so openProjectorWindow() can
           // re-show the same hidden engine instead of leaking a new one per
           // close. Native X-close is handled by onWindowsChanged below.
-          debugPrint('Main window received request to close secondary window.');
+          _log.fine('Main window received request to close secondary window.');
           if (_secondaryWindow != null) {
             try {
               await _secondaryWindow!.hide();
             } catch (e) {
-              debugPrint('Failed to hide secondary window: $e');
+              _log.warning('Failed to hide secondary window: $e');
             }
           }
           setSecondaryWindowOpen(false);
@@ -569,14 +576,16 @@ class ProjectionController extends StateNotifier<ProjectionState> {
           final allControllers = await WindowController.getAll();
           final hasOurs = allControllers.any((c) => c.windowId == _secondaryWindow!.windowId);
           if (!hasOurs) {
-            debugPrint('Secondary window was natively closed. Updating state.');
+            _log.fine('Secondary window was natively closed. Updating state.');
             _secondaryWindow = null;
             state = state.copyWith(isSecondaryWindowOpen: false);
           }
-        } catch (_) {}
+        } catch (_) {
+          // ignore: missing prefs on first launch
+        }
       });
     } catch (e) {
-      debugPrint('Failed to register main window IPC handler: $e');
+      _log.severe('Failed to register main window IPC handler: $e');
     }
   }
 
@@ -607,7 +616,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       });
       return true;
     } catch (e) {
-      debugPrint('Sync failed for window ${_secondaryWindow!.windowId}: $e');
+      _log.warning('Sync failed for window ${_secondaryWindow!.windowId}: $e');
       // During startup, the channel might not be registered yet.
       // Do not clear _secondaryWindow here; let the retry mechanism handle it.
       // Actual window closure is handled by onWindowsChanged and IPC.

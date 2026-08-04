@@ -18,7 +18,7 @@ class Songs extends Table {
   IntColumn get songNum => integer()();
   TextColumn get title => text().withLength(max: 200)();
   TextColumn get key => text().nullable().withLength(max: 100)();
-  TextColumn get body => text()(); // The full lyrics
+  TextColumn get body => text().withLength(max: 1_000_000)(); // Capped at 1 MB to prevent memory exhaustion
   DateTimeColumn get modified => dateTime().nullable()();
   TextColumn get search => text().nullable()(); // Normalized search text
   TextColumn get copyright => text().nullable().withLength(max: 200)();
@@ -35,6 +35,16 @@ class Songs extends Table {
 
   // Soft-delete: songs can be deactivated without removing data
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+}
+
+class LinkedSongbookRegistry extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get path => text()();
+  TextColumn get name => text().withLength(max: 200)();
+  DateTimeColumn get lastImportedAt => dateTime().nullable()();
+
+  @override
+  List<String> get customConstraints => ['UNIQUE(path)'];
 }
 
 class SongBooks extends Table {
@@ -99,6 +109,7 @@ class BibleBookmarks extends Table {
 @DriftDatabase(
   tables: [
     Categories,
+    LinkedSongbookRegistry,
     Songs,
     SongBooks,
     History,
@@ -118,11 +129,38 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 10;
+
+  // Linked songbooks helpers
+
+  Future<List<LinkedSongbookRegistryData>> getAllLinkedSongbooks() =>
+      (select(linkedSongbookRegistry)..orderBy([(t) => OrderingTerm.asc(t.path)])).get();
+
+  Stream<List<LinkedSongbookRegistryData>> watchAllLinkedSongbooks() =>
+      (select(linkedSongbookRegistry)..orderBy([(t) => OrderingTerm.asc(t.path)])).watch();
+
+  Future<LinkedSongbookRegistryData?> getLinkedSongbookByPath(String path) =>
+      (select(linkedSongbookRegistry)..where((t) => t.path.equals(path))).getSingleOrNull();
+
+  Future<int> insertLinkedSongbook(LinkedSongbookRegistryCompanion entry) =>
+      into(linkedSongbookRegistry).insert(entry);
+
+  Future<int> updateLinkedSongbookByPath(String path, LinkedSongbookRegistryCompanion entry) =>
+      (update(linkedSongbookRegistry)..where((t) => t.path.equals(path))).write(entry);
+
+  Future<int> deleteLinkedSongbookByPath(String path) =>
+      (delete(linkedSongbookRegistry)..where((t) => t.path.equals(path))).go();
+
+  Future<int> countLinkedSongbooks() async =>
+      (await select(linkedSongbookRegistry).get()).length;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (m) => m.createAll(),
+    onCreate: (m) async {
+      await m.createAll();
+      await m.database.customStatement('CREATE UNIQUE INDEX IF NOT EXISTS idx_songs_title_num ON songs (LOWER(title), song_num) WHERE is_active = 1');
+      await m.database.customStatement('CREATE INDEX IF NOT EXISTS idx_songs_active_category ON songs (is_active, category_id, song_num)');
+    },
     onUpgrade: (m, from, to) async {
       if (from < 2) {
         await m.createTable(songSets);
@@ -141,6 +179,19 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 6) {
         await m.addColumn(songSetItems, songSetItems.key);
+      }
+      if (from < 7) {
+        await m.database.customStatement('CREATE UNIQUE INDEX IF NOT EXISTS idx_songs_title_num ON songs (LOWER(title), song_num) WHERE is_active = 1');
+      }
+      if (from < 8) {
+        // body length cap is enforced at the Dart layer for existing rows;
+        // CHECK constraint is applied only on new database creation.
+      }
+      if (from < 9) {
+        await m.database.customStatement('CREATE INDEX IF NOT EXISTS idx_songs_active_category ON songs (is_active, category_id, song_num)');
+      }
+      if (from < 10) {
+        await m.createTable(linkedSongbookRegistry);
       }
     },
   );

@@ -197,11 +197,14 @@ class _BibleReadingViewState extends State<BibleReadingView> {
       final index = widget.verses.indexWhere((verse) => verse.id == v.id);
       if (index < 0) return;
 
+      final mediaQuery = MediaQuery.of(context);
+      // ignore: use_build_context_synchronously
       Future.delayed(const Duration(milliseconds: 80), () {
         if (!mounted || !_scrollController.hasClients) return;
         final ctx = _activeVerseKey.currentContext;
         if (ctx != null) {
           Scrollable.ensureVisible(
+            // ignore: use_build_context_synchronously
             ctx,
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
@@ -211,7 +214,7 @@ class _BibleReadingViewState extends State<BibleReadingView> {
         }
         final viewportHeight = _scrollController.position.viewportDimension;
         final headerHeight = kToolbarHeight +
-            MediaQuery.of(context).padding.top +
+            mediaQuery.padding.top +
             (widget.selectedChapter != null ? 52.0 : 0.0) +
             (widget.selectionMode ? 48.0 : 0.0) +
             24.0;
@@ -616,6 +619,7 @@ class _BibleReadingViewState extends State<BibleReadingView> {
     final center = renderBox?.localToGlobal(renderBox.size.center(Offset.zero)) ??
         Offset.zero;
     final isLargeScreen = getLayoutMode(context) == LayoutMode.desktop;
+    final container = ProviderScope.containerOf(context);
     showMenu<String>(
       context: context,
       position: RelativeRect.fromLTRB(center.dx, center.dy, center.dx + 1, center.dy + 1),
@@ -667,13 +671,13 @@ class _BibleReadingViewState extends State<BibleReadingView> {
       if (action == 'project') {
         widget.onProjectPassage(verse.chapter, [verse]);
       } else if (action == 'navigate') {
-        ProviderScope.containerOf(context)
+        container
             .read(bibleControllerProvider.notifier)
             .navigateToVerse(verse.bookId, verse.chapter, verse.verse);
       } else if (action == 'bookmark') {
         widget.onToggleBookmark(verse);
       } else if (action == 'select') {
-        ProviderScope.containerOf(context)
+        container
             .read(bibleControllerProvider.notifier)
             .toggleSelectionMode();
       }
@@ -716,8 +720,11 @@ class BibleVersePopupMenu extends StatelessWidget {
       onSelected: (action) {
         if (action == 'project') {
           onProject();
-        } else if (action == 'bookmark') onBookmark();
-        else if (action == 'navigate') onNavigate();
+        } else if (action == 'bookmark') {
+          onBookmark();
+        } else if (action == 'navigate') {
+          onNavigate();
+        }
       },
       itemBuilder: (context) => [
         PopupMenuItem(

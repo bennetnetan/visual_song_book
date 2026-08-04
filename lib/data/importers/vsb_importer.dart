@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:visual_song_book/data/db/songbook_db.dart';
 
 enum ImportSourceType { file, bytes }
 
@@ -55,6 +56,33 @@ class ImportResult {
   factory ImportResult.failure(String error) {
     return ImportResult(success: false, errorMessage: error);
   }
+}
+
+/// Deduplicates a list of [SongsCompanion] entries by the composite key
+/// `songNum|LOWER(title)`, keeping the first occurrence of each pair.
+///
+/// This makes imports resilient to dirty source data where the same song
+/// appears more than once (e.g. bundled songbooks with duplicate entries).
+///
+/// Returns the deduplicated list and the number of duplicates removed.
+({List<SongsCompanion> deduplicated, int duplicatesRemoved}) deduplicateSongs(
+  List<SongsCompanion> songs,
+) {
+  final seen = <String>{};
+  final deduplicated = <SongsCompanion>[];
+  int duplicatesRemoved = 0;
+
+  for (final song in songs) {
+    final key =
+        '${song.songNum.value}|${song.title.value.toLowerCase().trim()}';
+    if (seen.add(key)) {
+      deduplicated.add(song);
+    } else {
+      duplicatesRemoved++;
+    }
+  }
+
+  return (deduplicated: deduplicated, duplicatesRemoved: duplicatesRemoved);
 }
 
 abstract class SongbookImporter {

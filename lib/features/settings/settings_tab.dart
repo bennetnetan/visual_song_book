@@ -12,13 +12,7 @@ import 'package:visual_song_book/data/importers/vsbook_importer.dart';
 import 'package:visual_song_book/features/settings/settings_cards.dart';
 import 'package:visual_song_book/features/song_list/song_list_controller.dart';
 
-final selectedSettingsCategoryProvider = StateProvider<String>(
-  (ref) => 'General',
-);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Main Settings Tab Widget
-// ─────────────────────────────────────────────────────────────────────────────
+// Main Settings Tab Widget — non-tabbed grouped layout
 class SettingsTab extends ConsumerStatefulWidget {
   const SettingsTab({super.key});
 
@@ -170,349 +164,151 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isLargeScreen = getLayoutMode(context) == LayoutMode.desktop;
-    if (isLargeScreen) {
-      return _buildDesktopLayout();
-    } else {
-      return _buildMobileLayout();
-    }
-  }
-
-  // ───────── MOBILE ─────────
-  Widget _buildMobileLayout() {
-    final selectedCategory = ref.watch(selectedSettingsCategoryProvider);
-
-    final categories = ['Appearance', 'Projection', 'Library', 'About'];
 
     return Scaffold(
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Scrollable horizontal category chips
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: categories.map((cat) {
-                  final isSelected = selectedCategory == cat;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: _CategoryChip(
-                      label: cat,
-                      isSelected: isSelected,
-                      onTap: () => ref
-                          .read(selectedSettingsCategoryProvider.notifier)
-                          .state = cat,
-                    ),
-                  );
-                }).toList(),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(
+          horizontal: isLargeScreen ? 48 : 16,
+          vertical: 24,
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: isLargeScreen ? 780 : double.infinity,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildPageHeader(theme),
+              const SizedBox(height: 32),
+              const AppearanceCard(),
+              const SizedBox(height: 24),
+              const ProjectionPreferencesCard(),
+              const SizedBox(height: 24),
+              const SourceModeCard(),
+              const SizedBox(height: 16),
+              const LinkedSongbooksCard(),
+              const SizedBox(height: 16),
+              ImportExportCard(
+                isImporting: _isImporting,
+                importStatus: _importStatus,
+                isExporting: _isExporting,
+                onImportFile: _importFile,
+                onImportBundled: _importBundled,
+                onExportVsBook: _exportVsBook,
+              ),
+              const SizedBox(height: 16),
+              const _DataSourcesCard(),
+              const SizedBox(height: 16),
+              const _SongCollectionsCard(),
+              const SizedBox(height: 24),
+              const AboutCard(),
+              const SizedBox(height: 16),
+              const ChangelogCard(),
+              const SizedBox(height: 32),
+              _buildFooter(theme),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPageHeader(ThemeData theme) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(
+            Icons.settings_rounded,
+            color: theme.colorScheme.onPrimaryContainer,
+            size: 24,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Settings',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.5,
+                color: theme.colorScheme.onSurface,
               ),
             ),
+            const SizedBox(height: 4),
+            Text(
+              'Application preferences',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFooter(ThemeData theme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+            width: 1,
           ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              children: [
-                ..._buildCategoryContent(selectedCategory),
-                const SizedBox(height: 80),
-              ],
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  width: 32,
+                  height: 32,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Visual Song Book v1.9.0',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Made by BenjaNetan',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
           ),
         ],
       ),
     );
   }
-
-  // ───────── DESKTOP ─────────
-  Widget _buildDesktopLayout() {
-    final selectedCategory = ref.watch(selectedSettingsCategoryProvider);
-    final theme = Theme.of(context);
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Sidebar
-        Container(
-          width: 260,
-          decoration: BoxDecoration(
-            border: Border(
-              right: BorderSide(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-                width: 1,
-              ),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(28, 32, 28, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Icon(
-                        Icons.settings_rounded,
-                        color: theme.colorScheme.onPrimaryContainer,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      'Settings',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Application preferences',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1, indent: 20, endIndent: 20),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Column(
-                  children: [
-                    _SidebarNavItem(
-                      icon: Icons.palette_rounded,
-                      label: 'Appearance',
-                      isSelected: selectedCategory == 'Appearance',
-                      onTap: () => ref
-                          .read(selectedSettingsCategoryProvider.notifier)
-                          .state = 'Appearance',
-                    ),
-                    _SidebarNavItem(
-                      icon: Icons.cast_rounded,
-                      label: 'Projection',
-                      isSelected: selectedCategory == 'Projection',
-                      onTap: () => ref
-                          .read(selectedSettingsCategoryProvider.notifier)
-                          .state = 'Projection',
-                    ),
-                    _SidebarNavItem(
-                      icon: Icons.folder_copy_rounded,
-                      label: 'Library',
-                      isSelected: selectedCategory == 'Library',
-                      onTap: () => ref
-                          .read(selectedSettingsCategoryProvider.notifier)
-                          .state = 'Library',
-                    ),
-                    _SidebarNavItem(
-                      icon: Icons.info_outline_rounded,
-                      label: 'About',
-                      isSelected: selectedCategory == 'About',
-                      onTap: () => ref
-                          .read(selectedSettingsCategoryProvider.notifier)
-                          .state = 'About',
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Content area
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(40),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 780),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: _buildCategoryContent(selectedCategory),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ───────── SHARED CONTENT BUILDER ─────────
-  List<Widget> _buildCategoryContent(String category) {
-    switch (category) {
-      case 'Appearance':
-        return [const AppearanceCard()];
-      case 'Projection':
-        return [const ProjectionPreferencesCard()];
-      case 'Library':
-        return [
-          const LinkedSongbooksCard(),
-          const SizedBox(height: 24),
-          ImportExportCard(
-            isImporting: _isImporting,
-            importStatus: _importStatus,
-            isExporting: _isExporting,
-            onImportFile: _importFile,
-            onImportBundled: _importBundled,
-            onExportVsBook: _exportVsBook,
-          ),
-          const SizedBox(height: 24),
-          const _DataSourcesCard(),
-          const SizedBox(height: 24),
-          const _SongCollectionsCard(),
-        ];
-      case 'About':
-        return [
-          const AboutCard(),
-          const SizedBox(height: 24),
-          const ChangelogCard(),
-        ];
-      default:
-        return [];
-    }
-  }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Sidebar Navigation Item (Desktop)
-// ─────────────────────────────────────────────────────────────────────────────
-class _SidebarNavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _SidebarNavItem({
-    required this.icon,
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = isSelected
-        ? theme.colorScheme.primary
-        : theme.colorScheme.onSurfaceVariant;
-    final bgColor = isSelected
-        ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
-        : Colors.transparent;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(icon, size: 20, color: color),
-                const SizedBox(width: 12),
-                Text(
-                  label,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: color,
-                  ),
-                ),
-                if (isSelected) ...[
-                  const Spacer(),
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Category Chip (Mobile horizontal tab bar)
-// ─────────────────────────────────────────────────────────────────────────────
-class _CategoryChip extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _CategoryChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      child: isSelected
-          ? FilledButton(
-              onPressed: onTap,
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                textStyle: GoogleFonts.plusJakartaSans(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              child: Text(label),
-            )
-          : OutlinedButton(
-              onPressed: onTap,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                side: BorderSide(
-                  color: theme.colorScheme.outlineVariant,
-                ),
-                foregroundColor: theme.colorScheme.onSurfaceVariant,
-                textStyle: GoogleFonts.plusJakartaSans(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              child: Text(label),
-            ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Data Sources Card — Material 3 clean version
-// ─────────────────────────────────────────────────────────────────────────────
+// Data Sources Card
 class _DataSourcesCard extends ConsumerWidget {
   const _DataSourcesCard();
 
@@ -674,9 +470,7 @@ class _DataSourcesCard extends ConsumerWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Song Collections (categories) card
-// ─────────────────────────────────────────────────────────────────────────────
 class _SongCollectionsCard extends ConsumerStatefulWidget {
   const _SongCollectionsCard();
 
@@ -858,9 +652,7 @@ class _SongCollectionsCardState extends ConsumerState<_SongCollectionsCard> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Danger Zone — clean Material 3 version
-// ─────────────────────────────────────────────────────────────────────────────
+// Danger Zone
 class _DangerZoneSection extends ConsumerWidget {
   const _DangerZoneSection();
 
@@ -939,7 +731,6 @@ class _DangerZoneSection extends ConsumerWidget {
             ),
             onPressed: () async {
               Navigator.pop(context);
-              // Wipe all songs from all sources
               await ref
                   .read(songRepositoryProvider)
                   .deleteAllSongs();

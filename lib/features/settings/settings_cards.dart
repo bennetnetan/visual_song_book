@@ -4,6 +4,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:visual_song_book/core/models/source_mode.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
@@ -349,6 +351,22 @@ class _ChangelogCardState extends State<ChangelogCard> {
 
     final recentEntries = [
       const _ChangelogEntry(
+        version: 'v1.9.0',
+        date: '2026-08-04',
+        changes: [
+          'Projection mode — extended (secondary window) or single (in-window on primary display)',
+          'Reopening projection reuses the hidden window — no duplicate engines',
+          'Bible projection: load more verses for long passages',
+          'Projection screen cleanup — position indicator and nav arrows hidden on desktop, kept on mobile fullscreen',
+          'Font-size cap unified (16–160); pinch-zoom persists once when the gesture ends',
+          'Search: Enter/click projects the keyboard-highlighted result',
+          'History: set and Bible entries refresh live and can be cleared; Continue Reading survives restart',
+          'Categories: filter songs by collection; deleting a category keeps its songs (moved to Uncategorized)',
+          '.vsbook import no longer crashes on modified timestamps; deleted songs stay deleted',
+          'Hygiene: dead code and unused dependencies removed, explicit lint rules, macOS target 11.0, CI with hermetic tests',
+        ],
+      ),
+      const _ChangelogEntry(
         version: 'v1.7.1',
         date: '2026-07-31',
         changes: [
@@ -632,7 +650,7 @@ class AboutCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Chip(
                   label: Text(
-                    'v1.7.1',
+                    'v1.9.0',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -670,6 +688,125 @@ class AboutCard extends StatelessWidget {
           const SizedBox(height: 24),
         ],
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Source Mode Card — choose which song sources to load on startup
+// ─────────────────────────────────────────────────────────────────────────────
+class SourceModeCard extends ConsumerWidget {
+  const SourceModeCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    return SettingsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader(
+            icon: Icons.source,
+            title: 'Song Source',
+            color: Colors.blue,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Choose which songs to load on startup. '
+            'This setting determines whether bundled songbooks, linked files, or both are loaded.',
+            style: GoogleFonts.plusJakartaSans(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 20),
+          _SourceModeSelector(),
+        ],
+      ),
+    );
+  }
+}
+
+class _SourceModeSelector extends ConsumerStatefulWidget {
+  const _SourceModeSelector();
+
+  @override
+  ConsumerState<_SourceModeSelector> createState() => _SourceModeSelectorState();
+}
+
+class _SourceModeSelectorState extends ConsumerState<_SourceModeSelector> {
+  SourceMode _currentMode = SourceMode.unified;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentMode();
+  }
+
+  Future<void> _loadCurrentMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString('default_source_mode');
+    if (saved != null) {
+      setState(() => _currentMode = SourceMode.fromString(saved));
+    }
+  }
+
+  Future<void> _changeMode(SourceMode mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('default_source_mode', mode.name);
+    setState(() => _currentMode = mode);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Source mode changed to "${mode.label}". '
+            'Restart the app to apply.',
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        SegmentedButton<SourceMode>(
+          segments: const [
+            ButtonSegment(
+              value: SourceMode.bundled,
+              label: Text('Bundled'),
+              icon: Icon(Icons.library_books, size: 16),
+            ),
+            ButtonSegment(
+              value: SourceMode.linked,
+              label: Text('Linked'),
+              icon: Icon(Icons.link, size: 16),
+            ),
+            ButtonSegment(
+              value: SourceMode.unified,
+              label: Text('Both'),
+              icon: Icon(Icons.layers, size: 16),
+            ),
+          ],
+          selected: {_currentMode},
+          onSelectionChanged: (Set<SourceMode> selection) {
+            if (selection.isNotEmpty) {
+              _changeMode(selection.first);
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        Text(
+          _currentMode.description,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }
@@ -769,9 +906,9 @@ class LinkedSongbooksCard extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: exists
                               ? (needsSync
-                                    ? Colors.orange.withValues(alpha: 0.1)
-                                    : Colors.green.withValues(alpha: 0.1))
-                              : Colors.red.withValues(alpha: 0.1),
+                                    ? theme.colorScheme.tertiary.withValues(alpha: 0.1)
+                                    : theme.colorScheme.primary.withValues(alpha: 0.1))
+                              : theme.colorScheme.error.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
@@ -782,8 +919,8 @@ class LinkedSongbooksCard extends ConsumerWidget {
                               : Icons.error_outline,
                           size: 20,
                           color: exists
-                              ? (needsSync ? Colors.orange : Colors.green)
-                              : Colors.red,
+                              ? (needsSync ? theme.colorScheme.tertiary : theme.colorScheme.primary)
+                              : theme.colorScheme.error,
                         ),
                       ),
                       title: Text(
@@ -833,11 +970,15 @@ class LinkedSongbooksCard extends ConsumerWidget {
                             ),
                         ],
                       ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.link_off, size: 20),
-                        color: theme.colorScheme.error,
-                        tooltip: 'Unlink',
-                        onPressed: () => _unlink(context, ref, book),
+                      trailing: Semantics(
+                        label: 'Unlink',
+                        button: true,
+                        child: IconButton(
+                          icon: const Icon(Icons.link_off, size: 20),
+                          color: theme.colorScheme.error,
+                          tooltip: 'Unlink',
+                          onPressed: () => _unlink(context, ref, book),
+                        ),
                       ),
                     ),
                   );
