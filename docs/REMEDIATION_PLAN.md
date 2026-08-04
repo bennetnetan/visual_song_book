@@ -156,6 +156,9 @@ shows all 8 new TTFs in `AssetManifest.bin`.
 
 ### 4c. Release signing + app identity (MAJOR #14)
 
+**Status:** ⏸️ DEFERRED (product decision, 2026-08-04) — needs the application ID / org from
+the product owner; nothing can ship in this phase without it.
+
 1. Android: replace `signingConfigs.getByName("debug")` (`build.gradle.kts:32`) with a real
    release keystore (env vars / `keystore.properties`); bump `applicationId` and
    `android:label` away from `com.example.visual_song_book`.
@@ -344,7 +347,7 @@ Prioritize regression tests for the criticals:
    (neither drop nor invest now); keep `drift_flutter` dep for a future effort.
 2. macOS: disable sandbox (recommended) or move storage into the container? — **P4a** ✅ DECIDED
    (disable sandbox, commit `fdbe94d`)
-3. Application ID / org for all platforms — **P4c**
+3. Application ID / org for all platforms — **P4c** ⏸️ DEFERRED 2026-08-04 (awaiting product owner)
 4. Category deletion: reassign songs or cascade-delete them? — **P7**
 5. `projectionMode` "duplicate": full mirroring or gated/deferred? — **P8**
 6. License type (if any) — **P10**
