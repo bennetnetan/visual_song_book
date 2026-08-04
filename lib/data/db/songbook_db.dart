@@ -18,7 +18,7 @@ class Songs extends Table {
   IntColumn get songNum => integer()();
   TextColumn get title => text().withLength(max: 200)();
   TextColumn get key => text().nullable().withLength(max: 100)();
-  TextColumn get body => text()(); // The full lyrics
+  TextColumn get body => text().withLength(max: 1_000_000)(); // Capped at 1 MB to prevent memory exhaustion
   DateTimeColumn get modified => dateTime().nullable()();
   TextColumn get search => text().nullable()(); // Normalized search text
   TextColumn get copyright => text().nullable().withLength(max: 200)();
@@ -118,7 +118,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -147,6 +147,10 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 7) {
         await m.database.customStatement('CREATE UNIQUE INDEX IF NOT EXISTS idx_songs_title_num ON songs (LOWER(title), song_num) WHERE is_active = 1');
+      }
+      if (from < 8) {
+        // body length cap is enforced at the Dart layer for existing rows;
+        // CHECK constraint is applied only on new database creation.
       }
     },
   );
