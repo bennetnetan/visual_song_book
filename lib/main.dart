@@ -8,6 +8,7 @@ import 'package:logging/logging.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
+import 'package:visual_song_book/core/utils/projection_window_args.dart';
 
 import 'package:visual_song_book/data/services/app_storage.dart';
 import 'package:visual_song_book/data/services/linked_songbooks_service.dart';
@@ -30,24 +31,20 @@ void main(List<String> args) async {
   // Pre-warm the unified app storage path so LazyDatabase resolves instantly.
   getAppStoragePath(); // fire-and-forget — result is cached for all subsequent calls
 
-  if (args.isNotEmpty &&
-      (args.first == 'multi_window' ||
-          args.first.startsWith('Projection Output'))) {
-    // Secondary window path (desktop_multi_window).
-    // NOTE: window_manager and screen_retriever plugins are NOT registered in
-    // desktop_multi_window secondary engines. Any calls to them will fail
-    // silently. The secondary window handles its own fullscreen via
-    // ProjectionOutputView._goFullscreenOnBestDisplay() using Win32 APIs.
-    // The window placement mode ('extended' or 'single') is passed in the
-    // arguments so the secondary engine knows whether to auto-fullscreen.
-    final modeArg = args.first.contains(':')
-        ? args.first.substring(args.first.indexOf(':') + 1)
-        : 'extended';
+  // Classify the process args: desktop_multi_window spawns each secondary
+  // window as a fresh engine with its own args. The projection engine is
+  // launched with 'Projection Output:<mode>' (see ProjectionController).
+  // NOTE: window_manager and screen_retriever plugins are NOT registered in
+  // desktop_multi_window secondary engines. Any calls to them will fail
+  // silently. The secondary window handles its own fullscreen via
+  // ProjectionOutputView._goFullscreenOnBestDisplay() using Win32 APIs.
+  final windowArgs = parseProjectionWindowArgs(args.isNotEmpty ? args.first : null);
+  if (windowArgs.isProjectionWindow) {
     runApp(
       ProviderScope(
         overrides: [
           isProjectionWindowProvider.overrideWithValue(true),
-          projectionWindowModeProvider.overrideWithValue(modeArg),
+          projectionWindowModeProvider.overrideWithValue(windowArgs.mode),
         ],
         child: const MyApp(isProjectionWindow: true),
       ),
