@@ -159,6 +159,18 @@ class SongRepository {
     return result.read(db.songs.id.count()) ?? 0;
   }
 
+  Future<Map<int, int>> getSongCountsByCategory() async {
+    final result = await (db.selectOnly(db.songs)
+          ..addColumns([db.songs.categoryId, db.songs.id.count()])
+          ..where(db.songs.isActive.equals(true))
+          ..groupBy([db.songs.categoryId])
+    ).get();
+    return {
+      for (var row in result)
+        row.read(db.songs.categoryId)!: row.read(db.songs.id)!,
+    };
+  }
+
   Future<void> deleteCategory(int categoryId) async {
     await db.transaction(() async {
       await (db.update(
