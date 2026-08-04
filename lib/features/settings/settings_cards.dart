@@ -349,6 +349,22 @@ class _ChangelogCardState extends State<ChangelogCard> {
 
     final recentEntries = [
       const _ChangelogEntry(
+        version: 'v1.8.0',
+        date: '2026-08-04',
+        changes: [
+          'Projection mode — extended (secondary window) or single (in-window on primary display)',
+          'Reopening projection reuses the hidden window — no duplicate engines',
+          'Bible projection: load more verses for long passages',
+          'Projection screen cleanup — position indicator and nav arrows hidden on desktop, kept on mobile fullscreen',
+          'Font-size cap unified (16–160); pinch-zoom persists once when the gesture ends',
+          'Search: Enter/click projects the keyboard-highlighted result',
+          'History: set and Bible entries refresh live and can be cleared; Continue Reading survives restart',
+          'Categories: filter songs by collection; deleting a category keeps its songs (moved to Uncategorized)',
+          '.vsbook import no longer crashes on modified timestamps; deleted songs stay deleted',
+          'Hygiene: dead code and unused dependencies removed, explicit lint rules, macOS target 11.0, CI with hermetic tests',
+        ],
+      ),
+      const _ChangelogEntry(
         version: 'v1.7.1',
         date: '2026-07-31',
         changes: [
@@ -632,7 +648,7 @@ class AboutCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Chip(
                   label: Text(
-                    'v1.7.1',
+                    'v1.8.0',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
