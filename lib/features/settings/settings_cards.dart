@@ -724,7 +724,7 @@ class AboutCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Chip(
                   label: const Text(
-                    'v1.9.0',
+                     'v2.0.0',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
