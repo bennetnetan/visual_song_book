@@ -364,7 +364,10 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
             }
           }
         },
-        // Pinch-to-zoom (scale font size) + Pan to swipe left/right (unified implementation to prevent gestures conflicts)
+        // Pinch-to-zoom (scale font size) + swipe left/right (unified
+        // implementation to prevent gesture conflicts). Pinch is detected by
+        // pointer count (>= 2), never by the float `scale` value, so a single-
+        // finger swipe cannot accidentally trigger a font change.
         onScaleStart: (details) {
           _baseFontSize = activeFontSize;
           _pinchActive = false;
@@ -372,11 +375,11 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
           _panDeltaX = 0.0;
         },
         onScaleUpdate: (details) {
-          if (details.scale != 1.0) {
+          if (details.pointerCount >= 2) {
             _pinchActive = true;
             final newSize = (_baseFontSize * details.scale).clamp(16.0, 160.0);
             notifier.setFontSize(newSize);
-          } else if (details.pointerCount == 1) {
+          } else if (!_pinchActive) {
             _panDeltaX = details.localFocalPoint.dx - _panStartOffset.dx;
           }
         },
@@ -384,7 +387,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
           if (_pinchActive) {
             notifier.persistFontSize();
           } else {
-            // Check horizontal swipe gesture threshold
+            // Horizontal swipe → previous / next slide (songs AND Bible).
             if (_panDeltaX.abs() > 60.0) {
               if (_panDeltaX < 0) {
                 if (_isSecondaryWindow) {
@@ -456,17 +459,20 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
               // Centered slide text + Bible reference tightly attached 20px below
               SafeArea(
                 child: Padding(
+                  // Keep outer padding lean (especially in landscape, where the
+                  // screen height is small) so the text auto-fit has maximum
+                  // room and pinch-zoom stays responsive.
                   padding: EdgeInsets.only(
-                    left: 64.0,
-                    right: 64.0,
-                    top: 48.0,
+                    left: 48.0,
+                    right: 48.0,
+                    top: 32.0,
                     // Reserve room for the mobile bottom control bar so the
                     // auto-fit never tucks text behind it.
                     bottom: _isMobile &&
                             !_isSecondaryWindow &&
                             state.slides.isNotEmpty
-                        ? 104.0
-                        : 48.0,
+                        ? 68.0
+                        : 32.0,
                   ),
                   child: Center(
                     child: activeText.isNotEmpty
@@ -652,8 +658,8 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                   ),
                 ),
 
-              // Mobile-only: always-visible bottom bar with font-size controls
-              // and a slide-count chip. Pinch-to-zoom still works alongside.
+              // Mobile-only: always-visible bottom bar with a slide-count chip.
+              // Font size is controlled with pinch-to-zoom.
               if (_isMobile && !_isSecondaryWindow && state.slides.isNotEmpty)
                 Positioned(
                   bottom: 0,
@@ -661,21 +667,11 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                   right: 0,
                   child: SafeArea(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       color: Colors.black.withValues(alpha: 0.35),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _MobileFontButton(
-                            icon: Icons.text_decrease,
-                            tooltip: 'Smaller font',
-                            onPressed: state.fontSize > 16
-                                ? () {
-                                    notifier.setFontSize(state.fontSize - 4);
-                                    notifier.persistFontSize();
-                                  }
-                                : null,
-                          ),
                           // Slide position indicator  e.g. "3 / 12"
                           Text(
                             '${state.currentSlideIndex + 1} / ${state.slides.length}',
@@ -684,16 +680,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                               fontSize: 12,
                               letterSpacing: 0.5,
                             ),
-                          ),
-                          _MobileFontButton(
-                            icon: Icons.text_increase,
-                            tooltip: 'Larger font',
-                            onPressed: state.fontSize < 160
-                                ? () {
-                                    notifier.setFontSize(state.fontSize + 4);
-                                    notifier.persistFontSize();
-                                  }
-                                : null,
                           ),
                         ],
                       ),
@@ -736,32 +722,6 @@ class _FontSizeButton extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
       hoverColor: Colors.white.withValues(alpha: 0.08),
-    );
-  }
-}
-
-/// Touch-friendly font-size button for the mobile projection bottom bar.
-class _MobileFontButton extends StatelessWidget {
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback? onPressed;
-
-  const _MobileFontButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      icon: Icon(icon, color: Colors.white.withValues(alpha: 0.6), size: 20),
-      tooltip: tooltip,
-      onPressed: onPressed,
-      splashRadius: 20,
-      padding: const EdgeInsets.all(8),
-      constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-      disabledColor: Colors.white.withValues(alpha: 0.25),
     );
   }
 }
