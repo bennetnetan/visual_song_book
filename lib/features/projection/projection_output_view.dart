@@ -463,16 +463,17 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                   // screen height is small) so the text auto-fit has maximum
                   // room and pinch-zoom stays responsive.
                   padding: EdgeInsets.only(
-                    left: 48.0,
-                    right: 48.0,
-                    top: 32.0,
+                    left: 40.0,
+                    right: 40.0,
+                    top: 24.0,
                     // Reserve room for the mobile bottom control bar so the
-                    // auto-fit never tucks text behind it.
+                    // auto-fit never tucks text behind it. Portrait mode's
+                    // bar is taller (buttons + slide counter).
                     bottom: _isMobile &&
                             !_isSecondaryWindow &&
                             state.slides.isNotEmpty
-                        ? 68.0
-                        : 32.0,
+                        ? (_isPortraitMode ? 100.0 : 40.0)
+                        : 24.0,
                   ),
                   child: Center(
                     child: activeText.isNotEmpty
@@ -545,7 +546,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
               // Navigation arrows — mobile fullscreen only.
               // Desktop projection screens stay clean: the operator navigates
               // from the main window (buttons / keyboard), so no overlay arrows.
-              if (slideCount > 0 && _isMobile)
+              // In portrait mode the side arrows are hidden and replaced by
+              // prev/next buttons above the bottom slide counter.
+              if (slideCount > 0 && _isMobile && !_isPortraitMode)
                 IgnorePointer(
                   child: AnimatedOpacity(
                     opacity: 0.38,
@@ -666,19 +669,46 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                   left: 0,
                   right: 0,
                   child: SafeArea(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: ColoredBox(
                       color: Colors.black.withValues(alpha: 0.35),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Slide position indicator  e.g. "3 / 12"
-                          Text(
-                            '${state.currentSlideIndex + 1} / ${state.slides.length}',
-                            style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 12,
-                              letterSpacing: 0.5,
+                          // Portrait mode: prev/next buttons just above the
+                          // slide counter (black circles, white chevrons).
+                          if (_isPortraitMode)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment
+                                    .spaceBetween,
+                                children: [
+                                  _PortraitNavButton(
+                                    icon: Icons.chevron_left,
+                                    onPressed: notifier.prevSlide,
+                                  ),
+                                  _PortraitNavButton(
+                                    icon: Icons.chevron_right,
+                                    onPressed: notifier.nextSlide,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            child: Text(
+                              '${state.currentSlideIndex + 1} / ${state.slides.length}',
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 12,
+                                letterSpacing: 0.5,
+                              ),
                             ),
                           ),
                         ],
@@ -722,6 +752,37 @@ class _FontSizeButton extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
       hoverColor: Colors.white.withValues(alpha: 0.08),
+    );
+  }
+}
+
+/// Circular prev/next button used in the portrait bottom bar (black circle,
+/// white chevron) so it matches the dark presentation background.
+class _PortraitNavButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  const _PortraitNavButton({
+    required this.icon,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withValues(alpha: 0.6),
+      shape: const CircleBorder(),
+      elevation: 2,
+      child: IconButton(
+        icon: Icon(icon, size: 32, color: Colors.white),
+        onPressed: onPressed,
+        tooltip: icon == Icons.chevron_left
+            ? 'Previous slide'
+            : 'Next slide',
+        splashRadius: 24,
+        padding: const EdgeInsets.all(8),
+        constraints: const BoxConstraints(minWidth: 52, minHeight: 52),
+      ),
     );
   }
 }

@@ -74,7 +74,7 @@ class VerseText extends StatelessWidget {
         // replaces the old character-count estimate, which underestimated the
         // wrapped line count in portrait (text overflowed) and overestimated it
         // in landscape (text rendered smaller than necessary).
-        final double availHeight = (size.height - 16).clamp(1.0, 10000.0);
+        final double availHeight = (size.height - 8).clamp(1.0, 10000.0);
         final double availWidth = size.width.clamp(1.0, 10000.0);
 
         double finalFontSize = targetSize;
