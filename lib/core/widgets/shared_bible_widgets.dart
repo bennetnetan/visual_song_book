@@ -196,7 +196,7 @@ class ReferenceLabel extends StatelessWidget {
           fontFamily: 'Outfit',
           fontSize: fontSize,
           fontWeight: FontWeight.w500,
-          color: const Color(0xFF00E5CC).withValues(alpha: 0.85),
+          color: Theme.of(context).colorScheme.primary,
           letterSpacing: 0.5,
         ),
       ),

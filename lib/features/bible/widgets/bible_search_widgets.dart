@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
 import 'package:visual_song_book/features/bible/bible_controller.dart';
 import 'package:visual_song_book/features/bible/bible_repository.dart';
@@ -66,10 +65,10 @@ class _BibleSearchBarState extends State<BibleSearchBar> {
           onChanged: widget.onChanged,
           onSubmitted: (_) => widget.focusNode.unfocus(),
           textInputAction: TextInputAction.search,
-          style: GoogleFonts.inter(fontSize: 16),
+          style: const TextStyle(fontSize: 16),
           decoration: InputDecoration(
             hintText: 'Search verses, keywords, or "Jn 3:16"...',
-            hintStyle: GoogleFonts.inter(color: theme.colorScheme.onSurfaceVariant),
+            hintStyle: TextStyle(color: theme.colorScheme.onSurfaceVariant),
             prefixIcon: Icon(Icons.search, color: theme.colorScheme.primary, size: 22),
             suffixIcon: widget.controller.text.isNotEmpty
                 ? IconButton(
@@ -115,7 +114,7 @@ class BibleSearchSuggestionSection extends StatelessWidget {
               children: [
                 Text(
                   'RECENT SEARCHES',
-                  style: GoogleFonts.inter(
+                  style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.0,
@@ -224,6 +223,7 @@ class BibleSearchResultsView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(bibleControllerProvider);
     final theme = Theme.of(context);
+    final readingFont = state.readingFontFamily;
 
     return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -231,7 +231,7 @@ class BibleSearchResultsView extends ConsumerWidget {
           24, 10, 24, MediaQuery.of(context).padding.bottom + 24),
       children: [
         if (exactMatch != null) ...[
-          _buildBestMatchCard(theme),
+          _buildBestMatchCard(theme, readingFont),
           const SizedBox(height: 20),
         ],
         if (results.isNotEmpty) ...[
@@ -242,6 +242,7 @@ class BibleSearchResultsView extends ConsumerWidget {
           ...results.map((v) => BibleResultCard(
                 verse: v,
                 query: state.query,
+                fontFamily: readingFont,
                 onTap: () => onNavigate(v),
                 onLongPress: () => _showResultMenu(context, v),
                 isBookmarked: bookmarkedVerseIds.contains(v.verse),
@@ -273,7 +274,7 @@ class BibleSearchResultsView extends ConsumerWidget {
                   const SizedBox(height: 16),
                   Text(
                     'No results found for "${state.query}"',
-                    style: GoogleFonts.inter(color: theme.colorScheme.onSurfaceVariant),
+                    style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -283,7 +284,7 @@ class BibleSearchResultsView extends ConsumerWidget {
     );
   }
 
-  Widget _buildBestMatchCard(ThemeData theme) {
+  Widget _buildBestMatchCard(ThemeData theme, String readingFont) {
     return Container(
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
@@ -311,7 +312,7 @@ class BibleSearchResultsView extends ConsumerWidget {
                       ),
                       child: Text(
                         'BEST MATCH',
-                        style: GoogleFonts.inter(
+                        style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.2,
@@ -323,7 +324,7 @@ class BibleSearchResultsView extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         exactMatch!.reference,
-                        style: GoogleFonts.inter(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           color: theme.colorScheme.primary,
@@ -335,7 +336,8 @@ class BibleSearchResultsView extends ConsumerWidget {
                 const SizedBox(height: 12),
                 Text(
                   '"${exactMatch!.text}"',
-                  style: GoogleFonts.ebGaramond(
+                  style: TextStyle(
+                    fontFamily: readingFont,
                     fontSize: 20,
                     height: 1.3,
                     fontWeight: FontWeight.w500,
@@ -349,7 +351,7 @@ class BibleSearchResultsView extends ConsumerWidget {
                     const SizedBox(width: 6),
                     Text(
                       'Tap to navigate',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 11,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -376,7 +378,7 @@ class BibleSearchResultsView extends ConsumerWidget {
           results.length < state.totalSearchCount
               ? 'showing ${results.length} of ${state.totalSearchCount} results'
               : '${results.length} results',
-          style: GoogleFonts.inter(
+          style: TextStyle(
             fontSize: 12,
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -431,6 +433,7 @@ class BibleSearchResultsView extends ConsumerWidget {
 class BibleResultCard extends StatelessWidget {
   final BibleVerse verse;
   final String query;
+  final String fontFamily;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final bool isBookmarked;
@@ -439,6 +442,7 @@ class BibleResultCard extends StatelessWidget {
     super.key,
     required this.verse,
     required this.query,
+    required this.fontFamily,
     required this.onTap,
     this.onLongPress,
     this.isBookmarked = false,
@@ -452,12 +456,12 @@ class BibleResultCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainer,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
                 color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
           ),
@@ -468,19 +472,24 @@ class BibleResultCard extends StatelessWidget {
                 children: [
                   Text(
                     verse.reference,
-                    style: GoogleFonts.inter(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: theme.colorScheme.primary,
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Text('•',
-                      style: TextStyle(color: Colors.grey, fontSize: 10)),
+                  Text(
+                    '•',
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontSize: 10,
+                    ),
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     verse.bookId <= 39 ? 'Old Testament' : 'New Testament',
-                    style: GoogleFonts.inter(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: theme.colorScheme.onSurfaceVariant,
@@ -496,11 +505,13 @@ class BibleResultCard extends StatelessWidget {
               HighlightedText(
                 text: verse.text,
                 query: query,
-                style: GoogleFonts.ebGaramond(
+                style: TextStyle(
+                  fontFamily: fontFamily,
                   fontSize: 20,
                   color: theme.colorScheme.onSurface,
                 ),
-                highlightStyle: GoogleFonts.ebGaramond(
+                highlightStyle: TextStyle(
+                  fontFamily: fontFamily,
                   fontSize: 20,
                   color: theme.colorScheme.primary,
                   fontWeight: FontWeight.bold,
@@ -538,7 +549,7 @@ class _BibleSectionTitle extends StatelessWidget {
         ],
         Text(
           isUppercase ? title.toUpperCase() : title,
-          style: GoogleFonts.inter(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
             letterSpacing: isUppercase ? 1.2 : 0,

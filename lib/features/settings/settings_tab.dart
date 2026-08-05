@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
@@ -228,7 +227,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: theme.colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             Icons.settings_rounded,
@@ -242,7 +241,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
           children: [
             Text(
               'Settings',
-              style: GoogleFonts.plusJakartaSans(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 letterSpacing: -0.5,
@@ -252,7 +251,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
             const SizedBox(height: 4),
             Text(
               'Application preferences',
-              style: GoogleFonts.plusJakartaSans(
+              style: TextStyle(
                 fontSize: 13,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -292,7 +291,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
               const SizedBox(width: 12),
               Text(
                 'Visual Song Book v1.9.0',
-                style: GoogleFonts.plusJakartaSans(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: theme.colorScheme.onSurfaceVariant,
@@ -303,7 +302,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
           const SizedBox(height: 8),
           Text(
             'Made by BenjaNetan',
-            style: GoogleFonts.plusJakartaSans(
+            style: TextStyle(
               fontSize: 11,
               color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
@@ -330,12 +329,11 @@ class _DataSourcesCard extends ConsumerWidget {
           const SectionHeader(
             icon: Icons.folder_copy_rounded,
             title: 'Manage Data Sources',
-            color: Colors.deepOrange,
           ),
           const SizedBox(height: 8),
           Text(
             'View and remove imported songbook collections.',
-            style: GoogleFonts.plusJakartaSans(
+            style: TextStyle(
               color: theme.colorScheme.onSurfaceVariant,
               fontSize: 13,
             ),
@@ -363,7 +361,7 @@ class _DataSourcesCard extends ConsumerWidget {
                         const SizedBox(height: 8),
                         Text(
                           'No external sources found.',
-                          style: GoogleFonts.plusJakartaSans(
+                          style: TextStyle(
                             fontStyle: FontStyle.italic,
                             color: theme.colorScheme.onSurfaceVariant,
                             fontSize: 13,
@@ -380,7 +378,7 @@ class _DataSourcesCard extends ConsumerWidget {
                     elevation: 0,
                     margin: const EdgeInsets.only(bottom: 10),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       side: BorderSide(
                         color: theme.colorScheme.outlineVariant
                             .withValues(alpha: 0.5),
@@ -395,7 +393,7 @@ class _DataSourcesCard extends ConsumerWidget {
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surfaceContainerHigh,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
                           Icons.library_books_outlined,
@@ -405,14 +403,14 @@ class _DataSourcesCard extends ConsumerWidget {
                       ),
                       title: Text(
                         source.split(Platform.pathSeparator).last,
-                        style: GoogleFonts.plusJakartaSans(
+                        style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
                       ),
                       subtitle: Text(
                         source,
-                        style: GoogleFonts.plusJakartaSans(
+                        style: TextStyle(
                           fontSize: 11,
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -525,13 +523,12 @@ class _SongCollectionsCardState extends ConsumerState<_SongCollectionsCard> {
           const SectionHeader(
             icon: Icons.collections_bookmark_outlined,
             title: 'Song Collections',
-            color: Colors.teal,
           ),
           const SizedBox(height: 8),
           Text(
             'Collections group songs into categories. Deleting a collection '
             'keeps its songs — they become Uncategorized.',
-            style: GoogleFonts.plusJakartaSans(
+            style: TextStyle(
               color: theme.colorScheme.onSurfaceVariant,
               fontSize: 13,
             ),
@@ -554,7 +551,7 @@ class _SongCollectionsCardState extends ConsumerState<_SongCollectionsCard> {
                     const SizedBox(height: 8),
                     Text(
                       'No collections yet. Create one from the Songs tab.',
-                      style: GoogleFonts.plusJakartaSans(
+                      style: TextStyle(
                         fontStyle: FontStyle.italic,
                         color: theme.colorScheme.onSurfaceVariant,
                         fontSize: 13,
@@ -572,7 +569,7 @@ class _SongCollectionsCardState extends ConsumerState<_SongCollectionsCard> {
                   elevation: 0,
                   margin: const EdgeInsets.only(bottom: 10),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                     side: BorderSide(
                       color: theme.colorScheme.outlineVariant
                           .withValues(alpha: 0.5),
@@ -587,7 +584,7 @@ class _SongCollectionsCardState extends ConsumerState<_SongCollectionsCard> {
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         Icons.collections_bookmark_outlined,
@@ -597,14 +594,14 @@ class _SongCollectionsCardState extends ConsumerState<_SongCollectionsCard> {
                     ),
                     title: Text(
                       category.name,
-                      style: GoogleFonts.plusJakartaSans(
+                      style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                       ),
                     ),
                     subtitle: Text(
                       '$count song${count == 1 ? '' : 's'}',
-                      style: GoogleFonts.plusJakartaSans(
+                      style: TextStyle(
                         fontSize: 11,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -677,11 +674,11 @@ class _DangerZoneSection extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: theme.colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 'DANGER ZONE',
-                style: GoogleFonts.plusJakartaSans(
+                style: TextStyle(
                   color: theme.colorScheme.onErrorContainer,
                   fontWeight: FontWeight.bold,
                   fontSize: 11,
@@ -694,7 +691,7 @@ class _DangerZoneSection extends ConsumerWidget {
         const SizedBox(height: 8),
         Text(
           'These actions are irreversible. Please proceed with extreme caution.',
-          style: GoogleFonts.plusJakartaSans(
+          style: TextStyle(
             color: theme.colorScheme.onSurfaceVariant,
             fontSize: 12,
           ),
@@ -708,9 +705,6 @@ class _DangerZoneSection extends ConsumerWidget {
             foregroundColor: theme.colorScheme.error,
             side: BorderSide(color: theme.colorScheme.error.withValues(alpha: 0.6)),
             minimumSize: const Size.fromHeight(44),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
           ),
         ),
       ],

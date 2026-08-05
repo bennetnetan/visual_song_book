@@ -1,5 +1,8 @@
 import 'package:visual_song_book/features/bible/bible_repository.dart';
 
+const List<String> kBibleReadingFonts = ['EBGaramond', 'Lora', 'Inter'];
+const String kBibleReadingFontDefault = 'EBGaramond';
+
 class BibleState {
   final List<BibleBook> books;
   final int? selectedBookId;
@@ -27,7 +30,7 @@ class BibleState {
 
   // Reading customization
   final double bibleFontSize;
-  final bool useSerifFont;
+  final String readingFontFamily;
 
   // Recent books (book IDs)
   final List<int> recentBookIds;
@@ -64,7 +67,7 @@ class BibleState {
     this.selectionMode = false,
     this.selectedVerseIds = const {},
     this.bibleFontSize = 15.0,
-    this.useSerifFont = false,
+    this.readingFontFamily = kBibleReadingFontDefault,
     this.recentBookIds = const [],
     this.lastReadBookId,
     this.lastReadChapter,
@@ -94,7 +97,7 @@ class BibleState {
     bool? selectionMode,
     Set<int>? selectedVerseIds,
     double? bibleFontSize,
-    bool? useSerifFont,
+    String? readingFontFamily,
     List<int>? recentBookIds,
     int? Function()? lastReadBookId,
     int? Function()? lastReadChapter,
@@ -129,7 +132,7 @@ class BibleState {
       selectionMode: selectionMode ?? this.selectionMode,
       selectedVerseIds: selectedVerseIds ?? this.selectedVerseIds,
       bibleFontSize: bibleFontSize ?? this.bibleFontSize,
-      useSerifFont: useSerifFont ?? this.useSerifFont,
+      readingFontFamily: readingFontFamily ?? this.readingFontFamily,
       recentBookIds: recentBookIds ?? this.recentBookIds,
       lastReadBookId: lastReadBookId != null
           ? lastReadBookId()
@@ -164,7 +167,7 @@ class BibleState {
     selectionMode: false,
     selectedVerseIds: const {},
     bibleFontSize: 15.0,
-    useSerifFont: false,
+    readingFontFamily: kBibleReadingFontDefault,
     recentBookIds: const [],
     lastReadBookId: null,
     lastReadChapter: null,

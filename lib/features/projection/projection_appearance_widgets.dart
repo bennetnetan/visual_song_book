@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:video_player/video_player.dart';
 import 'package:visual_song_book/features/projection/projection_theme.dart';
 
@@ -42,9 +41,9 @@ class ProjectionAppearanceControls extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // ── Slide text color ──
-        Text(
+        const Text(
           'Slide Text Color',
-          style: GoogleFonts.plusJakartaSans(
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 14,
           ),
@@ -52,16 +51,16 @@ class ProjectionAppearanceControls extends StatelessWidget {
         const SizedBox(height: 6),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text(
+          title: const Text(
             'Auto text color',
-            style: GoogleFonts.plusJakartaSans(
+            style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 14,
             ),
           ),
-          subtitle: Text(
+          subtitle: const Text(
             'Pick a readable color automatically from the background',
-            style: GoogleFonts.plusJakartaSans(fontSize: 12),
+            style: TextStyle(fontSize: 12),
           ),
           value: theme.autoContrastText,
           onChanged: (value) =>
@@ -87,9 +86,9 @@ class ProjectionAppearanceControls extends StatelessWidget {
         const Divider(height: 32),
 
         // ── Background style ──
-        Text(
+        const Text(
           'Background Style',
-          style: GoogleFonts.plusJakartaSans(
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 14,
           ),
@@ -97,7 +96,7 @@ class ProjectionAppearanceControls extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           'The backdrop behind the projected lyrics.',
-          style: GoogleFonts.plusJakartaSans(
+          style: TextStyle(
             fontSize: 12,
             color: appTheme.colorScheme.onSurfaceVariant,
           ),
@@ -593,7 +592,7 @@ class _MediaSourceList<T> extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Text(
           'No media added yet. Add up to $kMaxMediaSources below.',
-          style: GoogleFonts.plusJakartaSans(
+          style: TextStyle(
             fontSize: 12,
             color: appTheme.colorScheme.onSurfaceVariant,
           ),
@@ -612,7 +611,7 @@ class _MediaSourceList<T> extends StatelessWidget {
                 titleFor(sources[i]),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.plusJakartaSans(
+                style: const TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
                 ),
@@ -621,7 +620,7 @@ class _MediaSourceList<T> extends StatelessWidget {
                 subtitleFor(sources[i]),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.plusJakartaSans(fontSize: 11),
+                style: const TextStyle(fontSize: 11),
               ),
               trailing: IconButton(
                 icon: const Icon(Icons.close, size: 18),
@@ -658,9 +657,9 @@ class _MediaRotationControls extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Background rotation',
-          style: GoogleFonts.plusJakartaSans(
+          style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 13,
           ),
@@ -684,7 +683,7 @@ class _MediaRotationControls extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Show source',
-            style: GoogleFonts.plusJakartaSans(
+            style: TextStyle(
               fontSize: 12,
               color: appTheme.colorScheme.onSurfaceVariant,
             ),
@@ -782,7 +781,7 @@ class _ColorPickerRow extends StatelessWidget {
       children: [
         Text(
           label,
-          style: GoogleFonts.plusJakartaSans(
+          style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),

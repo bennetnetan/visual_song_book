@@ -113,7 +113,7 @@ class MetadataCard extends StatelessWidget {
               child: DropdownButtonFormField<int?>(
                 initialValue: selectedCategoryId,
                 decoration: fieldDecoration('Category'),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 items: [
                   const DropdownMenuItem<int?>(
                     value: null,
@@ -186,7 +186,7 @@ class LyricsCard extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: Theme.of(
                 context,
@@ -199,7 +199,6 @@ class LyricsCard extends StatelessWidget {
             maxLines: 20,
             keyboardType: TextInputType.multiline,
             style: const TextStyle(
-              fontFamily: 'RobotoMono',
               fontSize: 14,
               height: 1.6,
             ),
@@ -230,7 +229,7 @@ class LyricsCard extends StatelessWidget {
             color: Theme.of(
               context,
             ).colorScheme.secondaryContainer.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: Theme.of(
                 context,
@@ -277,12 +276,14 @@ class LivePreviewCard extends StatelessWidget {
       title: 'Projection Preview',
       children: [
         if (slides.isEmpty)
-          const Center(
+          Center(
             child: Padding(
-              padding: EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(24.0),
               child: Text(
                 'Type some lyrics to see a preview.',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           )

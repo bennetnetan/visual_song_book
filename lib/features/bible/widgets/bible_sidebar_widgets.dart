@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/features/bible/bible_controller.dart';
@@ -30,7 +29,10 @@ class BibleRightSidebar extends ConsumerWidget {
               else if (state.activeCrossReferences.isEmpty)
                 Text(
                   'No cross references found.',
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 )
               else
                 BibleCrossReferenceList(references: state.activeCrossReferences),
@@ -80,7 +82,7 @@ class _BibleCrossReferenceListState extends State<BibleCrossReferenceList> {
                   children: [
                     Text(
                       cr.reference,
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.primary,
@@ -91,7 +93,7 @@ class _BibleCrossReferenceListState extends State<BibleCrossReferenceList> {
                       cr.targetText,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 12,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -129,7 +131,10 @@ class BibleBookmarkList extends ConsumerWidget {
         if (bookmarks.isEmpty) {
           return Text(
             'No bookmarks yet.',
-            style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           );
         }
         return Column(
@@ -146,7 +151,7 @@ class BibleBookmarkList extends ConsumerWidget {
                           Expanded(
                             child: Text(
                               b.reference,
-                              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                             ),
                           ),
                         ],
@@ -168,7 +173,7 @@ class _BibleSidebarLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title.toUpperCase(),
-      style: GoogleFonts.inter(
+      style: TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w700,
         letterSpacing: 1.2,

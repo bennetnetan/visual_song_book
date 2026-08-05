@@ -15,7 +15,7 @@ class BibleController extends StateNotifier<BibleState> {
   static const _recentBooksKey = 'bible_recent_books';
   static const _recentSearchesKey = 'bible_recent_searches';
   static const _fontSizeKey = 'bible_font_size';
-  static const _serifFontKey = 'bible_use_serif_font';
+  static const _readingFontKey = 'bible_reading_font';
   static const _lastReadBookKey = 'bible_last_read_book';
   static const _lastReadChapterKey = 'bible_last_read_chapter';
   static const _lastReadVerseKey = 'bible_last_read_verse';
@@ -32,7 +32,8 @@ class BibleController extends StateNotifier<BibleState> {
     final recentBookIds = prefs.getStringList(_recentBooksKey)?.map(int.parse).toList() ?? [];
     final recentSearches = prefs.getStringList(_recentSearchesKey) ?? [];
     final fontSize = prefs.getDouble(_fontSizeKey) ?? 15.0;
-    final useSerif = prefs.getBool(_serifFontKey) ?? false;
+    final readingFontFamily =
+        prefs.getString(_readingFontKey) ?? kBibleReadingFontDefault;
     final lastReadBook = prefs.getInt(_lastReadBookKey);
     final lastReadChapter = prefs.getInt(_lastReadChapterKey);
     final lastReadVerse = prefs.getInt(_lastReadVerseKey);
@@ -45,7 +46,7 @@ class BibleController extends StateNotifier<BibleState> {
         recentBookIds: recentBookIds,
         recentSearches: recentSearches,
         bibleFontSize: fontSize,
-        useSerifFont: useSerif,
+        readingFontFamily: readingFontFamily,
         lastReadBookId: () => lastReadBook,
         lastReadChapter: () => lastReadChapter,
         lastReadVerse: () => lastReadVerse,
@@ -331,11 +332,11 @@ class BibleController extends StateNotifier<BibleState> {
     await prefs.setDouble(_fontSizeKey, size);
   }
 
-  Future<void> toggleSerifFont() async {
-    final newValue = !state.useSerifFont;
-    state = state.copyWith(useSerifFont: newValue);
+  Future<void> setReadingFontFamily(String family) async {
+    if (!kBibleReadingFonts.contains(family)) return;
+    state = state.copyWith(readingFontFamily: family);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_serifFontKey, newValue);
+    await prefs.setString(_readingFontKey, family);
   }
 
   // --- Recent books ---

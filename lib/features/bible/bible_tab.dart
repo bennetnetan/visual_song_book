@@ -119,8 +119,7 @@ class _BibleTabState extends ConsumerState<BibleTab> {
                               const Text(
                                 'Bible',
                                 style: TextStyle(
-                                  fontFamily: 'Outfit',
-                                  fontWeight: FontWeight.bold,
+                                                                    fontWeight: FontWeight.bold,
                                   fontSize: 20,
                                   letterSpacing: 0.5,
                                 ),
@@ -223,7 +222,7 @@ class _BibleTabState extends ConsumerState<BibleTab> {
                               onToggleVerseSelection: notifier.toggleVerseSelection,
                               onSelectAllVerses: notifier.selectAllVerses,
                               fontSize: state.bibleFontSize,
-                              useSerifFont: state.useSerifFont,
+                              readingFontFamily: state.readingFontFamily,
                               isLoadingVerses: state.isLoadingVerses,
                               isLargeScreen: widget.isLargeScreen,
                               onShowCrossRefs: _showMobileCrossRefs,

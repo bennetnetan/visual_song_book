@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/features/bible/bible_controller.dart';
 import 'package:visual_song_book/features/bible/bible_repository.dart';
@@ -77,7 +76,7 @@ class BibleEmptyReadingView extends StatelessWidget {
                           children: [
                             Text(
                               'Continue Reading',
-                              style: GoogleFonts.inter(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: theme.colorScheme.primary,
@@ -86,7 +85,7 @@ class BibleEmptyReadingView extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               '$lastBookName ${lastReadChapter ?? ''}',
-                              style: GoogleFonts.inter(
+                              style: TextStyle(
                                 fontSize: 12,
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
@@ -121,7 +120,7 @@ class BibleReadingView extends StatefulWidget {
   final ValueChanged<int> onToggleVerseSelection;
   final VoidCallback onSelectAllVerses;
   final double fontSize;
-  final bool useSerifFont;
+  final String readingFontFamily;
   final bool isLoadingVerses;
   final bool isLargeScreen;
   final ValueChanged<BibleVerse> onShowCrossRefs;
@@ -143,7 +142,7 @@ class BibleReadingView extends StatefulWidget {
     required this.onToggleVerseSelection,
     required this.onSelectAllVerses,
     required this.fontSize,
-    required this.useSerifFont,
+    required this.readingFontFamily,
     required this.isLoadingVerses,
     required this.isLargeScreen,
     required this.onShowCrossRefs,
@@ -250,7 +249,7 @@ class _BibleReadingViewState extends State<BibleReadingView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final readingFont = widget.useSerifFont ? 'EB Garamond' : 'Inter';
+    final readingFont = widget.readingFontFamily;
 
     return Column(
       children: [
@@ -293,7 +292,6 @@ class _BibleReadingViewState extends State<BibleReadingView> {
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   backgroundColor: colorScheme.primaryContainer.withValues(alpha: 0.15),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 icon: const Icon(Icons.keyboard_arrow_down, size: 20),
                 label: Text(
@@ -341,7 +339,7 @@ class _BibleReadingViewState extends State<BibleReadingView> {
           const SizedBox(width: 8),
           Text(
             '$selected verse${selected == 1 ? '' : 's'} selected',
-            style: GoogleFonts.inter(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: colorScheme.onSurface,

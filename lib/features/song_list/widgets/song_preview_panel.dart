@@ -38,7 +38,10 @@ class SongPreviewPanel extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
               IconButton.filledTonal(
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                icon: Icon(
+                  Icons.delete_outline,
+                  color: Theme.of(context).colorScheme.error,
+                ),
                 tooltip: 'Delete Song',
                 onPressed: () =>
                     _confirmDelete(context, ref, song.id, song.title),
@@ -93,7 +96,7 @@ class SongPreviewPanel extends ConsumerWidget {
             child: Card(
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
                 side: BorderSide(
                   color: Theme.of(
                     context,
@@ -105,7 +108,7 @@ class SongPreviewPanel extends ConsumerWidget {
               ).colorScheme.surfaceContainer.withValues(alpha: 0.3),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                   gradient: LinearGradient(
                     colors: [
                       Theme.of(
@@ -153,7 +156,6 @@ class SongPreviewPanel extends ConsumerWidget {
                         child: Text(
                           song.body,
                           style: TextStyle(
-                            fontFamily: 'Lora',
                             fontSize: 17,
                             height: 1.6,
                             color: Theme.of(
@@ -195,7 +197,12 @@ class SongPreviewPanel extends ConsumerWidget {
               await ref.read(songRepositoryProvider).deleteSong(songId);
               ref.read(selectedSongIdProvider.notifier).state = null;
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'Delete',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
           ),
         ],
       ),
