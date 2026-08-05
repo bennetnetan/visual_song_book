@@ -69,31 +69,39 @@ class VerseText extends StatelessWidget {
         // Multiply by 1.35 to map to an appropriate presentation size (e.g. 40 -> 54px).
         double targetSize = fontSize * 1.35;
 
-        // Count estimated wrapped lines to check for height overflow
-        final double availHeight = (size.height - 48).clamp(100.0, 10000.0);
-        final List<String> paragraphs = text.split('\n');
-        int totalLines = 0;
-        const int wrapThreshold = 45;
+        // Auto-fit: measure the REAL wrapped height with TextPainter and shrink
+        // the font until text + reference label fit the available bounds. This
+        // replaces the old character-count estimate, which underestimated the
+        // wrapped line count in portrait (text overflowed) and overestimated it
+        // in landscape (text rendered smaller than necessary).
+        final double availHeight = (size.height - 48).clamp(60.0, 10000.0);
+        final double availWidth = size.width.clamp(1.0, 10000.0);
 
-        for (final paragraph in paragraphs) {
-          final trimmed = paragraph.trim();
-          if (trimmed.isEmpty) continue;
-          if (trimmed.length <= wrapThreshold) {
-            totalLines += 1;
-          } else {
-            totalLines += (trimmed.length / wrapThreshold).ceil();
-          }
+        double finalFontSize = targetSize;
+        while (finalFontSize > 18.0) {
+          final double referenceHeight =
+              (referenceLabel != null && referenceLabel!.isNotEmpty)
+                  ? 20.0 + (finalFontSize * 0.45).clamp(20.0, 48.0)
+                  : 0.0;
+          final TextPainter tp = TextPainter(
+            text: TextSpan(
+              text: text,
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: finalFontSize,
+                fontWeight: FontWeight.w600,
+                height: 1.35,
+                letterSpacing: 0.3,
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.center,
+          )..layout(maxWidth: availWidth);
+
+          if (tp.height + referenceHeight <= availHeight) break;
+          finalFontSize -= 2;
         }
-        if (totalLines == 0) totalLines = 1;
-
-        // Calculate height needed at targetSize
-        final double heightNeeded = totalLines * targetSize * 1.45;
-        if (heightNeeded > availHeight) {
-          // Scale down to fit the available height
-          targetSize = availHeight / (totalLines * 1.45);
-        }
-
-        final double finalFontSize = targetSize.clamp(18.0, 180.0);
+        finalFontSize = finalFontSize.clamp(18.0, 180.0);
 
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 350),
