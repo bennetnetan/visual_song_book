@@ -32,7 +32,7 @@ class BibleController extends StateNotifier<BibleState> {
     final prefs = await SharedPreferences.getInstance();
     final recentBookIds = prefs.getStringList(_recentBooksKey)?.map(int.parse).toList() ?? [];
     final recentSearches = prefs.getStringList(_recentSearchesKey) ?? [];
-    final fontSize = prefs.getDouble(_fontSizeKey) ?? 20.0;
+    final fontSize = prefs.getDouble(_fontSizeKey) ?? 19.0;
     String readingFontFamily = prefs.getString(_readingFontKey) ?? kBibleReadingFontDefault;
     if (prefs.containsKey(_legacySerifFontKey) && !prefs.containsKey(_readingFontKey)) {
       final useSerif = prefs.getBool(_legacySerifFontKey) ?? false;

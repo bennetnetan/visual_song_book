@@ -1,7 +1,7 @@
 import 'package:visual_song_book/features/bible/bible_repository.dart';
 
 const List<String> kBibleReadingFonts = ['EBGaramond', 'Lora', 'Inter'];
-const String kBibleReadingFontDefault = 'EBGaramond';
+const String kBibleReadingFontDefault = 'Lora';
 
 class BibleState {
   final List<BibleBook> books;
@@ -66,7 +66,7 @@ class BibleState {
     this.bookmarkedVerseIds = const {},
     this.selectionMode = false,
     this.selectedVerseIds = const {},
-    this.bibleFontSize = 20.0,
+    this.bibleFontSize = 19.0,
     this.readingFontFamily = kBibleReadingFontDefault,
     this.recentBookIds = const [],
     this.lastReadBookId,
