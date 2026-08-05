@@ -517,10 +517,8 @@ class _ChangelogCardState extends State<ChangelogCard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     final recentEntries = [
-      const _ChangelogEntry(
+      const _ChangelogEntryWidget(
         version: 'v1.9.0',
         date: '2026-08-04',
         changes: [
@@ -536,7 +534,7 @@ class _ChangelogCardState extends State<ChangelogCard> {
           'Hygiene: dead code and unused dependencies removed, explicit lint rules, macOS target 11.0, CI with hermetic tests',
         ],
       ),
-      const _ChangelogEntry(
+      const _ChangelogEntryWidget(
         version: 'v1.7.1',
         date: '2026-07-31',
         changes: [
@@ -546,7 +544,7 @@ class _ChangelogCardState extends State<ChangelogCard> {
           'Improved projection UI and controls visibility on Android/touch devices',
         ],
       ),
-      const _ChangelogEntry(
+      const _ChangelogEntryWidget(
         version: 'v1.7.0',
         date: '2026-07-28',
         changes: [
@@ -562,88 +560,6 @@ class _ChangelogCardState extends State<ChangelogCard> {
           'Fixed Win32 fullscreen scheduler reentrancy crash (deferred via Timer.run)',
         ],
       ),
-      const _ChangelogEntry(
-        version: 'v1.6.0+2',
-        date: '2026-07-21',
-        changes: [
-          'Keyboard-scrolled search items now stay visible — replaced fixed-height scroll math with Scrollable.ensureVisible',
-          'Keyboard navigation hint moved above search results so it is always visible, not hidden below the list',
-        ],
-      ),
-      const _ChangelogEntry(
-        version: 'v1.6.0',
-        date: '2026-07-21',
-        changes: [
-          'Categories simplified — Full Song Book & Injili Song Book replace the dozens of individual imported categories',
-          'Unified storage directory — all app data consolidated in .visual_song_book/',
-          'Cross-book duplicates eliminated — seeded songs deduplicated by title alone',
-          'Sidebar starts minimized — NavigationRail collapsed by default on launch',
-          'Seed marker hardened — verifies DB actually has songs before trusting SharedPreferences marker',
-          'AppImage OS bar icon — icons embedded in hicolor theme paths with correct StartupWMClass',
-        ],
-      ),
-    ];
-
-    final olderEntries = [
-      const _ChangelogEntry(
-        version: 'v1.5.0',
-        date: '2026-07-21',
-        changes: [
-          'First-launch seeding — Full Song Book & Injili Song Book pre-loaded automatically on fresh install',
-          'Centralized AppLogger powered by Dart logging package (structured, level-aware, IDE-friendly)',
-          'SetsTab null-check crash fixed — graceful loading indicator when DB resolves before sets list',
-          'Strict DB staleness checks — stale selectedSetId auto-cleared when set is deleted externally',
-          'Reactive set-items stream — SongSetItems now watched live, eliminating stale-data races',
-          '100ms nav-ready dwell timer in search — type to search, pause to navigate with arrow keys',
-          'Enter to project highlighted result from search without touching the mouse',
-          'Subtle animated keyboard-hint indicator fades in when nav mode is active in search results',
-          'Linux window title fixed to "Visual Song Book" with app logo embedded in GTK titlebar',
-          'Android per-ABI release APKs (armeabi-v7a, arm64-v8a, x86_64)',
-          'Linux AppImage with embedded logo and AppDir integration',
-        ],
-      ),
-      const _ChangelogEntry(
-        version: 'v1.4.2',
-        date: '2026-06-26',
-        changes: [
-          'Multi-monitor detection — projection opens secondary window on multi-display, fullscreen on single',
-          'UI polish — subtle hover-only nav arrows, transparent controls, PopScope blocks back gesture in projection',
-          'Fixed Positioned/AnimatedOpacity nesting crash in projection output view',
-          'Removed redundant CHANGELOG section from About card, consolidated into versioned Changelog card',
-          'Removed Bible search back button on mobile (was opening book picker instead of navigating back)',
-          'App bar hidden on mobile for History and Sets tabs',
-          'Mobile-friendly action buttons for Sets with redesigned layout',
-          'Unified Bible app bar font styling with dashboard tabs',
-          'Collapsible inline lyrics preview on mobile song list',
-          'Slide timeline with auto-scroll to active verse in projection view',
-        ],
-      ),
-      const _ChangelogEntry(
-        version: 'v1.4.1',
-        date: '2026-06-25',
-        changes: [
-          'Inline song preview with collapsible lyrics on mobile',
-          'Low-opacity slide timeline at bottom of projection output',
-          'Drag-and-drop reorder hint above set list',
-          'Full-color app icon branding throughout UI',
-          'Mobile optimization — hide projection tab, clean up Bible book pickers',
-          'High-resolution app icon logo in settings',
-        ],
-      ),
-      const _ChangelogEntry(
-        version: 'v1.4.0',
-        date: '2026-06-24',
-        changes: [
-          'Interactive Book and Chapter pop-up navigation dialog matching Bible specs',
-          'Subtle inline verse cross-references displayable for active verses',
-          'Bible Bookmarks list supported on mobile and desktop via History tab',
-          'Overhauled settings cards into clean, responsive Material 3 flat designs',
-          'Unified Project actions for Bible, Songs, and Sets with Display settings options',
-          'Responsive stacked live preview layout for narrow screen mobile devices',
-          'Subtle hover-only display controls in projection output view',
-          'Implemented drag-and-drop song sets reordering and inline list search filtering',
-        ],
-      ),
     ];
 
     return SettingsCard(
@@ -655,54 +571,44 @@ class _ChangelogCardState extends State<ChangelogCard> {
             title: 'Changelog',
           ),
           const SizedBox(height: 24),
-          ...recentEntries,
-          if (_showOlder) ...olderEntries,
-          if (olderEntries.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: () => setState(() => _showOlder = !_showOlder),
-              child: Row(
-                children: [
-                  Icon(
-                    _showOlder ? Icons.expand_less : Icons.expand_more,
-                    size: 18,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    _showOlder
-                        ? 'Hide older versions'
-                        : 'Show ${olderEntries.length} older versions',
-                    style: TextStyle(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
+          ...recentEntries.take(_showOlder ? recentEntries.length : 1).map((entry) => Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _ChangelogEntryWidget(
+                  version: entry.version,
+                  date: entry.date,
+                  changes: entry.changes,
+                  expanded: _showOlder || entry == recentEntries.first,
+                ),
+              )),
+          if (!_showOlder && recentEntries.length > 1)
+            TextButton.icon(
+              onPressed: () => setState(() => _showOlder = true),
+              icon: const Icon(Icons.expand_more, size: 18),
+              label: Text('Show ${recentEntries.length - 1} more entries'),
             ),
-          ],
         ],
       ),
     );
   }
 }
 
-class _ChangelogEntry extends StatelessWidget {
+class _ChangelogEntryWidget extends StatelessWidget {
   final String version;
   final String date;
   final List<String> changes;
+  final bool expanded;
 
-  const _ChangelogEntry({
+  const _ChangelogEntryWidget({
     required this.version,
     required this.date,
     required this.changes,
+    this.expanded = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final visibleChanges = expanded ? changes : changes.take(1).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -735,7 +641,7 @@ class _ChangelogEntry extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        ...changes.map(
+        ...visibleChanges.map(
           (change) => Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 4),
             child: Row(
