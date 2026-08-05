@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/win32_window_helper.dart';
 import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
+import 'package:visual_song_book/features/projection/image_link_cache.dart';
 import 'package:visual_song_book/features/projection/projection_appearance_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/projection/projection_theme.dart';
@@ -28,11 +29,13 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
   bool _ipcIsBible = false;
   double? _ipcFontSize;
   List<String> _ipcSlideLabels = const [];
+  int _ipcCurrentIndex = 0;
   ProjectionTheme _ipcTheme = const ProjectionTheme();
   bool _isSecondaryWindow = false;
   late final FocusNode _focusNode;
   bool _isClosing = false;
   bool _isHovering = false;
+  bool _isCloseHovered = false;
   int _originalWindowStyle = 0;
   bool _isGoingFullscreen = false;
   VoidCallback? _focusListener; // re-asserts fullscreen on window focus gain
@@ -41,6 +44,10 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
   bool _pinchActive = false;
   Offset _panStartOffset = Offset.zero;
   double _panDeltaX = 0.0;
+
+  /// Advances the media background every tick when timed rotation is on.
+  int _mediaCycleIndex = 0;
+  Timer? _mediaTimer;
 
   /// Whether the projection is currently locked to portrait orientation.
   /// Defaults to false so behaviour matches the historic landscape lock.
@@ -150,6 +157,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
           if (args['slideLabels'] != null) {
             _ipcSlideLabels =
                 (args['slideLabels'] as List).cast<String>();
+          }
+          if (args['currentIndex'] != null) {
+            _ipcCurrentIndex = (args['currentIndex'] as num).toInt();
           }
           if (args['slideTheme'] != null) {
             _ipcTheme = ProjectionTheme.fromJson(
@@ -312,8 +322,26 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
     }
   }
 
+  /// Starts (or stops) the background rotation timer so it tracks the active
+  /// theme. Idempotent — safe to call from every build.
+  void _syncMediaTimer(ProjectionTheme theme) {
+    final needsTimer =
+        theme.mediaRotationMode == MediaRotationMode.timed &&
+        (theme.imageSources.length > 1 || theme.videoLinks.length > 1);
+    if (needsTimer && _mediaTimer == null) {
+      _mediaTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+        if (mounted) setState(() => _mediaCycleIndex++);
+      });
+    } else if (!needsTimer && _mediaTimer != null) {
+      _mediaTimer!.cancel();
+      _mediaTimer = null;
+    }
+  }
+
   @override
   void dispose() {
+    _mediaTimer?.cancel();
+    _mediaTimer = null;
     if (_focusListener != null) {
       _focusNode.removeListener(_focusListener!);
     }
@@ -373,6 +401,13 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
     final int slideCount = _isSecondaryWindow
         ? _ipcSlideLabels.length
         : state.slides.length;
+
+    final int activeSlideIndex = _isSecondaryWindow
+        ? _ipcCurrentIndex
+        : state.currentSlideIndex;
+
+    // Keep the timed-rotation timer in step with the active theme.
+    _syncMediaTimer(projTheme);
 
     return PopScope(
       canPop: false,
@@ -472,10 +507,14 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
           body: Stack(
             fit: StackFit.expand,
             children: [
-              // Themed background — radial gradient, solid color block, or
-              // image. Defaults to the historical teal-to-black gradient so
-              // existing behaviour is unchanged.
-              _ProjectionBackground(theme: projTheme),
+              // Themed background — radial gradient, solid color block,
+              // image (file or cached link), or looping video. Defaults to
+              // the historical teal-to-black gradient.
+              _ProjectionBackground(
+                theme: projTheme,
+                slideIndex: activeSlideIndex,
+                mediaCycleIndex: _mediaCycleIndex,
+              ),
 
               // Centered slide text + Bible reference tightly attached 20px below
               SafeArea(
@@ -512,23 +551,39 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
               ),
 
               // Close button:
-              //   • Desktop  — fades in on hover (subtle, out-of-the-way)
+              //   • Desktop  — appears only while the cursor hovers the
+              //                button itself (strictly hover-gated)
               //   • Mobile   — always visible at low opacity so the audience
               //                presenter can tap to exit at any time
               Positioned(
                 top: 4,
                 left: 4,
-                child: AnimatedOpacity(
-                  opacity: _isMobile ? 0.45 : (_isHovering ? 0.4 : 0.0),
-                  duration: const Duration(milliseconds: 300),
-                  child: SafeArea(
-                    child: IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white, size: 18),
-                      onPressed: _handleClose,
-                      tooltip: 'Exit projection (Esc)',
-                      splashRadius: 20,
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                child: MouseRegion(
+                  onEnter: (_) => setState(() => _isCloseHovered = true),
+                  onExit: (_) => setState(() => _isCloseHovered = false),
+                  // A generous hit target around the icon so the button is
+                  // easy to reach without being visible until hovered.
+                  child: AnimatedOpacity(
+                    opacity: _isMobile
+                        ? 0.45
+                        : (_isCloseHovered ? 0.9 : 0.0),
+                    duration: const Duration(milliseconds: 300),
+                    child: SafeArea(
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        onPressed: _handleClose,
+                        tooltip: 'Exit projection (Esc)',
+                        splashRadius: 20,
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(
+                          minWidth: 36,
+                          minHeight: 36,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -837,13 +892,24 @@ class _PortraitNavButton extends StatelessWidget {
 }
 
 /// Themed backdrop behind the slide text — a radial gradient, a solid color
-/// block, or a cover image with a dark scrim. Falls back to the default
-/// gradient when an image is selected but none is available (or on web, where
-/// dart:io image files are not usable).
+/// block, an image (local file or cached link), or a looping video. Falls
+/// back to the default gradient when a media source is unavailable.
 class _ProjectionBackground extends StatelessWidget {
   final ProjectionTheme theme;
+  final int slideIndex;
+  final int mediaCycleIndex;
 
-  const _ProjectionBackground({required this.theme});
+  const _ProjectionBackground({
+    required this.theme,
+    required this.slideIndex,
+    required this.mediaCycleIndex,
+  });
+
+  int _resolveIndex(List<Object?> links) => theme.resolveMediaIndex(
+    listLength: links.length,
+    slideIndex: slideIndex,
+    mediaCycleIndex: mediaCycleIndex,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -851,17 +917,55 @@ class _ProjectionBackground extends StatelessWidget {
       case ProjectionBackgroundType.solid:
         return ColoredBox(color: theme.solidColor);
       case ProjectionBackgroundType.image:
-        final path = theme.imagePath;
-        if (path == null || kIsWeb) {
+        final sources = theme.imageSources;
+        if (sources.isEmpty) {
           return const _DefaultProjectionBackground();
         }
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.file(File(path), fit: BoxFit.cover),
-            // Dark scrim keeps lyrics readable over bright images.
-            ColoredBox(color: Colors.black.withValues(alpha: 0.35)),
-          ],
+        final source = sources[_resolveIndex(sources)];
+        if (!source.isLink) {
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.file(File(source.value), fit: BoxFit.cover),
+              const _DarkScrim(),
+            ],
+          );
+        }
+        if (kIsWeb) {
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.network(source.value, fit: BoxFit.cover),
+              const _DarkScrim(),
+            ],
+          );
+        }
+        // Remote link: prefer the on-disk cache, fall back to a direct fetch.
+        return FutureBuilder<File?>(
+          future: ImageLinkCache.cachedFile(source.value),
+          builder: (context, snapshot) {
+            final cached = snapshot.data;
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                if (cached != null)
+                  Image.file(cached, fit: BoxFit.cover)
+                else
+                  Image.network(source.value, fit: BoxFit.cover),
+                const _DarkScrim(),
+              ],
+            );
+          },
+        );
+      case ProjectionBackgroundType.video:
+        final links = theme.videoLinks;
+        if (links.isEmpty || kIsWeb) {
+          return const _DefaultProjectionBackground();
+        }
+        final url = links[_resolveIndex(links)];
+        return ProjectionVideoBackground(
+          key: ValueKey('video_bg_$url'),
+          url: url,
         );
       case ProjectionBackgroundType.gradient:
         if (theme.gradientColors.isEmpty) {
@@ -877,6 +981,16 @@ class _ProjectionBackground extends StatelessWidget {
           ),
         );
     }
+  }
+}
+
+/// Semi-transparent black layer that keeps lyrics readable over bright media.
+class _DarkScrim extends StatelessWidget {
+  const _DarkScrim();
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(color: Colors.black.withValues(alpha: 0.35));
   }
 }
 
