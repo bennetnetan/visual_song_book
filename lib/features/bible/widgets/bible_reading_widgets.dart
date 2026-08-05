@@ -50,50 +50,17 @@ class BibleEmptyReadingView extends StatelessWidget {
                     color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7))),
             if (lastBookName != null && onContinueReading != null) ...[
               const SizedBox(height: 24),
-              Card(
-                elevation: 0,
-                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                  ),
+              FilledButton.icon(
+                onPressed: onContinueReading,
+                icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                label: Text(
+                  'Continue Reading $lastBookName ${lastReadChapter ?? ''}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-                child: InkWell(
-                  onTap: onContinueReading,
-                  borderRadius: BorderRadius.circular(16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.play_circle_outline,
-                            color: theme.colorScheme.primary, size: 28),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Continue Reading',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '$lastBookName ${lastReadChapter ?? ''}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
@@ -450,112 +417,112 @@ class _BibleReadingViewState extends State<BibleReadingView> {
             final isBookmarked = widget.bookmarkedVerseIds.contains(v.verse);
             final isSelected = widget.selectedVerseIds.contains(v.id);
 
-            return ColoredBox(
-              key: isActive ? _activeVerseKey : null,
-              color: isActive
-                  ? colorScheme.primaryContainer.withValues(alpha: 0.3)
-                  : isSelected
-                      ? colorScheme.primaryContainer.withValues(alpha: 0.15)
-                      : Colors.transparent,
-              child: InkWell(
-                onTap: widget.selectionMode
-                    ? () => widget.onToggleVerseSelection(v.id)
-                    : () => widget.onSelectVerse(v),
-                onDoubleTap: widget.selectionMode
-                    ? null
-                    : () => widget.onProjectPassage(v.chapter, [v]),
-                onLongPress: widget.selectionMode
-                    ? null
-                    : () => _showVerseMenu(context, v),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (widget.selectionMode) ...[
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Icon(
-                            isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-                            size: 18,
-                            color: isSelected
-                                ? colorScheme.primary
-                                : colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      SizedBox(
-                        width: 28,
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            '${v.verse}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: isActive
-                                  ? colorScheme.primary
-                                  : colorScheme.primary.withValues(alpha: 0.7),
-                              height: 1.7,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              v.text,
-                              style: TextStyle(
-                                fontFamily: readingFont,
-                                fontSize: widget.fontSize,
-                                height: 1.65,
-                                color: colorScheme.onSurface,
-                              ),
-                            ),
-                            if (isActive) ...[
-                              const SizedBox(height: 8),
-                              BibleInlineCrossReferences(verse: v),
-                            ],
-                          ],
-                        ),
-                      ),
-                      if (isActive && !widget.selectionMode)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2, right: 4),
-                          child: GestureDetector(
-                            onTap: () {
-                              if (!widget.isLargeScreen) {
-                                widget.onShowCrossRefs(v);
-                              }
-                            },
-                            child: Icon(Icons.link,
-                                size: 14,
-                                color: widget.isLargeScreen
-                                    ? colorScheme.primary
-                                    : colorScheme.onSurfaceVariant),
-                          ),
-                        ),
-                      if (!widget.selectionMode)
-                        BibleVersePopupMenu(
-                          verse: v,
-                          isBookmarked: isBookmarked,
-                          isLargeScreen: widget.isLargeScreen,
-                          onProject: () => widget.onProjectPassage(v.chapter, [v]),
-                          onBookmark: () => widget.onToggleBookmark(v),
-                          onNavigate: () {
-                            ProviderScope.containerOf(context)
-                                .read(bibleControllerProvider.notifier)
-                                .navigateToVerse(v.bookId, v.chapter, v.verse);
-                          },
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            );
+             return ColoredBox(
+               key: isActive ? _activeVerseKey : null,
+               color: isActive
+                   ? colorScheme.primaryContainer.withValues(alpha: 0.12)
+                   : isSelected
+                       ? colorScheme.primaryContainer.withValues(alpha: 0.06)
+                       : Colors.transparent,
+               child: InkWell(
+                 onTap: widget.selectionMode
+                     ? () => widget.onToggleVerseSelection(v.id)
+                     : () => widget.onSelectVerse(v),
+                 onDoubleTap: widget.selectionMode
+                     ? null
+                     : () => widget.onProjectPassage(v.chapter, [v]),
+                 onLongPress: widget.selectionMode || !isActive
+                     ? null
+                     : () => _showVerseMenu(context, v),
+                 child: Padding(
+                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                   child: Row(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       if (widget.selectionMode) ...[
+                         Padding(
+                           padding: const EdgeInsets.only(top: 2),
+                           child: Icon(
+                             isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                             size: 18,
+                             color: isSelected
+                                 ? colorScheme.primary
+                                 : colorScheme.onSurfaceVariant,
+                           ),
+                         ),
+                         const SizedBox(width: 8),
+                       ],
+                       SizedBox(
+                         width: 28,
+                         child: Align(
+                           alignment: Alignment.centerLeft,
+                           child: Text(
+                             '${v.verse}',
+                             style: TextStyle(
+                               fontSize: 11,
+                               fontWeight: FontWeight.w600,
+                               color: isActive
+                                   ? colorScheme.primary
+                                   : colorScheme.primary.withValues(alpha: 0.7),
+                               height: 1.7,
+                             ),
+                           ),
+                         ),
+                       ),
+                       Expanded(
+                         child: Column(
+                           crossAxisAlignment: CrossAxisAlignment.start,
+                           children: [
+                             Text(
+                               v.text,
+                               style: TextStyle(
+                                 fontFamily: readingFont,
+                                 fontSize: widget.fontSize,
+                                 height: 1.65,
+                                 color: colorScheme.onSurface,
+                               ),
+                             ),
+                             if (isActive) ...[
+                               const SizedBox(height: 10),
+                               BibleInlineCrossReferences(verse: v),
+                             ],
+                           ],
+                         ),
+                       ),
+                       if (isActive && !widget.selectionMode)
+                         Padding(
+                           padding: const EdgeInsets.only(top: 2, right: 4),
+                           child: GestureDetector(
+                             onTap: () {
+                               if (!widget.isLargeScreen) {
+                                 widget.onShowCrossRefs(v);
+                               }
+                             },
+                             child: Icon(Icons.link,
+                                 size: 14,
+                                 color: widget.isLargeScreen
+                                     ? colorScheme.primary
+                                     : colorScheme.onSurfaceVariant),
+                           ),
+                         ),
+                       if (isActive && !widget.selectionMode)
+                         BibleVersePopupMenu(
+                           verse: v,
+                           isBookmarked: isBookmarked,
+                           isLargeScreen: widget.isLargeScreen,
+                           onProject: () => widget.onProjectPassage(v.chapter, [v]),
+                           onBookmark: () => widget.onToggleBookmark(v),
+                           onNavigate: () {
+                             ProviderScope.containerOf(context)
+                                 .read(bibleControllerProvider.notifier)
+                                 .navigateToVerse(v.bookId, v.chapter, v.verse);
+                           },
+                         ),
+                     ],
+                   ),
+                 ),
+               ),
+             );
           },
         ),
         ),
