@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:logging/logging.dart';
-import 'package:media_kit/media_kit.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
@@ -24,8 +23,9 @@ void main(List<String> args) async {
   // fetch them at runtime (throws loudly if a used variant is missing).
   GoogleFonts.config.allowRuntimeFetching = false;
 
-  // Video player backend (libmpv on desktop, platform players on mobile).
-  MediaKit.ensureInitialized();
+  // Video playback uses the official video_player plugin; on Windows and
+  // Linux the fvp backend (bundled FFmpeg) handles local files — no system
+  // libmpv dependency, so packaged builds (AppImage) work on clean machines.
 
   // Initialise logging — ALL levels in debug, WARNING+ in release.
   AppLogger.init(level: kReleaseMode ? Level.WARNING : Level.ALL);

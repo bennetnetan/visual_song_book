@@ -19,45 +19,15 @@ enum MediaRotationMode {
   manual,
 }
 
-/// A single image background source: either a local file path (chosen with the
-/// file picker) or a remote link. Remote links are cached on disk so they are
-/// not re-fetched on every frame.
-///
-/// Entries starting with `http://`/`https://` are treated as links.
-class ImageSource {
-  final String value;
-
-  const ImageSource(this.value);
-
-  bool get isLink =>
-      value.startsWith('http://') || value.startsWith('https://');
-
-  String get displayName {
-    if (isLink) {
-      try {
-        return Uri.parse(value).host;
-      } catch (_) {
-        return value;
-      }
-    }
-    // Basename of a local file path.
-    final name = value.replaceAll('\\', '/');
-    final last = name.substring(name.lastIndexOf('/') + 1);
-    return last.isEmpty ? value : last;
-  }
-
-  @override
-  bool operator ==(Object other) => other is ImageSource && other.value == value;
-
-  @override
-  int get hashCode => value.hashCode;
-
-  @override
-  String toString() => value;
-}
-
 /// Maximum number of media sources per background type.
 const int kMaxMediaSources = 3;
+
+/// Basename of a local file path, used for display in the media editors.
+String fileNameOf(String path) {
+  final normalized = path.replaceAll('\\', '/');
+  final last = normalized.substring(normalized.lastIndexOf('/') + 1);
+  return last.isEmpty ? path : last;
+}
 
 /// Appearance configuration for the projection output (slide text color and
 /// background). Persisted in SharedPreferences and applied live in
@@ -79,12 +49,13 @@ class ProjectionTheme {
   /// Fill color used by the solid ("color block") background.
   final Color solidColor;
 
-  /// Up to [kMaxMediaSources] image backgrounds. Each entry is either a local
-  /// file path or a remote link (cached on disk).
-  final List<ImageSource> imageSources;
+  /// Up to [kMaxMediaSources] local image file paths (chosen with the file
+  /// picker). Playback of copyrighted media is the operator's responsibility.
+  final List<String> imagePaths;
 
-  /// Up to [kMaxMediaSources] video backgrounds, given as remote links.
-  final List<String> videoLinks;
+  /// Up to [kMaxMediaSources] local video file paths (chosen with the file
+  /// picker). Played muted and looping on the projector.
+  final List<String> videoPaths;
 
   /// How the media sources cycle during projection.
   final MediaRotationMode mediaRotationMode;
@@ -102,8 +73,8 @@ class ProjectionTheme {
       Color(0xFF000000),
     ],
     this.solidColor = const Color(0xFF000000),
-    this.imageSources = const <ImageSource>[],
-    this.videoLinks = const <String>[],
+    this.imagePaths = const <String>[],
+    this.videoPaths = const <String>[],
     this.mediaRotationMode = MediaRotationMode.perSlide,
     this.selectedMediaIndex = 0,
   });
@@ -114,8 +85,8 @@ class ProjectionTheme {
     ProjectionBackgroundType? backgroundType,
     List<Color>? gradientColors,
     Color? solidColor,
-    List<ImageSource>? imageSources,
-    List<String>? videoLinks,
+    List<String>? imagePaths,
+    List<String>? videoPaths,
     MediaRotationMode? mediaRotationMode,
     int? selectedMediaIndex,
   }) {
@@ -125,8 +96,8 @@ class ProjectionTheme {
       backgroundType: backgroundType ?? this.backgroundType,
       gradientColors: gradientColors ?? this.gradientColors,
       solidColor: solidColor ?? this.solidColor,
-      imageSources: imageSources ?? this.imageSources,
-      videoLinks: videoLinks ?? this.videoLinks,
+      imagePaths: imagePaths ?? this.imagePaths,
+      videoPaths: videoPaths ?? this.videoPaths,
       mediaRotationMode: mediaRotationMode ?? this.mediaRotationMode,
       selectedMediaIndex: selectedMediaIndex ?? this.selectedMediaIndex,
     );
@@ -196,21 +167,29 @@ class ProjectionTheme {
       'backgroundType': backgroundType.index,
       'gradientColors': gradientColors.map((c) => c.toARGB32()).toList(),
       'solidColor': solidColor.toARGB32(),
-      'imageSources': imageSources.map((s) => s.value).toList(),
-      'videoLinks': videoLinks,
+      'imagePaths': imagePaths,
+      'videoPaths': videoPaths,
       'mediaRotationMode': mediaRotationMode.index,
       'selectedMediaIndex': selectedMediaIndex,
     };
   }
 
   factory ProjectionTheme.fromJson(Map<String, dynamic> json) {
-    final rawImageSources = (json['imageSources'] as List?) ??
+    // Migrate pre-link-removal keys (`imageSources`/`videoLinks`) and the
+    // legacy single `imagePath` field into the local-path lists.
+    final rawImagePaths = (json['imagePaths'] as List?) ??
+        (json['imageSources'] as List?) ??
         const <dynamic>[];
     final legacyImagePath = json['imagePath'] as String?;
-    final imageSources = <ImageSource>[
-      for (final v in rawImageSources) ImageSource(v.toString()),
-      if (rawImageSources.isEmpty && legacyImagePath != null)
-        ImageSource(legacyImagePath),
+    final imagePaths = <String>[
+      for (final v in rawImagePaths) v.toString(),
+      if (rawImagePaths.isEmpty && legacyImagePath != null) legacyImagePath,
+    ];
+    final rawVideoPaths = (json['videoPaths'] as List?) ??
+        (json['videoLinks'] as List?) ??
+        const <dynamic>[];
+    final videoPaths = <String>[
+      for (final v in rawVideoPaths) v.toString(),
     ];
     return ProjectionTheme(
       textColor: json['textColor'] != null
@@ -223,11 +202,8 @@ class ProjectionTheme {
           .map((v) => Color(v as int))
           .toList(),
       solidColor: Color((json['solidColor'] as int?) ?? 0xFF000000),
-      imageSources: imageSources,
-      videoLinks:
-          ((json['videoLinks'] as List?) ?? const <dynamic>[])
-              .map((v) => v.toString())
-              .toList(),
+      imagePaths: imagePaths,
+      videoPaths: videoPaths,
       mediaRotationMode: MediaRotationMode.values[
           (json['mediaRotationMode'] as int?) ?? 0],
       selectedMediaIndex: (json['selectedMediaIndex'] as int?) ?? 0,

@@ -4,9 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
-import 'package:visual_song_book/features/projection/image_link_cache.dart';
+import 'package:video_player/video_player.dart';
 import 'package:visual_song_book/features/projection/projection_theme.dart';
 
 /// Reusable projection appearance controls (slide text color + background
@@ -207,32 +205,32 @@ class ProjectionPreview extends StatelessWidget {
       case ProjectionBackgroundType.solid:
         backdrop = ColoredBox(color: theme.solidColor);
       case ProjectionBackgroundType.image:
-        final source = _activeSource(
-          theme.imageSources,
+        final path = _activePath(
+          theme.imagePaths,
           theme,
-          listLength: theme.imageSources.length,
+          listLength: theme.imagePaths.length,
         );
-        if (source == null) {
+        if (path == null) {
           backdrop = const _DefaultPreviewGradient();
         } else {
           backdrop = Stack(
             fit: StackFit.expand,
             children: [
-              _PreviewImage(source: source),
+              _PreviewImage(path: path),
               ColoredBox(color: Colors.black.withValues(alpha: 0.35)),
             ],
           );
         }
       case ProjectionBackgroundType.video:
-        final url = _activeLink(
-          theme.videoLinks,
+        final path = _activePath(
+          theme.videoPaths,
           theme,
-          listLength: theme.videoLinks.length,
+          listLength: theme.videoPaths.length,
         );
-        if (url == null || kIsWeb) {
+        if (path == null || kIsWeb) {
           backdrop = const _DefaultPreviewGradient();
         } else {
-          backdrop = ProjectionVideoBackground(url: url);
+          backdrop = ProjectionVideoBackground(path: path);
         }
     }
 
@@ -262,32 +260,18 @@ class ProjectionPreview extends StatelessWidget {
     );
   }
 
-  static ImageSource? _activeSource(
-    List<ImageSource> sources,
+  static String? _activePath(
+    List<String> paths,
     ProjectionTheme theme, {
     required int listLength,
   }) {
-    if (sources.isEmpty) return null;
+    if (paths.isEmpty) return null;
     final i = theme.resolveMediaIndex(
       listLength: listLength,
       slideIndex: 0,
       mediaCycleIndex: 0,
     );
-    return sources[i];
-  }
-
-  static String? _activeLink(
-    List<String> links,
-    ProjectionTheme theme, {
-    required int listLength,
-  }) {
-    if (links.isEmpty) return null;
-    final i = theme.resolveMediaIndex(
-      listLength: listLength,
-      slideIndex: 0,
-      mediaCycleIndex: 0,
-    );
-    return links[i];
+    return paths[i];
   }
 }
 
@@ -309,44 +293,35 @@ class _DefaultPreviewGradient extends StatelessWidget {
   }
 }
 
-/// Renders an image source (local file or cached/remote link) in a preview.
+/// Renders a local image file in a preview. Falls back to the default
+/// gradient if the file no longer exists.
 class _PreviewImage extends StatelessWidget {
-  final ImageSource source;
+  final String path;
 
-  const _PreviewImage({required this.source});
+  const _PreviewImage({required this.path});
 
   @override
   Widget build(BuildContext context) {
-    if (!source.isLink) {
-      return Image.file(File(source.value), fit: BoxFit.cover);
-    }
-    if (kIsWeb) {
-      return Image.network(source.value, fit: BoxFit.cover);
-    }
-    return FutureBuilder<File?>(
-      future: ImageLinkCache.cachedFile(source.value),
-      builder: (context, snapshot) {
-        final cached = snapshot.data;
-        if (cached != null) {
-          return Image.file(cached, fit: BoxFit.cover);
-        }
-        return Image.network(source.value, fit: BoxFit.cover);
-      },
+    return Image.file(
+      File(path),
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => const _DefaultPreviewGradient(),
     );
   }
 }
 
-/// Fullscreen looping (muted) video backdrop for remote links. Used by both
-/// the projection output and the appearance preview.
+/// Fullscreen looping (muted) video backdrop for a local video file. Used by
+/// both the projection output and the appearance preview. Rendered with
+/// [video_player] (official backend on mobile, the fvp backend on desktop).
 class ProjectionVideoBackground extends StatefulWidget {
-  final String url;
+  final String path;
 
   /// Whether a dark scrim is layered over the video.
   final bool showScrim;
 
   const ProjectionVideoBackground({
     super.key,
-    required this.url,
+    required this.path,
     this.showScrim = true,
   });
 
@@ -356,50 +331,79 @@ class ProjectionVideoBackground extends StatefulWidget {
 }
 
 class _ProjectionVideoBackgroundState extends State<ProjectionVideoBackground> {
-  late final Player _player;
-  late final VideoController _controller;
+  late VideoPlayerController _controller;
+  bool _failed = false;
 
   @override
   void initState() {
     super.initState();
-    _player = Player();
-    _controller = VideoController(_player);
-    _open(widget.url);
+    _controller = VideoPlayerController.file(File(widget.path));
+    _init();
   }
 
   @override
   void didUpdateWidget(covariant ProjectionVideoBackground oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.url != widget.url) {
-      _open(widget.url);
+    if (oldWidget.path != widget.path) {
+      _controller.dispose();
+      _controller = VideoPlayerController.file(File(widget.path));
+      _failed = false;
+      _init();
     }
   }
 
-  Future<void> _open(String url) async {
+  Future<void> _init() async {
     try {
-      await _player.setVolume(0.0);
-      await _player.setPlaylistMode(PlaylistMode.loop);
-      await _player.open(Media(url));
+      await _controller.initialize();
+      await _controller.setLooping(true);
+      await _controller.setVolume(0.0);
+      await _controller.play();
+      if (mounted) setState(() {});
     } catch (_) {
-      // ignore: unplayable link — show the empty backdrop
+      // ignore: unplayable file — show a plain black backdrop
+      if (mounted) setState(() => _failed = true);
     }
   }
 
   @override
   void dispose() {
-    _player.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final value = _controller.value;
+    if (_failed) {
+      return const ColoredBox(color: Color(0xFF000000));
+    }
+    if (!value.isInitialized) {
+      return const ColoredBox(
+        color: Color(0xFF000000),
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white38,
+            ),
+          ),
+        ),
+      );
+    }
+    final videoSize = value.size;
     return Stack(
       fit: StackFit.expand,
       children: [
-        Video(
-          controller: _controller,
-          controls: NoVideoControls,
+        FittedBox(
           fit: BoxFit.cover,
+          clipBehavior: Clip.hardEdge,
+          child: SizedBox(
+            width: videoSize.width,
+            height: videoSize.height,
+            child: VideoPlayer(_controller),
+          ),
         ),
         if (widget.showScrim)
           ColoredBox(color: Colors.black.withValues(alpha: 0.35)),
@@ -419,32 +423,22 @@ class _ImageBackgroundEditor extends StatelessWidget {
 
   Future<void> _pickFromDisk(BuildContext context) async {
     final result = await FilePicker.platform.pickFiles(type: FileType.image);
-    if (result == null || result.files.single.path == null) return;
-    final source = ImageSource(result.files.single.path!);
-    if (theme.imageSources.contains(source)) return;
-    if (theme.imageSources.length >= kMaxMediaSources) return;
-    onChanged(
-      theme.copyWith(imageSources: [...theme.imageSources, source]),
-    );
-  }
-
-  Future<void> _addLink(BuildContext context) async {
-    final url = await _promptForLink(context, title: 'Add Image Link');
-    if (url == null) return;
-    final source = ImageSource(url);
-    if (theme.imageSources.contains(source)) return;
-    if (theme.imageSources.length >= kMaxMediaSources) return;
-    onChanged(
-      theme.copyWith(imageSources: [...theme.imageSources, source]),
-    );
-    // Cache now so projection doesn't refetch on every frame.
-    if (ImageLinkCache.isSupported) {
-      try {
-        await ImageLinkCache.ensureCached(url);
-      } catch (_) {
-        // ignore: the link may still render via NetworkImage
+    if (result == null) return;
+    final path = result.files.single.path;
+    if (path == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Web projection cannot load local files'),
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
+      return;
     }
+    if (theme.imagePaths.contains(path)) return;
+    if (theme.imagePaths.length >= kMaxMediaSources) return;
+    onChanged(theme.copyWith(imagePaths: [...theme.imagePaths, path]));
   }
 
   @override
@@ -452,15 +446,15 @@ class _ImageBackgroundEditor extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _MediaSourceList<ImageSource>(
-          sources: theme.imageSources,
-          iconFor: (s) => s.isLink ? Icons.link : Icons.folder,
-          titleFor: (s) => s.displayName,
-          subtitleFor: (s) => s.value,
-          onRemove: (s) => onChanged(
+        _MediaSourceList<String>(
+          sources: theme.imagePaths,
+          iconFor: (_) => Icons.folder,
+          titleFor: fileNameOf,
+          subtitleFor: (path) => path,
+          onRemove: (path) => onChanged(
             theme.copyWith(
-              imageSources: theme.imageSources
-                  .where((e) => e.value != s.value)
+              imagePaths: theme.imagePaths
+                  .where((e) => e != path)
                   .toList(),
             ),
           ),
@@ -471,45 +465,20 @@ class _ImageBackgroundEditor extends StatelessWidget {
           runSpacing: 8,
           children: [
             FilledButton.tonalIcon(
-              onPressed: theme.imageSources.length >= kMaxMediaSources
+              onPressed: theme.imagePaths.length >= kMaxMediaSources
                   ? null
                   : () => _pickFromDisk(context),
               icon: const Icon(Icons.folder_open, size: 18),
-              label: const Text('Choose from disk'),
-            ),
-            FilledButton.tonalIcon(
-              onPressed: theme.imageSources.length >= kMaxMediaSources
-                  ? null
-                  : () => _addLink(context),
-              icon: const Icon(Icons.add_link, size: 18),
-              label: const Text('Add Image Link'),
+              label: const Text('Choose image from disk'),
             ),
           ],
         ),
-        if (ImageLinkCache.isSupported) ...[
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: () async {
-              await ImageLinkCache.clear();
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Image link cache cleared'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              }
-            },
-            icon: const Icon(Icons.cleaning_services, size: 18),
-            label: const Text('Clear image cache'),
-          ),
-        ],
-        if (theme.imageSources.isNotEmpty) ...[
+        if (theme.imagePaths.isNotEmpty) ...[
           const SizedBox(height: 8),
           _MediaRotationControls(
             mode: theme.mediaRotationMode,
             selectedIndex: theme.selectedMediaIndex,
-            sourceCount: theme.imageSources.length,
+            sourceCount: theme.imagePaths.length,
             onModeChanged: (m) =>
                 onChanged(theme.copyWith(mediaRotationMode: m)),
             onIndexChanged: (i) =>
@@ -530,23 +499,24 @@ class _VideoBackgroundEditor extends StatelessWidget {
     required this.onChanged,
   });
 
-  Future<void> _addLink(BuildContext context) async {
-    final url = await _promptForLink(context, title: 'Add Video Link');
-    if (url == null) return;
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+  Future<void> _pickFromDisk(BuildContext context) async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.video);
+    if (result == null) return;
+    final path = result.files.single.path;
+    if (path == null) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Video links must be http(s) URLs'),
+            content: Text('Web projection cannot load local files'),
             duration: Duration(seconds: 2),
           ),
         );
       }
       return;
     }
-    if (theme.videoLinks.contains(url)) return;
-    if (theme.videoLinks.length >= kMaxMediaSources) return;
-    onChanged(theme.copyWith(videoLinks: [...theme.videoLinks, url]));
+    if (theme.videoPaths.contains(path)) return;
+    if (theme.videoPaths.length >= kMaxMediaSources) return;
+    onChanged(theme.copyWith(videoPaths: [...theme.videoPaths, path]));
   }
 
   @override
@@ -555,20 +525,14 @@ class _VideoBackgroundEditor extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _MediaSourceList<String>(
-          sources: theme.videoLinks,
+          sources: theme.videoPaths,
           iconFor: (_) => Icons.play_circle_outline,
-          titleFor: (url) {
-            try {
-              return Uri.parse(url).host;
-            } catch (_) {
-              return url;
-            }
-          },
-          subtitleFor: (url) => url,
-          onRemove: (url) => onChanged(
+          titleFor: fileNameOf,
+          subtitleFor: (path) => path,
+          onRemove: (path) => onChanged(
             theme.copyWith(
-              videoLinks: theme.videoLinks
-                  .where((e) => e != url)
+              videoPaths: theme.videoPaths
+                  .where((e) => e != path)
                   .toList(),
             ),
           ),
@@ -579,20 +543,20 @@ class _VideoBackgroundEditor extends StatelessWidget {
           runSpacing: 8,
           children: [
             FilledButton.tonalIcon(
-              onPressed: theme.videoLinks.length >= kMaxMediaSources
+              onPressed: theme.videoPaths.length >= kMaxMediaSources
                   ? null
-                  : () => _addLink(context),
-              icon: const Icon(Icons.add_link, size: 18),
-              label: const Text('Add Video Link'),
+                  : () => _pickFromDisk(context),
+              icon: const Icon(Icons.folder_open, size: 18),
+              label: const Text('Choose video from disk'),
             ),
           ],
         ),
-        if (theme.videoLinks.isNotEmpty) ...[
+        if (theme.videoPaths.isNotEmpty) ...[
           const SizedBox(height: 8),
           _MediaRotationControls(
             mode: theme.mediaRotationMode,
             selectedIndex: theme.selectedMediaIndex,
-            sourceCount: theme.videoLinks.length,
+            sourceCount: theme.videoPaths.length,
             onModeChanged: (m) =>
                 onChanged(theme.copyWith(mediaRotationMode: m)),
             onIndexChanged: (i) =>
@@ -758,40 +722,6 @@ class _MediaRotationControls extends StatelessWidget {
       MediaRotationMode.manual => 'Manual',
     };
   }
-}
-
-/// Asks the user for a media link and returns it (or null when cancelled).
-Future<String?> _promptForLink(
-  BuildContext context, {
-  required String title,
-}) {
-  final controller = TextEditingController();
-  return showDialog<String>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Text(title),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        keyboardType: TextInputType.url,
-        decoration: const InputDecoration(
-          hintText: 'https://example.com/media.mp4',
-        ),
-        onSubmitted: (value) => Navigator.pop(dialogContext, value.trim()),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogContext),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () =>
-              Navigator.pop(dialogContext, controller.text.trim()),
-          child: const Text('Add'),
-        ),
-      ],
-    ),
-  );
 }
 
 class _ColorSwatch extends StatelessWidget {

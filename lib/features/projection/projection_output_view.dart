@@ -10,7 +10,6 @@ import 'package:go_router/go_router.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/win32_window_helper.dart';
 import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
-import 'package:visual_song_book/features/projection/image_link_cache.dart';
 import 'package:visual_song_book/features/projection/projection_appearance_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/projection/projection_theme.dart';
@@ -327,7 +326,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
   void _syncMediaTimer(ProjectionTheme theme) {
     final needsTimer =
         theme.mediaRotationMode == MediaRotationMode.timed &&
-        (theme.imageSources.length > 1 || theme.videoLinks.length > 1);
+        (theme.imagePaths.length > 1 || theme.videoPaths.length > 1);
     if (needsTimer && _mediaTimer == null) {
       _mediaTimer = Timer.periodic(const Duration(seconds: 15), (_) {
         if (mounted) setState(() => _mediaCycleIndex++);
@@ -892,8 +891,8 @@ class _PortraitNavButton extends StatelessWidget {
 }
 
 /// Themed backdrop behind the slide text — a radial gradient, a solid color
-/// block, an image (local file or cached link), or a looping video. Falls
-/// back to the default gradient when a media source is unavailable.
+/// block, a local image file, or a local looping video. Falls back to the
+/// default gradient when a media source is unavailable (e.g. a deleted file).
 class _ProjectionBackground extends StatelessWidget {
   final ProjectionTheme theme;
   final int slideIndex;
@@ -905,8 +904,8 @@ class _ProjectionBackground extends StatelessWidget {
     required this.mediaCycleIndex,
   });
 
-  int _resolveIndex(List<Object?> links) => theme.resolveMediaIndex(
-    listLength: links.length,
+  int _resolveIndex(List<Object?> paths) => theme.resolveMediaIndex(
+    listLength: paths.length,
     slideIndex: slideIndex,
     mediaCycleIndex: mediaCycleIndex,
   );
@@ -917,55 +916,32 @@ class _ProjectionBackground extends StatelessWidget {
       case ProjectionBackgroundType.solid:
         return ColoredBox(color: theme.solidColor);
       case ProjectionBackgroundType.image:
-        final sources = theme.imageSources;
-        if (sources.isEmpty) {
+        // Local file paths are only producible off-web; empty on web.
+        if (kIsWeb || theme.imagePaths.isEmpty) {
           return const _DefaultProjectionBackground();
         }
-        final source = sources[_resolveIndex(sources)];
-        if (!source.isLink) {
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.file(File(source.value), fit: BoxFit.cover),
-              const _DarkScrim(),
-            ],
-          );
-        }
-        if (kIsWeb) {
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.network(source.value, fit: BoxFit.cover),
-              const _DarkScrim(),
-            ],
-          );
-        }
-        // Remote link: prefer the on-disk cache, fall back to a direct fetch.
-        return FutureBuilder<File?>(
-          future: ImageLinkCache.cachedFile(source.value),
-          builder: (context, snapshot) {
-            final cached = snapshot.data;
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                if (cached != null)
-                  Image.file(cached, fit: BoxFit.cover)
-                else
-                  Image.network(source.value, fit: BoxFit.cover),
-                const _DarkScrim(),
-              ],
-            );
-          },
+        final paths = theme.imagePaths;
+        final path = paths[_resolveIndex(paths)];
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.file(
+              File(path),
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const _DefaultProjectionBackground(),
+            ),
+            const _DarkScrim(),
+          ],
         );
       case ProjectionBackgroundType.video:
-        final links = theme.videoLinks;
-        if (links.isEmpty || kIsWeb) {
+        if (kIsWeb || theme.videoPaths.isEmpty) {
           return const _DefaultProjectionBackground();
         }
-        final url = links[_resolveIndex(links)];
+        final paths = theme.videoPaths;
+        final path = paths[_resolveIndex(paths)];
         return ProjectionVideoBackground(
-          key: ValueKey('video_bg_$url'),
-          url: url,
+          key: ValueKey('video_bg_$path'),
+          path: path,
         );
       case ProjectionBackgroundType.gradient:
         if (theme.gradientColors.isEmpty) {
