@@ -519,6 +519,21 @@ class _ChangelogCardState extends State<ChangelogCard> {
   Widget build(BuildContext context) {
     final recentEntries = [
       const _ChangelogEntryWidget(
+        version: 'v2.0.0',
+        date: '2026-08-05',
+        changes: [
+          'Settings restructured into tabbed sections: Appearance, Projection, Data Sources, System',
+          'Bible reader UI refinements: active verse options, subtle selection colors, increased verse spacing',
+          'Cross-references displayed at top of sidebar with auto-scroll',
+          'Continue Reading button redesigned to filled button style',
+          'Verse options menu restricted to active verse only',
+          'Default Bible font changed to Lora at 19pt with adjustable font size slider in settings',
+          'Legacy Bible serif font preference migrated to new font family setting',
+          'Removed google_fonts dependency and restored bundled font usage',
+          'Fixed missing imports and analyzer errors across Bible and settings modules',
+        ],
+      ),
+      const _ChangelogEntryWidget(
         version: 'v1.9.0',
         date: '2026-08-04',
         changes: [
@@ -542,22 +557,6 @@ class _ChangelogCardState extends State<ChangelogCard> {
           'Eliminated title bar flash on secondary projection screen (Windows)',
           'Improved Enter-key interaction and responsiveness for search results',
           'Improved projection UI and controls visibility on Android/touch devices',
-        ],
-      ),
-      const _ChangelogEntryWidget(
-        version: 'v1.7.0',
-        date: '2026-07-28',
-        changes: [
-          'Settings restructured into 4 categories: Appearance, Projection, Library, About',
-          'Borderless fullscreen projection on Windows via Win32 FFI (title bar + taskbar hidden)',
-          'Mobile/desktop layout split — phone/tablet gets simplified single-column layout',
-          'Linked songbooks — link .vsbook files from Google Drive or shared folders with auto-sync',
-          'Source filter on songs tab — filter by songbook/source with counts',
-          'First-launch onboarding wizard for initial setup',
-          'Auto-chorus toggle moved inline next to Clear Screen in projection header',
-          'Import from File button — auto-detects .mdb vs .vsbook format',
-          'Changelog now expandable — shows latest 2 entries by default',
-          'Fixed Win32 fullscreen scheduler reentrancy crash (deferred via Timer.run)',
         ],
       ),
     ];
@@ -736,16 +735,18 @@ class AboutCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Text(
-            'Song management, KJV Bible reader, and live projection '
-            'for church worship teams. Import from various formats, '
-            'organize song sets, and project lyrics to external screens.',
-            style: TextStyle(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontSize: 13,
-              height: 1.5,
+          Center(
+            child: Text(
+              'Song management, KJV Bible reader, and live projection '
+              'for church worship teams. Import from various formats, '
+              'organize song sets, and project lyrics to external screens.',
+              style: TextStyle(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontSize: 13,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
           Center(
