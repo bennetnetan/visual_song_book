@@ -84,8 +84,7 @@ class MainDashboardPage extends ConsumerWidget {
                   Text(
                     currentTitle,
                     style: const TextStyle(
-                      fontFamily: 'Outfit',
-                      fontWeight: FontWeight.bold,
+                                            fontWeight: FontWeight.bold,
                       fontSize: 20,
                       letterSpacing: 0.5,
                     ),
@@ -125,8 +124,7 @@ class MainDashboardPage extends ConsumerWidget {
                             Text(
                               'Visual Book',
                               style: TextStyle(
-                                fontFamily: 'Outfit',
-                                fontWeight: FontWeight.bold,
+                                                                fontWeight: FontWeight.bold,
                                 fontSize: 16,
                                 color: Theme.of(context).colorScheme.primary,
                               ),

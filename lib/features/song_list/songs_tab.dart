@@ -79,7 +79,7 @@ class _SongsTabState extends ConsumerState<SongsTab> {
       showCheckmark: false,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         side: BorderSide(
           color: selected
               ? Theme.of(context).colorScheme.secondary.withValues(alpha: 0.4)
@@ -235,7 +235,7 @@ class _SongsTabState extends ConsumerState<SongsTab> {
                                         vertical: 10,
                                       ),
                                       border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(28),
+                                        borderRadius: BorderRadius.circular(16),
                                         borderSide: BorderSide.none,
                                       ),
                                     ),
@@ -249,7 +249,7 @@ class _SongsTabState extends ConsumerState<SongsTab> {
                                         padding: const EdgeInsets.all(6),
                                         decoration: BoxDecoration(
                                           color: Theme.of(context).colorScheme.primaryContainer,
-                                          borderRadius: const BorderRadius.all(Radius.circular(10)),
+                                          borderRadius: const BorderRadius.all(Radius.circular(12)),
                                         ),
                                         child: Image.asset(
                                           'assets/images/logo.png',
@@ -262,8 +262,7 @@ class _SongsTabState extends ConsumerState<SongsTab> {
                                     const Text(
                                       'Song Book',
                                       style: TextStyle(
-                                        fontFamily: 'Outfit',
-                                        fontWeight: FontWeight.bold,
+                                                                                fontWeight: FontWeight.bold,
                                         fontSize: 20,
                                         letterSpacing: 0.5,
                                       ),

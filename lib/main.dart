@@ -1,12 +1,11 @@
 import 'dart:io';
-import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:logging/logging.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
+import 'package:visual_song_book/core/theme/app_theme.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/core/utils/projection_window_args.dart';
 
@@ -19,11 +18,7 @@ import 'package:window_manager/window_manager.dart';
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // All fonts used via GoogleFonts.* are bundled in assets/fonts; never
-  // fetch them at runtime (throws loudly if a used variant is missing).
-  GoogleFonts.config.allowRuntimeFetching = false;
 
-  // Video playback uses the official video_player plugin; on Windows and
   // Linux the fvp backend (bundled FFmpeg) handles local files — no system
   // libmpv dependency, so packaged builds (AppImage) work on clean machines.
 
@@ -105,51 +100,8 @@ class MyApp extends ConsumerWidget {
         ? const AsyncValue.data(true)
         : ref.watch(hasCompletedOnboardingProvider);
 
-    final lightTheme = FlexThemeData.light(
-      scheme: FlexScheme.tealM3,
-      useMaterial3: true,
-      fontFamily: 'Inter',
-      surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
-      blendLevel: 1,
-      subThemesData: const FlexSubThemesData(
-        inputDecoratorBorderType: FlexInputBorderType.outline,
-        inputDecoratorRadius: 16.0,
-        cardRadius: 16.0,
-        cardElevation: 0,
-        dialogRadius: 20.0,
-        dialogElevation: 0,
-        bottomSheetElevation: 0,
-        navigationBarElevation: 0,
-        navigationRailElevation: 0,
-        navigationRailUseIndicator: true,
-        appBarScrolledUnderElevation: 0,
-        elevatedButtonElevation: 0,
-        popupMenuElevation: 2,
-      ),
-    );
-
-    final darkTheme = FlexThemeData.dark(
-      scheme: FlexScheme.tealM3,
-      useMaterial3: true,
-      fontFamily: 'Inter',
-      surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
-      blendLevel: 2,
-      subThemesData: const FlexSubThemesData(
-        inputDecoratorBorderType: FlexInputBorderType.outline,
-        inputDecoratorRadius: 16.0,
-        cardRadius: 16.0,
-        cardElevation: 0,
-        dialogRadius: 20.0,
-        dialogElevation: 0,
-        bottomSheetElevation: 0,
-        navigationBarElevation: 0,
-        navigationRailElevation: 0,
-        navigationRailUseIndicator: true,
-        appBarScrolledUnderElevation: 0,
-        elevatedButtonElevation: 0,
-        popupMenuElevation: 2,
-      ),
-    );
+    final lightTheme = buildAppTheme(Brightness.light);
+    final darkTheme = buildAppTheme(Brightness.dark);
 
     return onboardingAsync.when(
       data: (completed) {

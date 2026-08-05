@@ -30,7 +30,7 @@ class HistoryTab extends ConsumerWidget {
           title: isLargeScreen
               ? const Text(
                   'Recent Activity',
-                  style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 )
               : null,
           actions: [

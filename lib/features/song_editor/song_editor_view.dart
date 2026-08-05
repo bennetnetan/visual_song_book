@@ -141,9 +141,6 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
               widget.songId != null ? 'Song updated!' : 'Song added!',
             ),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
           ),
         );
         context.pop();
@@ -175,7 +172,7 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
         context,
       ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(
           color: Theme.of(
             context,
@@ -183,7 +180,7 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
         ),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(
           color: Theme.of(
             context,
@@ -191,21 +188,21 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
         ),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(
           color: Theme.of(context).colorScheme.primary,
           width: 2,
         ),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(
           color: Theme.of(context).colorScheme.error,
           width: 1.5,
         ),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(
           color: Theme.of(context).colorScheme.error,
           width: 2,
@@ -228,8 +225,7 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
         title: Text(
           isEditing ? 'Edit Song' : 'New Song',
           style: const TextStyle(
-            fontFamily: 'Outfit',
-            fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
@@ -251,11 +247,7 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
                 onPressed: _save,
                 icon: const Icon(Icons.check, size: 18),
                 label: const Text('Save'),
-                style: FilledButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+                style: FilledButton.styleFrom(),
               ),
             ),
         ],
@@ -300,8 +292,7 @@ class _SongEditorViewState extends ConsumerState<SongEditorView> {
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 18.0),
                     textStyle: const TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 17,
+                                            fontSize: 17,
                       fontWeight: FontWeight.bold,
                     ),
                     shape: RoundedRectangleBorder(

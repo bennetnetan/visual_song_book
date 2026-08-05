@@ -33,9 +33,6 @@ class SetList extends StatelessWidget {
                 child: FilledButton.tonalIcon(
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
                   ),
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('New Set'),
@@ -47,9 +44,6 @@ class SetList extends StatelessWidget {
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
                   ),
                   icon: const Icon(Icons.file_upload, size: 18),
                   label: const Text('Import Set'),
@@ -82,7 +76,7 @@ class SetList extends StatelessWidget {
                           ? theme.colorScheme.secondaryContainer.withValues(alpha: 0.5)
                           : Colors.transparent,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
                         side: BorderSide(
                           color: isSelected
                               ? theme.colorScheme.primary.withValues(alpha: 0.3)

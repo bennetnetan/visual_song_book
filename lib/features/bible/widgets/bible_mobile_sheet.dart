@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:visual_song_book/features/bible/bible_controller.dart';
 import 'package:visual_song_book/features/bible/bible_repository.dart';
 
@@ -35,7 +34,7 @@ class BibleMobileCrossRefSheet extends ConsumerWidget {
               const SizedBox(height: 16),
               Text(
                 verse.reference,
-                style: GoogleFonts.inter(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.primary,
@@ -44,7 +43,8 @@ class BibleMobileCrossRefSheet extends ConsumerWidget {
               const SizedBox(height: 4),
               Text(
                 verse.text,
-                style: GoogleFonts.ebGaramond(
+                style: TextStyle(
+                  fontFamily: state.readingFontFamily,
                   fontSize: 16,
                   height: 1.4,
                   color: theme.colorScheme.onSurface,
@@ -55,7 +55,7 @@ class BibleMobileCrossRefSheet extends ConsumerWidget {
               const SizedBox(height: 8),
               Text(
                 'CROSS-REFERENCES',
-                style: GoogleFonts.inter(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.0,
@@ -68,7 +68,7 @@ class BibleMobileCrossRefSheet extends ConsumerWidget {
               else if (state.activeCrossReferences.isEmpty)
                 Text(
                   'No cross references found.',
-                  style: GoogleFonts.inter(
+                  style: TextStyle(
                       fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
                 )
               else
@@ -81,7 +81,7 @@ class BibleMobileCrossRefSheet extends ConsumerWidget {
                         contentPadding: EdgeInsets.zero,
                         title: Text(
                           cr.reference,
-                          style: GoogleFonts.inter(
+                          style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
                             color: theme.colorScheme.primary,
@@ -91,7 +91,7 @@ class BibleMobileCrossRefSheet extends ConsumerWidget {
                           cr.targetText,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
+                          style: TextStyle(
                             fontSize: 12,
                             color: theme.colorScheme.onSurfaceVariant,
                           ),

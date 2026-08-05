@@ -234,7 +234,6 @@ class SongListItem extends StatelessWidget {
                         child: Text(
                           song.body,
                           style: TextStyle(
-                            fontFamily: 'Lora',
                             fontSize: 14,
                             height: 1.5,
                             color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.95),

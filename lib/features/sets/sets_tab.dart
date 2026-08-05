@@ -68,18 +68,23 @@ class SetsTab extends ConsumerWidget {
                 label: const Text('Choose File (.json, .vsbset)'),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
               const SizedBox(height: 16),
-              const Row(
+              Row(
                 children: [
-                  Expanded(child: Divider()),
+                  const Expanded(child: Divider()),
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Text('OR', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: Text(
+                      'OR',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
-                  Expanded(child: Divider()),
+                  const Expanded(child: Divider()),
                 ],
               ),
               const SizedBox(height: 16),
@@ -92,7 +97,7 @@ class SetsTab extends ConsumerWidget {
                   border: OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
-                style: const TextStyle(fontFamily: 'RobotoMono', fontSize: 12),
+                style: const TextStyle(fontSize: 12),
               ),
             ],
           ),
@@ -218,7 +223,7 @@ class SetsTab extends ConsumerWidget {
                 !isLargeScreen && state.selectedSetId != null
                     ? notifier.selectedSet?.name ?? 'Set'
                     : 'Sets',
-                style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               actions: const [],
             ),
@@ -387,7 +392,10 @@ class SetsTab extends ConsumerWidget {
               Navigator.pop(ctx);
               ref.read(setsControllerProvider.notifier).deleteSet(id);
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'Delete',
+              style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+            ),
           ),
         ],
       ),

@@ -256,7 +256,10 @@ class _SetDetailState extends ConsumerState<SetDetail> {
               notifier.updateSongKeyInSet(widget.selectedSetId, item.songId, null);
               Navigator.pop(ctx);
             },
-            child: const Text('Clear Key', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'Clear Key',
+              style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -383,8 +386,7 @@ class _SetDetailState extends ConsumerState<SetDetail> {
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              fontFamily: 'Outfit',
-            ),
+                          ),
             overflow: TextOverflow.ellipsis,
           ),
         ),

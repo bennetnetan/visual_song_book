@@ -321,7 +321,10 @@ class _ProjectionHeader extends StatelessWidget {
               if (!isBible && state.currentSong != null)
                 Text(
                   'Song #${state.currentSong!.songNum} • Key: ${state.currentSong!.key ?? 'None'}',
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontSize: 13,
+                  ),
                 ),
               if (isBible)
                 Text(
@@ -346,8 +349,8 @@ class _ProjectionHeader extends StatelessWidget {
           icon: const Icon(Icons.close, size: 16),
           label: const Text('Clear Screen'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red[900],
-            foregroundColor: Colors.white,
+            backgroundColor: theme.colorScheme.error,
+            foregroundColor: theme.colorScheme.onError,
           ),
         ),
       ],
@@ -479,7 +482,7 @@ class _SlideListState extends State<_SlideList> {
         final slide = widget.state.slides[index];
         final isSelected = index == widget.state.currentSlideIndex;
         return Card(
-          elevation: isSelected ? 3 : 0,
+          elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(
@@ -1249,7 +1252,7 @@ class _SearchModeToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const bibleColor = Color(0xFF00E5CC);
+    final bibleColor = theme.colorScheme.tertiary;
     final songColor = theme.colorScheme.primary;
 
     return Row(
@@ -1377,7 +1380,9 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
           builder: (context, ref, child) {
             final isBible = ref.watch(projectionSearchProvider.select((s) => s.isBibleMode));
             final theme = Theme.of(context);
-            final color = isBible ? const Color(0xFF00E5CC) : theme.colorScheme.primary;
+            final color = isBible
+                ? theme.colorScheme.tertiary
+                : theme.colorScheme.primary;
 
             return ActionChip(
               onPressed: () => controller.openView(),
@@ -1795,7 +1800,7 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
               elevation: 0,
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 side: BorderSide(
                   color: isSelected
                       ? theme.colorScheme.primary.withValues(alpha: 0.8)
@@ -1815,13 +1820,18 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: (isExact ? theme.colorScheme.primary : const Color(0xFF00E5CC)).withValues(alpha: 0.12),
+                    color: (isExact
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.tertiary)
+                        .withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.menu_book,
                     size: 16,
-                    color: isExact ? theme.colorScheme.primary : const Color(0xFF00E5CC),
+                    color: isExact
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.tertiary,
                   ),
                 ),
                 title: HighlightedText(
@@ -1917,7 +1927,7 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
               elevation: 0,
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 side: BorderSide(
                   color: isSelected
                       ? theme.colorScheme.primary.withValues(alpha: 0.8)

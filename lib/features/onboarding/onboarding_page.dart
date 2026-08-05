@@ -182,8 +182,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             'Visual Song Book',
             style: theme.textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              fontFamily: 'Outfit',
-            ),
+                          ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),

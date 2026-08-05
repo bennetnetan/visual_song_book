@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:visual_song_book/core/models/source_mode.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
@@ -11,6 +10,8 @@ import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/data/importers/vsbook_importer.dart';
 import 'package:visual_song_book/data/services/linked_songbooks_service.dart';
+import 'package:visual_song_book/features/bible/bible_controller.dart';
+import 'package:visual_song_book/features/bible/bible_state.dart';
 import 'package:visual_song_book/features/projection/projection_appearance_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/projection/projection_theme.dart';
@@ -24,7 +25,7 @@ class SettingsCard extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: Theme.of(
             context,
@@ -66,7 +67,7 @@ class SectionHeader extends StatelessWidget {
         const SizedBox(width: 16),
         Text(
           title,
-          style: GoogleFonts.plusJakartaSans(
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -93,20 +94,19 @@ class ProjectionPreferencesCard extends ConsumerWidget {
           const SectionHeader(
             icon: Icons.settings_overscan,
             title: 'Projection Settings',
-            color: Colors.blue,
           ),
           const SizedBox(height: 24),
           SwitchListTile(
-            title: Text(
+            title: const Text(
               'Prevent Screen Sleep',
-              style: GoogleFonts.plusJakartaSans(
+              style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
               ),
             ),
-            subtitle: Text(
+            subtitle: const Text(
               'Keep the display active during presentation',
-              style: GoogleFonts.plusJakartaSans(fontSize: 12),
+              style: TextStyle(fontSize: 12),
             ),
             value: state.keepAwake,
             onChanged: notifier.setKeepAwake,
@@ -117,7 +117,7 @@ class ProjectionPreferencesCard extends ConsumerWidget {
             const Divider(height: 24),
             Text(
               'Projection Display Mode',
-              style: GoogleFonts.plusJakartaSans(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
                 color: theme.colorScheme.onSurface,
@@ -126,7 +126,7 @@ class ProjectionPreferencesCard extends ConsumerWidget {
             const SizedBox(height: 6),
             Text(
               'Choose how the live projection output should be positioned on desktop screens.',
-              style: GoogleFonts.plusJakartaSans(
+              style: TextStyle(
                 fontSize: 12,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -183,6 +183,9 @@ class AppearanceCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
     final notifier = ref.read(themeModeProvider.notifier);
+    final bibleState = ref.watch(bibleControllerProvider);
+    final bibleNotifier = ref.read(bibleControllerProvider.notifier);
+    final theme = Theme.of(context);
 
     return SettingsCard(
       child: Column(
@@ -191,12 +194,11 @@ class AppearanceCard extends ConsumerWidget {
           const SectionHeader(
             icon: Icons.palette,
             title: 'Appearance',
-            color: Colors.purple,
           ),
           const SizedBox(height: 24),
-          Text(
+          const Text(
             'Application Theme',
-            style: GoogleFonts.plusJakartaSans(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
             ),
@@ -226,10 +228,130 @@ class AppearanceCard extends ConsumerWidget {
             },
             showSelectedIcon: false,
           ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+          Text(
+            'Bible Reading Font',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Choose the typeface for scripture text in the Bible reader and search.',
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: bibleState.readingFontFamily,
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: theme.colorScheme.outlineVariant,
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+            items: kBibleReadingFonts.map((font) {
+              return DropdownMenuItem<String>(
+                value: font,
+                child: Row(
+                  children: [
+                    Text(
+                      _fontLabel(font),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontFamily: font,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '— for the LORD is good.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontFamily: font,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            onChanged: (font) {
+              if (font != null) bibleNotifier.setReadingFontFamily(font);
+            },
+          ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+          Text(
+            'Bible Font Size',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Adjust the text size for scripture in the Bible reader and search.',
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Slider(
+                  value: bibleState.bibleFontSize,
+                  min: 14,
+                  max: 36,
+                  divisions: 11,
+                  label: bibleState.bibleFontSize.toStringAsFixed(0),
+                  onChanged: (value) => bibleNotifier.setBibleFontSize(value),
+                ),
+              ),
+              SizedBox(
+                width: 44,
+                child: Text(
+                  bibleState.bibleFontSize.toStringAsFixed(0),
+                  textAlign: TextAlign.end,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
+
+  String _fontLabel(String font) => switch (font) {
+    'EBGaramond' => 'EB Garamond',
+    'Lora'       => 'Lora',
+    'Inter'      => 'Inter',
+    _            => font,
+  };
 }
 
 /// Configures the live projection appearance: slide text color, background
@@ -249,7 +371,6 @@ class ProjectionAppearanceCard extends ConsumerWidget {
           const SectionHeader(
             icon: Icons.slideshow,
             title: 'Projection Appearance',
-            color: Colors.teal,
           ),
           const SizedBox(height: 24),
           ProjectionAppearanceControls(
@@ -259,9 +380,9 @@ class ProjectionAppearanceCard extends ConsumerWidget {
           const Divider(height: 32),
 
           // ── Preview ──
-          Text(
+          const Text(
             'Preview',
-            style: GoogleFonts.plusJakartaSans(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
             ),
@@ -275,9 +396,9 @@ class ProjectionAppearanceCard extends ConsumerWidget {
             child: OutlinedButton.icon(
               onPressed: notifier.reset,
               icon: const Icon(Icons.restore, size: 18),
-              label: Text(
+              label: const Text(
                 'Restore Defaults',
-                style: GoogleFonts.plusJakartaSans(
+                style: TextStyle(
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -317,12 +438,11 @@ class ImportExportCard extends StatelessWidget {
           const SectionHeader(
             icon: Icons.import_export,
             title: 'Import & Export',
-            color: Colors.teal,
           ),
           const SizedBox(height: 12),
           Text(
             'Import songs from files or manage database backups.',
-            style: GoogleFonts.plusJakartaSans(
+            style: TextStyle(
               color: theme.colorScheme.onSurfaceVariant,
               fontSize: 13,
             ),
@@ -339,7 +459,7 @@ class ImportExportCard extends StatelessWidget {
                 const SizedBox(width: 12),
                 Text(
                   importStatus ?? 'Processing...',
-                  style: GoogleFonts.plusJakartaSans(
+                  style: TextStyle(
                     color: theme.colorScheme.primary,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
@@ -357,9 +477,6 @@ class ImportExportCard extends StatelessWidget {
                 label: const Text('Import Pre-installed Songbooks'),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -369,9 +486,6 @@ class ImportExportCard extends StatelessWidget {
                 label: const Text('Import from File (.vsbook / .mdb)'),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -381,9 +495,6 @@ class ImportExportCard extends StatelessWidget {
                 label: const Text('Export Backup (.vsbook)'),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
                 ),
               ),
             ],
@@ -406,10 +517,8 @@ class _ChangelogCardState extends State<ChangelogCard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     final recentEntries = [
-      const _ChangelogEntry(
+      const _ChangelogEntryWidget(
         version: 'v1.9.0',
         date: '2026-08-04',
         changes: [
@@ -425,7 +534,7 @@ class _ChangelogCardState extends State<ChangelogCard> {
           'Hygiene: dead code and unused dependencies removed, explicit lint rules, macOS target 11.0, CI with hermetic tests',
         ],
       ),
-      const _ChangelogEntry(
+      const _ChangelogEntryWidget(
         version: 'v1.7.1',
         date: '2026-07-31',
         changes: [
@@ -435,7 +544,7 @@ class _ChangelogCardState extends State<ChangelogCard> {
           'Improved projection UI and controls visibility on Android/touch devices',
         ],
       ),
-      const _ChangelogEntry(
+      const _ChangelogEntryWidget(
         version: 'v1.7.0',
         date: '2026-07-28',
         changes: [
@@ -451,88 +560,6 @@ class _ChangelogCardState extends State<ChangelogCard> {
           'Fixed Win32 fullscreen scheduler reentrancy crash (deferred via Timer.run)',
         ],
       ),
-      const _ChangelogEntry(
-        version: 'v1.6.0+2',
-        date: '2026-07-21',
-        changes: [
-          'Keyboard-scrolled search items now stay visible — replaced fixed-height scroll math with Scrollable.ensureVisible',
-          'Keyboard navigation hint moved above search results so it is always visible, not hidden below the list',
-        ],
-      ),
-      const _ChangelogEntry(
-        version: 'v1.6.0',
-        date: '2026-07-21',
-        changes: [
-          'Categories simplified — Full Song Book & Injili Song Book replace the dozens of individual imported categories',
-          'Unified storage directory — all app data consolidated in .visual_song_book/',
-          'Cross-book duplicates eliminated — seeded songs deduplicated by title alone',
-          'Sidebar starts minimized — NavigationRail collapsed by default on launch',
-          'Seed marker hardened — verifies DB actually has songs before trusting SharedPreferences marker',
-          'AppImage OS bar icon — icons embedded in hicolor theme paths with correct StartupWMClass',
-        ],
-      ),
-    ];
-
-    final olderEntries = [
-      const _ChangelogEntry(
-        version: 'v1.5.0',
-        date: '2026-07-21',
-        changes: [
-          'First-launch seeding — Full Song Book & Injili Song Book pre-loaded automatically on fresh install',
-          'Centralized AppLogger powered by Dart logging package (structured, level-aware, IDE-friendly)',
-          'SetsTab null-check crash fixed — graceful loading indicator when DB resolves before sets list',
-          'Strict DB staleness checks — stale selectedSetId auto-cleared when set is deleted externally',
-          'Reactive set-items stream — SongSetItems now watched live, eliminating stale-data races',
-          '100ms nav-ready dwell timer in search — type to search, pause to navigate with arrow keys',
-          'Enter to project highlighted result from search without touching the mouse',
-          'Subtle animated keyboard-hint indicator fades in when nav mode is active in search results',
-          'Linux window title fixed to "Visual Song Book" with app logo embedded in GTK titlebar',
-          'Android per-ABI release APKs (armeabi-v7a, arm64-v8a, x86_64)',
-          'Linux AppImage with embedded logo and AppDir integration',
-        ],
-      ),
-      const _ChangelogEntry(
-        version: 'v1.4.2',
-        date: '2026-06-26',
-        changes: [
-          'Multi-monitor detection — projection opens secondary window on multi-display, fullscreen on single',
-          'UI polish — subtle hover-only nav arrows, transparent controls, PopScope blocks back gesture in projection',
-          'Fixed Positioned/AnimatedOpacity nesting crash in projection output view',
-          'Removed redundant CHANGELOG section from About card, consolidated into versioned Changelog card',
-          'Removed Bible search back button on mobile (was opening book picker instead of navigating back)',
-          'App bar hidden on mobile for History and Sets tabs',
-          'Mobile-friendly action buttons for Sets with redesigned layout',
-          'Unified Bible app bar font styling with dashboard tabs',
-          'Collapsible inline lyrics preview on mobile song list',
-          'Slide timeline with auto-scroll to active verse in projection view',
-        ],
-      ),
-      const _ChangelogEntry(
-        version: 'v1.4.1',
-        date: '2026-06-25',
-        changes: [
-          'Inline song preview with collapsible lyrics on mobile',
-          'Low-opacity slide timeline at bottom of projection output',
-          'Drag-and-drop reorder hint above set list',
-          'Full-color app icon branding throughout UI',
-          'Mobile optimization — hide projection tab, clean up Bible book pickers',
-          'High-resolution app icon logo in settings',
-        ],
-      ),
-      const _ChangelogEntry(
-        version: 'v1.4.0',
-        date: '2026-06-24',
-        changes: [
-          'Interactive Book and Chapter pop-up navigation dialog matching Bible specs',
-          'Subtle inline verse cross-references displayable for active verses',
-          'Bible Bookmarks list supported on mobile and desktop via History tab',
-          'Overhauled settings cards into clean, responsive Material 3 flat designs',
-          'Unified Project actions for Bible, Songs, and Sets with Display settings options',
-          'Responsive stacked live preview layout for narrow screen mobile devices',
-          'Subtle hover-only display controls in projection output view',
-          'Implemented drag-and-drop song sets reordering and inline list search filtering',
-        ],
-      ),
     ];
 
     return SettingsCard(
@@ -542,57 +569,46 @@ class _ChangelogCardState extends State<ChangelogCard> {
           const SectionHeader(
             icon: Icons.history,
             title: 'Changelog',
-            color: Colors.amber,
           ),
           const SizedBox(height: 24),
-          ...recentEntries,
-          if (_showOlder) ...olderEntries,
-          if (olderEntries.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: () => setState(() => _showOlder = !_showOlder),
-              child: Row(
-                children: [
-                  Icon(
-                    _showOlder ? Icons.expand_less : Icons.expand_more,
-                    size: 18,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    _showOlder
-                        ? 'Hide older versions'
-                        : 'Show ${olderEntries.length} older versions',
-                    style: GoogleFonts.plusJakartaSans(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
+          ...recentEntries.take(_showOlder ? recentEntries.length : 1).map((entry) => Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _ChangelogEntryWidget(
+                  version: entry.version,
+                  date: entry.date,
+                  changes: entry.changes,
+                  expanded: _showOlder || entry == recentEntries.first,
+                ),
+              )),
+          if (!_showOlder && recentEntries.length > 1)
+            TextButton.icon(
+              onPressed: () => setState(() => _showOlder = true),
+              icon: const Icon(Icons.expand_more, size: 18),
+              label: Text('Show ${recentEntries.length - 1} more entries'),
             ),
-          ],
         ],
       ),
     );
   }
 }
 
-class _ChangelogEntry extends StatelessWidget {
+class _ChangelogEntryWidget extends StatelessWidget {
   final String version;
   final String date;
   final List<String> changes;
+  final bool expanded;
 
-  const _ChangelogEntry({
+  const _ChangelogEntryWidget({
     required this.version,
     required this.date,
     required this.changes,
+    this.expanded = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final visibleChanges = expanded ? changes : changes.take(1).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -603,11 +619,11 @@ class _ChangelogEntry extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: theme.colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 version,
-                style: GoogleFonts.plusJakartaSans(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                   color: theme.colorScheme.onPrimaryContainer,
@@ -617,7 +633,7 @@ class _ChangelogEntry extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               date,
-              style: GoogleFonts.plusJakartaSans(
+              style: TextStyle(
                 color: theme.colorScheme.onSurfaceVariant,
                 fontSize: 12,
               ),
@@ -625,7 +641,7 @@ class _ChangelogEntry extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        ...changes.map(
+        ...visibleChanges.map(
           (change) => Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 4),
             child: Row(
@@ -633,7 +649,7 @@ class _ChangelogEntry extends StatelessWidget {
               children: [
                 Text(
                   '• ',
-                  style: GoogleFonts.plusJakartaSans(
+                  style: TextStyle(
                     color: theme.colorScheme.onSurfaceVariant,
                     fontSize: 13,
                   ),
@@ -641,7 +657,7 @@ class _ChangelogEntry extends StatelessWidget {
                 Expanded(
                   child: Text(
                     change,
-                    style: GoogleFonts.plusJakartaSans(
+                    style: TextStyle(
                       color: theme.colorScheme.onSurfaceVariant,
                       fontSize: 13,
                       height: 1.4,
@@ -671,7 +687,6 @@ class AboutCard extends StatelessWidget {
           const SectionHeader(
             icon: Icons.info_outline,
             title: 'About',
-            color: Colors.teal,
           ),
           const SizedBox(height: 24),
           Center(
@@ -699,18 +714,18 @@ class AboutCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text(
+                const Text(
                   'Visual Song Book',
-                  style: GoogleFonts.plusJakartaSans(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Chip(
-                  label: Text(
+                  label: const Text(
                     'v1.9.0',
-                    style: GoogleFonts.plusJakartaSans(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
@@ -725,7 +740,7 @@ class AboutCard extends StatelessWidget {
             'Song management, KJV Bible reader, and live projection '
             'for church worship teams. Import from various formats, '
             'organize song sets, and project lyrics to external screens.',
-            style: GoogleFonts.plusJakartaSans(
+            style: TextStyle(
               color: theme.colorScheme.onSurfaceVariant,
               fontSize: 13,
               height: 1.5,
@@ -736,7 +751,7 @@ class AboutCard extends StatelessWidget {
           Center(
             child: Text(
               'Made by BenjaNetan',
-              style: GoogleFonts.plusJakartaSans(
+              style: TextStyle(
                 color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
@@ -767,13 +782,12 @@ class SourceModeCard extends ConsumerWidget {
           const SectionHeader(
             icon: Icons.source,
             title: 'Song Source',
-            color: Colors.blue,
           ),
           const SizedBox(height: 8),
           Text(
             'Choose which songs to load on startup. '
             'This setting determines whether bundled songbooks, linked files, or both are loaded.',
-            style: GoogleFonts.plusJakartaSans(
+            style: TextStyle(
               color: theme.colorScheme.onSurfaceVariant,
               fontSize: 13,
             ),
@@ -888,13 +902,12 @@ class LinkedSongbooksCard extends ConsumerWidget {
           const SectionHeader(
             icon: Icons.sync,
             title: 'Linked Songbooks',
-            color: Colors.cyan,
           ),
           const SizedBox(height: 8),
           Text(
             'Link .vsbook files from Google Drive or shared folders. '
             'The app checks for changes on startup and reimports automatically.',
-            style: GoogleFonts.plusJakartaSans(
+            style: TextStyle(
               color: theme.colorScheme.onSurfaceVariant,
               fontSize: 13,
             ),
@@ -920,7 +933,7 @@ class LinkedSongbooksCard extends ConsumerWidget {
                         const SizedBox(height: 8),
                         Text(
                           'No linked songbooks yet.',
-                          style: GoogleFonts.plusJakartaSans(
+                          style: TextStyle(
                             fontStyle: FontStyle.italic,
                             color: theme.colorScheme.onSurfaceVariant,
                             fontSize: 13,
@@ -929,7 +942,7 @@ class LinkedSongbooksCard extends ConsumerWidget {
                         const SizedBox(height: 4),
                         Text(
                           'Click "Link File" to get started.',
-                          style: GoogleFonts.plusJakartaSans(
+                          style: TextStyle(
                             color: theme.colorScheme.onSurfaceVariant
                                 .withValues(alpha: 0.6),
                             fontSize: 12,
@@ -948,7 +961,7 @@ class LinkedSongbooksCard extends ConsumerWidget {
                     elevation: 0,
                     margin: const EdgeInsets.only(bottom: 10),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       side: BorderSide(
                         color: theme.colorScheme.outlineVariant.withValues(
                           alpha: 0.5,
@@ -968,7 +981,7 @@ class LinkedSongbooksCard extends ConsumerWidget {
                                     ? theme.colorScheme.tertiary.withValues(alpha: 0.1)
                                     : theme.colorScheme.primary.withValues(alpha: 0.1))
                               : theme.colorScheme.error.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
                           exists
@@ -984,7 +997,7 @@ class LinkedSongbooksCard extends ConsumerWidget {
                       ),
                       title: Text(
                         book.name,
-                        style: GoogleFonts.plusJakartaSans(
+                        style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
@@ -994,7 +1007,7 @@ class LinkedSongbooksCard extends ConsumerWidget {
                         children: [
                           Text(
                             book.path,
-                            style: GoogleFonts.plusJakartaSans(
+                            style: TextStyle(
                               fontSize: 11,
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -1004,16 +1017,16 @@ class LinkedSongbooksCard extends ConsumerWidget {
                           if (!exists)
                             Text(
                               'File not found',
-                              style: GoogleFonts.plusJakartaSans(
+                              style: TextStyle(
                                 fontSize: 11,
-                                color: Colors.red,
+                                color: theme.colorScheme.error,
                                 fontWeight: FontWeight.w500,
                               ),
                             )
                           else if (needsSync)
-                            Text(
+                            const Text(
                               'Changes detected — will sync on next startup',
-                              style: GoogleFonts.plusJakartaSans(
+                              style: TextStyle(
                                 fontSize: 11,
                                 color: Colors.orange,
                                 fontWeight: FontWeight.w500,
@@ -1022,7 +1035,7 @@ class LinkedSongbooksCard extends ConsumerWidget {
                           else if (book.lastImportedAt != null)
                             Text(
                               'Last synced: ${_formatDate(book.lastImportedAt!)}',
-                              style: GoogleFonts.plusJakartaSans(
+                              style: const TextStyle(
                                 fontSize: 11,
                                 color: Colors.green,
                               ),
@@ -1055,9 +1068,6 @@ class LinkedSongbooksCard extends ConsumerWidget {
                   label: const Text('Link File'),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
                   ),
                 ),
               ),
@@ -1070,9 +1080,6 @@ class LinkedSongbooksCard extends ConsumerWidget {
                     label: const Text('Sync Now'),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
                     ),
                   ),
                 ),

@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
@@ -12,7 +11,62 @@ import 'package:visual_song_book/data/importers/vsbook_importer.dart';
 import 'package:visual_song_book/features/settings/settings_cards.dart';
 import 'package:visual_song_book/features/song_list/song_list_controller.dart';
 
-// Main Settings Tab Widget — non-tabbed grouped layout
+enum _SettingsSectionId {
+  appearance,
+  projection,
+  dataSources,
+  system,
+}
+
+class _SettingsSection {
+  final _SettingsSectionId id;
+  final String label;
+  final IconData icon;
+  final IconData selectedIcon;
+
+  const _SettingsSection({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.selectedIcon,
+  });
+}
+
+const _appearanceSection = _SettingsSection(
+  id: _SettingsSectionId.appearance,
+  label: 'Appearance',
+  icon: Icons.palette_outlined,
+  selectedIcon: Icons.palette,
+);
+
+const _projectionSection = _SettingsSection(
+  id: _SettingsSectionId.projection,
+  label: 'Projection',
+  icon: Icons.slideshow_outlined,
+  selectedIcon: Icons.slideshow,
+);
+
+const _dataSourcesSection = _SettingsSection(
+  id: _SettingsSectionId.dataSources,
+  label: 'Data Sources',
+  icon: Icons.folder_copy_rounded,
+  selectedIcon: Icons.folder_copy,
+);
+
+const _systemSection = _SettingsSection(
+  id: _SettingsSectionId.system,
+  label: 'System',
+  icon: Icons.settings_suggest_rounded,
+  selectedIcon: Icons.settings_suggest,
+);
+
+const List<_SettingsSection> _settingsSections = [
+  _appearanceSection,
+  _projectionSection,
+  _dataSourcesSection,
+  _systemSection,
+];
+
 class SettingsTab extends ConsumerStatefulWidget {
   const SettingsTab({super.key});
 
@@ -24,6 +78,112 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   bool _isImporting = false;
   String? _importStatus;
   bool _isExporting = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isLargeScreen = getLayoutMode(context) == LayoutMode.desktop;
+
+    return DefaultTabController(
+      length: _settingsSections.length,
+      child: Scaffold(
+        appBar: AppBar(
+          toolbarHeight: isLargeScreen ? 0 : kToolbarHeight,
+          title: isLargeScreen ? null : const Text('Settings'),
+          bottom: TabBar(
+            isScrollable: false,
+            tabs: _settingsSections
+                .map(
+                  (s) => Tab(text: s.label),
+                )
+                .toList(),
+          ),
+        ),
+        body: _buildSectionContent(theme),
+      ),
+    );
+  }
+
+  Widget _buildSectionContent(ThemeData theme) {
+    final isLargeScreen = getLayoutMode(context) == LayoutMode.desktop;
+
+    return TabBarView(
+      children: [
+        _buildAppearanceContent(isLargeScreen),
+        _buildProjectionContent(isLargeScreen),
+        _buildDataSourcesContent(theme, isLargeScreen),
+        _buildSystemContent(theme),
+      ],
+    );
+  }
+
+  Widget _buildAppearanceContent(bool isLargeScreen) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
+      child: Column(
+        children: const [
+          AppearanceCard(),
+          SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProjectionContent(bool isLargeScreen) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
+      child: Column(
+        children: const [
+          ProjectionAppearanceCard(),
+          SizedBox(height: 24),
+          ProjectionPreferencesCard(),
+          SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDataSourcesContent(ThemeData theme, bool isLargeScreen) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
+      child: Column(
+        children: [
+          const SourceModeCard(),
+          const SizedBox(height: 16),
+          const LinkedSongbooksCard(),
+          const SizedBox(height: 16),
+          ImportExportCard(
+            isImporting: _isImporting,
+            importStatus: _importStatus,
+            isExporting: _isExporting,
+            onImportFile: _importFile,
+            onImportBundled: _importBundled,
+            onExportVsBook: _exportVsBook,
+          ),
+          const SizedBox(height: 16),
+          const _DataSourcesCard(),
+          const SizedBox(height: 16),
+          const _SongCollectionsCard(),
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSystemContent(ThemeData theme) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          const AboutCard(),
+          const SizedBox(height: 16),
+          const ChangelogCard(),
+          const SizedBox(height: 32),
+          _buildFooter(theme),
+        ],
+      ),
+    );
+  }
 
   Future<void> _importFile() async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -162,107 +322,6 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isLargeScreen = getLayoutMode(context) == LayoutMode.desktop;
-
-    return Scaffold(
-      body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(
-          horizontal: isLargeScreen ? 48 : 16,
-          vertical: 24,
-        ),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: isLargeScreen ? 780 : double.infinity,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // The "Settings / Application preferences" header is hidden on
-              // mobile because the dashboard already shows a Settings AppBar.
-              if (isLargeScreen) ...[
-                _buildPageHeader(theme),
-                const SizedBox(height: 32),
-              ],
-              const AppearanceCard(),
-              const SizedBox(height: 24),
-              const ProjectionAppearanceCard(),
-              const SizedBox(height: 24),
-              const ProjectionPreferencesCard(),
-              const SizedBox(height: 24),
-              const SourceModeCard(),
-              const SizedBox(height: 16),
-              const LinkedSongbooksCard(),
-              const SizedBox(height: 16),
-              ImportExportCard(
-                isImporting: _isImporting,
-                importStatus: _importStatus,
-                isExporting: _isExporting,
-                onImportFile: _importFile,
-                onImportBundled: _importBundled,
-                onExportVsBook: _exportVsBook,
-              ),
-              const SizedBox(height: 16),
-              const _DataSourcesCard(),
-              const SizedBox(height: 16),
-              const _SongCollectionsCard(),
-              const SizedBox(height: 24),
-              const AboutCard(),
-              const SizedBox(height: 16),
-              const ChangelogCard(),
-              const SizedBox(height: 32),
-              _buildFooter(theme),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPageHeader(ThemeData theme) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Icon(
-            Icons.settings_rounded,
-            color: theme.colorScheme.onPrimaryContainer,
-            size: 24,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Settings',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                letterSpacing: -0.5,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Application preferences',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 13,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
   Widget _buildFooter(ThemeData theme) {
     return Container(
       width: double.infinity,
@@ -292,7 +351,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
               const SizedBox(width: 12),
               Text(
                 'Visual Song Book v1.9.0',
-                style: GoogleFonts.plusJakartaSans(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: theme.colorScheme.onSurfaceVariant,
@@ -303,7 +362,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
           const SizedBox(height: 8),
           Text(
             'Made by BenjaNetan',
-            style: GoogleFonts.plusJakartaSans(
+            style: TextStyle(
               fontSize: 11,
               color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
@@ -330,12 +389,11 @@ class _DataSourcesCard extends ConsumerWidget {
           const SectionHeader(
             icon: Icons.folder_copy_rounded,
             title: 'Manage Data Sources',
-            color: Colors.deepOrange,
           ),
           const SizedBox(height: 8),
           Text(
             'View and remove imported songbook collections.',
-            style: GoogleFonts.plusJakartaSans(
+            style: TextStyle(
               color: theme.colorScheme.onSurfaceVariant,
               fontSize: 13,
             ),
@@ -363,7 +421,7 @@ class _DataSourcesCard extends ConsumerWidget {
                         const SizedBox(height: 8),
                         Text(
                           'No external sources found.',
-                          style: GoogleFonts.plusJakartaSans(
+                          style: TextStyle(
                             fontStyle: FontStyle.italic,
                             color: theme.colorScheme.onSurfaceVariant,
                             fontSize: 13,
@@ -380,7 +438,7 @@ class _DataSourcesCard extends ConsumerWidget {
                     elevation: 0,
                     margin: const EdgeInsets.only(bottom: 10),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       side: BorderSide(
                         color: theme.colorScheme.outlineVariant
                             .withValues(alpha: 0.5),
@@ -395,7 +453,7 @@ class _DataSourcesCard extends ConsumerWidget {
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surfaceContainerHigh,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
                           Icons.library_books_outlined,
@@ -405,14 +463,14 @@ class _DataSourcesCard extends ConsumerWidget {
                       ),
                       title: Text(
                         source.split(Platform.pathSeparator).last,
-                        style: GoogleFonts.plusJakartaSans(
+                        style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                         ),
                       ),
                       subtitle: Text(
                         source,
-                        style: GoogleFonts.plusJakartaSans(
+                        style: TextStyle(
                           fontSize: 11,
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -525,13 +583,12 @@ class _SongCollectionsCardState extends ConsumerState<_SongCollectionsCard> {
           const SectionHeader(
             icon: Icons.collections_bookmark_outlined,
             title: 'Song Collections',
-            color: Colors.teal,
           ),
           const SizedBox(height: 8),
           Text(
             'Collections group songs into categories. Deleting a collection '
             'keeps its songs — they become Uncategorized.',
-            style: GoogleFonts.plusJakartaSans(
+            style: TextStyle(
               color: theme.colorScheme.onSurfaceVariant,
               fontSize: 13,
             ),
@@ -554,7 +611,7 @@ class _SongCollectionsCardState extends ConsumerState<_SongCollectionsCard> {
                     const SizedBox(height: 8),
                     Text(
                       'No collections yet. Create one from the Songs tab.',
-                      style: GoogleFonts.plusJakartaSans(
+                      style: TextStyle(
                         fontStyle: FontStyle.italic,
                         color: theme.colorScheme.onSurfaceVariant,
                         fontSize: 13,
@@ -572,7 +629,7 @@ class _SongCollectionsCardState extends ConsumerState<_SongCollectionsCard> {
                   elevation: 0,
                   margin: const EdgeInsets.only(bottom: 10),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                     side: BorderSide(
                       color: theme.colorScheme.outlineVariant
                           .withValues(alpha: 0.5),
@@ -587,7 +644,7 @@ class _SongCollectionsCardState extends ConsumerState<_SongCollectionsCard> {
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         Icons.collections_bookmark_outlined,
@@ -597,14 +654,14 @@ class _SongCollectionsCardState extends ConsumerState<_SongCollectionsCard> {
                     ),
                     title: Text(
                       category.name,
-                      style: GoogleFonts.plusJakartaSans(
+                      style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 13,
                       ),
                     ),
                     subtitle: Text(
                       '$count song${count == 1 ? '' : 's'}',
-                      style: GoogleFonts.plusJakartaSans(
+                      style: TextStyle(
                         fontSize: 11,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -677,11 +734,11 @@ class _DangerZoneSection extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: theme.colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 'DANGER ZONE',
-                style: GoogleFonts.plusJakartaSans(
+                style: TextStyle(
                   color: theme.colorScheme.onErrorContainer,
                   fontWeight: FontWeight.bold,
                   fontSize: 11,
@@ -694,7 +751,7 @@ class _DangerZoneSection extends ConsumerWidget {
         const SizedBox(height: 8),
         Text(
           'These actions are irreversible. Please proceed with extreme caution.',
-          style: GoogleFonts.plusJakartaSans(
+          style: TextStyle(
             color: theme.colorScheme.onSurfaceVariant,
             fontSize: 12,
           ),
@@ -708,9 +765,6 @@ class _DangerZoneSection extends ConsumerWidget {
             foregroundColor: theme.colorScheme.error,
             side: BorderSide(color: theme.colorScheme.error.withValues(alpha: 0.6)),
             minimumSize: const Size.fromHeight(44),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
           ),
         ),
       ],
