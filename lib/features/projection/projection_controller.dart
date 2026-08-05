@@ -13,6 +13,7 @@ import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/models/verse.dart';
 import 'package:visual_song_book/data/repositories/song_repository.dart';
 import 'package:visual_song_book/features/bible/bible_repository.dart';
+import 'package:visual_song_book/features/projection/projection_theme.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 final _log = AppLogger.get('ProjectionController');
@@ -132,6 +133,13 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       _loadSettings();
     }
     _setupMainWindowHandler();
+
+    // Push appearance changes to an open projector window immediately.
+    // Theme sync otherwise only happens on slide navigation, so changing
+    // colors in Settings wouldn't reach an already-open PC projector window.
+    ref.listen(projectionThemeProvider, (_, __) {
+      _syncSecondaryWindow();
+    });
   }
 
   @override
@@ -601,6 +609,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     final label = slide?.label ?? '';
     final fontSize = state.fontSize;
     final isBible = state.isBibleMode;
+    final projTheme = ref.read(projectionThemeProvider);
 
     try {
       await _secondaryWindow!.invokeMethod('update_slide', {
@@ -613,6 +622,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         // state is never populated.
         'slideLabels': state.slides.map((v) => v.label).toList(),
         'currentIndex': state.currentSlideIndex,
+        // Appearance settings so the secondary engine renders the same
+        // background + text color as the main projection.
+        'slideTheme': projTheme.toJson(),
       });
       return true;
     } catch (e) {

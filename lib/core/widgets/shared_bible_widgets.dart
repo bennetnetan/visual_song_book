@@ -51,12 +51,14 @@ class VerseText extends StatelessWidget {
   final String text;
   final String? referenceLabel;
   final double fontSize;
+  final Color color;
 
   const VerseText({
     required this.text,
     this.referenceLabel,
     super.key,
     this.fontSize = 40.0,
+    this.color = Colors.white,
   });
 
   @override
@@ -103,6 +105,11 @@ class VerseText extends StatelessWidget {
         }
         finalFontSize = finalFontSize.clamp(18.0, 180.0);
 
+        // Dark text (light backgrounds) needs soft light shadows, not the
+        // heavy black ones used for light text on dark backdrops.
+        final bool lightText =
+            ThemeData.estimateBrightnessForColor(color) == Brightness.dark;
+
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 350),
           switchInCurve: Curves.easeInOut,
@@ -147,23 +154,37 @@ class VerseText extends StatelessWidget {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontFamily: 'Outfit',
-                            color: Colors.white,
+                            color: color,
                             fontSize: finalFontSize,
                             fontWeight: FontWeight.w600,
                             height: 1.35,
                             letterSpacing: 0.3,
-                            shadows: [
-                              Shadow(
-                                offset: const Offset(0, 2),
-                                blurRadius: 12,
-                                color: Colors.black.withValues(alpha: 0.8),
-                              ),
-                              Shadow(
-                                offset: const Offset(0, 0),
-                                blurRadius: 30,
-                                color: const Color(0xFF00E5CC).withValues(alpha: 0.12),
-                              ),
-                            ],
+                            shadows: lightText
+                                ? [
+                                    Shadow(
+                                      offset: const Offset(0, 2),
+                                      blurRadius: 12,
+                                      color: Colors.black.withValues(
+                                        alpha: 0.8,
+                                      ),
+                                    ),
+                                    Shadow(
+                                      offset: const Offset(0, 0),
+                                      blurRadius: 30,
+                                      color: const Color(
+                                        0xFF00E5CC,
+                                      ).withValues(alpha: 0.12),
+                                    ),
+                                  ]
+                                : [
+                                    Shadow(
+                                      offset: const Offset(0, 1),
+                                      blurRadius: 8,
+                                      color: Colors.white.withValues(
+                                        alpha: 0.5,
+                                      ),
+                                    ),
+                                  ],
                           ),
                         ),
                       ),

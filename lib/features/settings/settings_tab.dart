@@ -188,6 +188,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
               ],
               const AppearanceCard(),
               const SizedBox(height: 24),
+              const ProjectionAppearanceCard(),
+              const SizedBox(height: 24),
               const ProjectionPreferencesCard(),
               const SizedBox(height: 24),
               const SourceModeCard(),
