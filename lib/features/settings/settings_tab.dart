@@ -180,9 +180,15 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildPageHeader(theme),
-              const SizedBox(height: 32),
+              // The "Settings / Application preferences" header is hidden on
+              // mobile because the dashboard already shows a Settings AppBar.
+              if (isLargeScreen) ...[
+                _buildPageHeader(theme),
+                const SizedBox(height: 32),
+              ],
               const AppearanceCard(),
+              const SizedBox(height: 24),
+              const ProjectionAppearanceCard(),
               const SizedBox(height: 24),
               const ProjectionPreferencesCard(),
               const SizedBox(height: 24),

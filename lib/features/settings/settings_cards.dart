@@ -11,7 +11,9 @@ import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/data/importers/vsbook_importer.dart';
 import 'package:visual_song_book/data/services/linked_songbooks_service.dart';
+import 'package:visual_song_book/features/projection/projection_appearance_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
+import 'package:visual_song_book/features/projection/projection_theme.dart';
 
 class SettingsCard extends StatelessWidget {
   final Widget child;
@@ -223,6 +225,63 @@ class AppearanceCard extends ConsumerWidget {
               notifier.setThemeMode(val.first);
             },
             showSelectedIcon: false,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Configures the live projection appearance: slide text color, background
+/// style (gradient / color block / image), and auto-contrast text.
+class ProjectionAppearanceCard extends ConsumerWidget {
+  const ProjectionAppearanceCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = ref.watch(projectionThemeProvider);
+    final notifier = ref.read(projectionThemeProvider.notifier);
+
+    return SettingsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader(
+            icon: Icons.slideshow,
+            title: 'Projection Appearance',
+            color: Colors.teal,
+          ),
+          const SizedBox(height: 24),
+          ProjectionAppearanceControls(
+            theme: theme,
+            onChanged: notifier.setTheme,
+          ),
+          const Divider(height: 32),
+
+          // ── Preview ──
+          Text(
+            'Preview',
+            style: GoogleFonts.plusJakartaSans(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ProjectionPreview(theme: theme),
+
+          const SizedBox(height: 24),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: notifier.reset,
+              icon: const Icon(Icons.restore, size: 18),
+              label: Text(
+                'Restore Defaults',
+                style: GoogleFonts.plusJakartaSans(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -720,7 +779,7 @@ class SourceModeCard extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-          _SourceModeSelector(),
+          const _SourceModeSelector(),
         ],
       ),
     );

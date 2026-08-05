@@ -10,7 +10,9 @@ import 'package:go_router/go_router.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/win32_window_helper.dart';
 import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
+import 'package:visual_song_book/features/projection/projection_appearance_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
+import 'package:visual_song_book/features/projection/projection_theme.dart';
 
 class ProjectionOutputView extends ConsumerStatefulWidget {
   const ProjectionOutputView({super.key});
@@ -26,10 +28,13 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
   bool _ipcIsBible = false;
   double? _ipcFontSize;
   List<String> _ipcSlideLabels = const [];
+  int _ipcCurrentIndex = 0;
+  ProjectionTheme _ipcTheme = const ProjectionTheme();
   bool _isSecondaryWindow = false;
   late final FocusNode _focusNode;
   bool _isClosing = false;
   bool _isHovering = false;
+  bool _isCloseHovered = false;
   int _originalWindowStyle = 0;
   bool _isGoingFullscreen = false;
   VoidCallback? _focusListener; // re-asserts fullscreen on window focus gain
@@ -38,6 +43,14 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
   bool _pinchActive = false;
   Offset _panStartOffset = Offset.zero;
   double _panDeltaX = 0.0;
+
+  /// Advances the media background every tick when timed rotation is on.
+  int _mediaCycleIndex = 0;
+  Timer? _mediaTimer;
+
+  /// Whether the projection is currently locked to portrait orientation.
+  /// Defaults to false so behaviour matches the historic landscape lock.
+  bool _isPortraitMode = false;
 
   /// True on Android and iOS — used to select mobile-friendly UI variants
   /// (always-visible controls rather than hover-gated desktop controls).
@@ -144,6 +157,14 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
             _ipcSlideLabels =
                 (args['slideLabels'] as List).cast<String>();
           }
+          if (args['currentIndex'] != null) {
+            _ipcCurrentIndex = (args['currentIndex'] as num).toInt();
+          }
+          if (args['slideTheme'] != null) {
+            _ipcTheme = ProjectionTheme.fromJson(
+              Map<String, dynamic>.from(args['slideTheme'] as Map),
+            );
+          }
         });
       } else if (call.method == 'go_fullscreen') {
         // Only enter fullscreen if we haven't already — prevents double
@@ -212,6 +233,33 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
 
 
 
+  /// Toggles the mobile projection between landscape and portrait full-screen.
+  /// Mobile only: desktop projection windows manage their own size/fullscreen.
+  Future<void> _toggleOrientation() async {
+    final goPortrait = !_isPortraitMode;
+    setState(() => _isPortraitMode = goPortrait);
+    await SystemChrome.setPreferredOrientations(goPortrait
+        ? [DeviceOrientation.portraitUp]
+        : [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
+  }
+
+  /// Opens a floating appearance sheet (mobile only) with a live preview that
+  /// reflows for portrait/landscape, a commit button, and restore defaults.
+  void _openProjectionAppearance() {
+    if (_isSecondaryWindow) return;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => const ProjectionAppearanceSheet(),
+    );
+  }
+
   Future<void> _sendNavigateToMain(String action) async {
     try {
       final controllers = await WindowController.getAll();
@@ -273,8 +321,26 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
     }
   }
 
+  /// Starts (or stops) the background rotation timer so it tracks the active
+  /// theme. Idempotent — safe to call from every build.
+  void _syncMediaTimer(ProjectionTheme theme) {
+    final needsTimer =
+        theme.mediaRotationMode == MediaRotationMode.timed &&
+        (theme.imagePaths.length > 1 || theme.videoPaths.length > 1);
+    if (needsTimer && _mediaTimer == null) {
+      _mediaTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+        if (mounted) setState(() => _mediaCycleIndex++);
+      });
+    } else if (!needsTimer && _mediaTimer != null) {
+      _mediaTimer!.cancel();
+      _mediaTimer = null;
+    }
+  }
+
   @override
   void dispose() {
+    _mediaTimer?.cancel();
+    _mediaTimer = null;
     if (_focusListener != null) {
       _focusNode.removeListener(_focusListener!);
     }
@@ -307,6 +373,12 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
     final state = ref.watch(projectionControllerProvider);
     final notifier = ref.read(projectionControllerProvider.notifier);
 
+    // The secondary engine receives its theme over IPC (its controller state
+    // is never populated); every other window reads the live provider.
+    final ProjectionTheme projTheme = _isSecondaryWindow
+        ? _ipcTheme
+        : ref.watch(projectionThemeProvider);
+
     final String activeText = _isSecondaryWindow
         ? _ipcText
         : (state.currentSlide?.text ?? '');
@@ -329,6 +401,13 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
         ? _ipcSlideLabels.length
         : state.slides.length;
 
+    final int activeSlideIndex = _isSecondaryWindow
+        ? _ipcCurrentIndex
+        : state.currentSlideIndex;
+
+    // Keep the timed-rotation timer in step with the active theme.
+    _syncMediaTimer(projTheme);
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -350,7 +429,10 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
             }
           }
         },
-        // Pinch-to-zoom (scale font size) + Pan to swipe left/right (unified implementation to prevent gestures conflicts)
+        // Pinch-to-zoom (scale font size) + swipe left/right (unified
+        // implementation to prevent gesture conflicts). Pinch is detected by
+        // pointer count (>= 2), never by the float `scale` value, so a single-
+        // finger swipe cannot accidentally trigger a font change.
         onScaleStart: (details) {
           _baseFontSize = activeFontSize;
           _pinchActive = false;
@@ -358,11 +440,11 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
           _panDeltaX = 0.0;
         },
         onScaleUpdate: (details) {
-          if (details.scale != 1.0) {
+          if (details.pointerCount >= 2) {
             _pinchActive = true;
             final newSize = (_baseFontSize * details.scale).clamp(16.0, 160.0);
             notifier.setFontSize(newSize);
-          } else if (details.pointerCount == 1) {
+          } else if (!_pinchActive) {
             _panDeltaX = details.localFocalPoint.dx - _panStartOffset.dx;
           }
         },
@@ -370,7 +452,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
           if (_pinchActive) {
             notifier.persistFontSize();
           } else {
-            // Check horizontal swipe gesture threshold
+            // Horizontal swipe → previous / next slide (songs AND Bible).
             if (_panDeltaX.abs() > 60.0) {
               if (_panDeltaX < 0) {
                 if (_isSecondaryWindow) {
@@ -424,27 +506,34 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
           body: Stack(
             fit: StackFit.expand,
             children: [
-              // Subtle radial gradient background for cinematic depth
-              Container(
-                decoration: const BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.center,
-                    radius: 1.2,
-                    colors: [
-                      Color(0xFF0A1A18), // very dark teal center
-                      Color(0xFF000000), // pure black edges
-                    ],
-                    stops: [0.0, 1.0],
-                  ),
-                ),
+              // Themed background — radial gradient, solid color block,
+              // image (file or cached link), or looping video. Defaults to
+              // the historical teal-to-black gradient.
+              _ProjectionBackground(
+                theme: projTheme,
+                slideIndex: activeSlideIndex,
+                mediaCycleIndex: _mediaCycleIndex,
               ),
 
               // Centered slide text + Bible reference tightly attached 20px below
               SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 64.0,
-                    vertical: 48.0,
+                  // Keep outer padding lean (especially in landscape, where the
+                  // screen height is small) so the text auto-fit has maximum
+                  // room and pinch-zoom stays responsive. Portrait mode uses
+                  // slimmer side padding so lyrics span more of the screen.
+                  padding: EdgeInsets.only(
+                    left: _isPortraitMode ? 20.0 : 40.0,
+                    right: _isPortraitMode ? 20.0 : 40.0,
+                    top: 24.0,
+                    // Reserve room for the mobile bottom control bar so the
+                    // auto-fit never tucks text behind it. Portrait mode's
+                    // bar is taller (buttons + slide counter).
+                    bottom: _isMobile &&
+                            !_isSecondaryWindow &&
+                            state.slides.isNotEmpty
+                        ? (_isPortraitMode ? 100.0 : 40.0)
+                        : 24.0,
                   ),
                   child: Center(
                     child: activeText.isNotEmpty
@@ -453,6 +542,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                             referenceLabel: activeIsBible ? activeLabel : null,
                             key: ValueKey(slideKey),
                             fontSize: activeFontSize,
+                            color: projTheme.effectiveTextColor,
                           )
                         : const SizedBox.shrink(),
                   ),
@@ -460,32 +550,104 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
               ),
 
               // Close button:
-              //   • Desktop  — fades in on hover (subtle, out-of-the-way)
+              //   • Desktop  — appears only while the cursor hovers the
+              //                button itself (strictly hover-gated)
               //   • Mobile   — always visible at low opacity so the audience
               //                presenter can tap to exit at any time
               Positioned(
                 top: 4,
                 left: 4,
-                child: AnimatedOpacity(
-                  opacity: _isMobile ? 0.45 : (_isHovering ? 0.4 : 0.0),
-                  duration: const Duration(milliseconds: 300),
-                  child: SafeArea(
-                    child: IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white, size: 18),
-                      onPressed: _handleClose,
-                      tooltip: 'Exit projection (Esc)',
-                      splashRadius: 20,
-                      padding: const EdgeInsets.all(6),
-                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                child: MouseRegion(
+                  onEnter: (_) => setState(() => _isCloseHovered = true),
+                  onExit: (_) => setState(() => _isCloseHovered = false),
+                  // A generous hit target around the icon so the button is
+                  // easy to reach without being visible until hovered.
+                  child: AnimatedOpacity(
+                    opacity: _isMobile
+                        ? 0.45
+                        : (_isCloseHovered ? 0.9 : 0.0),
+                    duration: const Duration(milliseconds: 300),
+                    child: SafeArea(
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        onPressed: _handleClose,
+                        tooltip: 'Exit projection (Esc)',
+                        splashRadius: 20,
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(
+                          minWidth: 36,
+                          minHeight: 36,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
 
+              // Appearance + orientation controls — mobile only, top-right.
+              // The palette icon jumps to Settings to configure the screen;
+              // the orientation icon switches between landscape/portrait.
+              if (_isMobile)
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: AnimatedOpacity(
+                    opacity: 0.45,
+                    duration: const Duration(milliseconds: 300),
+                    child: SafeArea(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.palette,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            onPressed: _openProjectionAppearance,
+                            tooltip: 'Projection appearance',
+                            splashRadius: 20,
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(
+                              minWidth: 36,
+                              minHeight: 36,
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              _isPortraitMode
+                                  ? Icons.crop_landscape
+                                  : Icons.crop_portrait,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            onPressed: _toggleOrientation,
+                            tooltip: _isPortraitMode
+                                ? 'Switch to landscape'
+                                : 'Switch to portrait',
+                            splashRadius: 20,
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(
+                              minWidth: 36,
+                              minHeight: 36,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
               // Navigation arrows — mobile fullscreen only.
               // Desktop projection screens stay clean: the operator navigates
               // from the main window (buttons / keyboard), so no overlay arrows.
-              if (slideCount > 0 && _isMobile)
+              // In portrait mode the side arrows are hidden and replaced by
+              // prev/next buttons above the bottom slide counter.
+              if (slideCount > 0 && _isMobile && !_isPortraitMode)
                 IgnorePointer(
                   child: AnimatedOpacity(
                     opacity: 0.38,
@@ -598,31 +760,62 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                   ),
                 ),
 
-              // Mobile-only: always-visible bottom bar with a slide-count chip.
-              // Font controls removed in favor of pinch-to-zoom.
+              // Mobile-only: always-visible bottom controls — slide-count chip
+              // and (in portrait) prev/next buttons. No dark bar behind them;
+              // they float over the projection background.
               if (_isMobile && !_isSecondaryWindow && state.slides.isNotEmpty)
                 Positioned(
                   bottom: 0,
                   left: 0,
                   right: 0,
                   child: SafeArea(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      color: Colors.black.withValues(alpha: 0.35),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Slide position indicator  e.g. "3 / 12"
-                          Text(
-                            '${state.currentSlideIndex + 1} / ${state.slides.length}',
-                            style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 12,
-                              letterSpacing: 0.5,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Portrait mode: prev/next buttons just above the
+                        // slide counter (black circles, white chevrons).
+                        if (_isPortraitMode)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _PortraitNavButton(
+                                  icon: Icons.chevron_left,
+                                  onPressed: notifier.prevSlide,
+                                ),
+                                _PortraitNavButton(
+                                  icon: Icons.chevron_right,
+                                  onPressed: notifier.nextSlide,
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: Text(
+                            '${state.currentSlideIndex + 1} / ${state.slides.length}',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.75),
+                              fontSize: 12,
+                              letterSpacing: 0.5,
+                              shadows: const [
+                                Shadow(
+                                  offset: Offset(0, 1),
+                                  blurRadius: 6,
+                                  color: Colors.black54,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -662,6 +855,225 @@ class _FontSizeButton extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
       hoverColor: Colors.white.withValues(alpha: 0.08),
+    );
+  }
+}
+
+/// Circular prev/next button used in the portrait bottom bar (black circle,
+/// white chevron) so it matches the dark presentation background.
+class _PortraitNavButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  const _PortraitNavButton({
+    required this.icon,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withValues(alpha: 0.6),
+      shape: const CircleBorder(),
+      elevation: 2,
+      child: IconButton(
+        icon: Icon(icon, size: 32, color: Colors.white),
+        onPressed: onPressed,
+        tooltip: icon == Icons.chevron_left
+            ? 'Previous slide'
+            : 'Next slide',
+        splashRadius: 24,
+        padding: const EdgeInsets.all(8),
+        constraints: const BoxConstraints(minWidth: 52, minHeight: 52),
+      ),
+    );
+  }
+}
+
+/// Themed backdrop behind the slide text — a radial gradient, a solid color
+/// block, a local image file, or a local looping video. Falls back to the
+/// default gradient when a media source is unavailable (e.g. a deleted file).
+class _ProjectionBackground extends StatelessWidget {
+  final ProjectionTheme theme;
+  final int slideIndex;
+  final int mediaCycleIndex;
+
+  const _ProjectionBackground({
+    required this.theme,
+    required this.slideIndex,
+    required this.mediaCycleIndex,
+  });
+
+  int _resolveIndex(List<Object?> paths) => theme.resolveMediaIndex(
+    listLength: paths.length,
+    slideIndex: slideIndex,
+    mediaCycleIndex: mediaCycleIndex,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    switch (theme.backgroundType) {
+      case ProjectionBackgroundType.solid:
+        return ColoredBox(color: theme.solidColor);
+      case ProjectionBackgroundType.image:
+        // Local file paths are only producible off-web; empty on web.
+        if (kIsWeb || theme.imagePaths.isEmpty) {
+          return const _DefaultProjectionBackground();
+        }
+        final paths = theme.imagePaths;
+        final path = paths[_resolveIndex(paths)];
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.file(
+              File(path),
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const _DefaultProjectionBackground(),
+            ),
+            const _DarkScrim(),
+          ],
+        );
+      case ProjectionBackgroundType.video:
+        if (kIsWeb || theme.videoPaths.isEmpty) {
+          return const _DefaultProjectionBackground();
+        }
+        final paths = theme.videoPaths;
+        final path = paths[_resolveIndex(paths)];
+        return ProjectionVideoBackground(
+          key: ValueKey('video_bg_$path'),
+          path: path,
+        );
+      case ProjectionBackgroundType.gradient:
+        if (theme.gradientColors.isEmpty) {
+          return const _DefaultProjectionBackground();
+        }
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment.center,
+              radius: 1.2,
+              colors: theme.gradientColors,
+            ),
+          ),
+        );
+    }
+  }
+}
+
+/// Semi-transparent black layer that keeps lyrics readable over bright media.
+class _DarkScrim extends StatelessWidget {
+  const _DarkScrim();
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(color: Colors.black.withValues(alpha: 0.35));
+  }
+}
+
+/// The default teal-to-black radial gradient (matches historic projection).
+class _DefaultProjectionBackground extends StatelessWidget {
+  const _DefaultProjectionBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment.center,
+          radius: 1.2,
+          colors: [Color(0xFF0A1A18), Color(0xFF000000)],
+        ),
+      ),
+    );
+  }
+}
+
+/// Floating projection-appearance options (mobile). Edits a staged theme
+/// locally so the preview can be reviewed before committing; the projection
+/// behind the sheet only updates on commit.
+class ProjectionAppearanceSheet extends ConsumerStatefulWidget {
+  const ProjectionAppearanceSheet({super.key});
+
+  @override
+  ConsumerState<ProjectionAppearanceSheet> createState() =>
+      _ProjectionAppearanceSheetState();
+}
+
+class _ProjectionAppearanceSheetState
+    extends ConsumerState<ProjectionAppearanceSheet> {
+  late ProjectionTheme _staged = ref.read(projectionThemeProvider);
+
+  void _commit() {
+    ref.read(projectionThemeProvider.notifier).setTheme(_staged);
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+
+    final Widget controls = SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: ProjectionAppearanceControls(
+        theme: _staged,
+        onChanged: (value) => setState(() => _staged = value),
+      ),
+    );
+
+    // Reflow so the preview stays visible in both orientations: preview on
+    // top in portrait, on the side in landscape.
+    final Widget content = isLandscape
+        ? Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 220,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 16, bottom: 8),
+                  child: ProjectionPreview(theme: _staged),
+                ),
+              ),
+              Expanded(child: controls),
+            ],
+          )
+        : Column(
+            children: [
+              ProjectionPreview(theme: _staged),
+              const SizedBox(height: 8),
+              Expanded(child: controls),
+            ],
+          );
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        // mainAxisSize.max (default): the content flexes to whatever height
+        // the draggable sheet currently allows, so it never overflows.
+        child: Column(
+          children: [
+            Expanded(child: content),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: () => setState(() {
+                    _staged = const ProjectionTheme();
+                  }),
+                  icon: const Icon(Icons.restore, size: 18),
+                  label: const Text('Restore Defaults'),
+                ),
+                const Spacer(),
+                FilledButton.icon(
+                  onPressed: _commit,
+                  icon: const Icon(Icons.check, size: 18),
+                  label: const Text('Commit Changes'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

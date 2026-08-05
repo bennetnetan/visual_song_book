@@ -23,6 +23,10 @@ void main(List<String> args) async {
   // fetch them at runtime (throws loudly if a used variant is missing).
   GoogleFonts.config.allowRuntimeFetching = false;
 
+  // Video playback uses the official video_player plugin; on Windows and
+  // Linux the fvp backend (bundled FFmpeg) handles local files — no system
+  // libmpv dependency, so packaged builds (AppImage) work on clean machines.
+
   // Initialise logging — ALL levels in debug, WARNING+ in release.
   AppLogger.init(level: kReleaseMode ? Level.WARNING : Level.ALL);
   final log = AppLogger.get('Main');

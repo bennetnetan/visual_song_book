@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   desktop_multi_window
+  fvp
   screen_retriever
   sqlite3_flutter_libs
   window_manager

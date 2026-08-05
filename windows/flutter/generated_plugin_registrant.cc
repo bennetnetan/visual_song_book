@@ -7,6 +7,7 @@
 #include "generated_plugin_registrant.h"
 
 #include <desktop_multi_window/desktop_multi_window_plugin.h>
+#include <fvp/fvp_plugin_c_api.h>
 #include <screen_retriever/screen_retriever_plugin.h>
 #include <sqlite3_flutter_libs/sqlite3_flutter_libs_plugin.h>
 #include <window_manager/window_manager_plugin.h>
@@ -14,6 +15,8 @@
 void RegisterPlugins(flutter::PluginRegistry* registry) {
   DesktopMultiWindowPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("DesktopMultiWindowPlugin"));
+  FvpPluginCApiRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("FvpPluginCApi"));
   ScreenRetrieverPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("ScreenRetrieverPlugin"));
   Sqlite3FlutterLibsPluginRegisterWithRegistrar(

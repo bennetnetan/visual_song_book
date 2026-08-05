@@ -323,7 +323,10 @@ class _SongsTabState extends ConsumerState<SongsTab> {
                                   const SizedBox(width: 8),
                                 ],
                           bottom: PreferredSize(
-                            preferredSize: const Size.fromHeight(92),
+                            preferredSize: Size.fromHeight(
+                              (listState.sourcePaths.length > 1 ? 48.0 : 0.0) +
+                                  56.0,
+                            ),
                             child: Column(
                               children: [
                                 if (listState.sourcePaths.length > 1)
@@ -371,7 +374,7 @@ class _SongsTabState extends ConsumerState<SongsTab> {
                                     ),
                                   ),
                                 SizedBox(
-                                  height: 44,
+                                  height: 56,
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 16.0,

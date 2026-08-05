@@ -51,12 +51,14 @@ class VerseText extends StatelessWidget {
   final String text;
   final String? referenceLabel;
   final double fontSize;
+  final Color color;
 
   const VerseText({
     required this.text,
     this.referenceLabel,
     super.key,
     this.fontSize = 40.0,
+    this.color = Colors.white,
   });
 
   @override
@@ -69,31 +71,42 @@ class VerseText extends StatelessWidget {
         // Multiply by 1.35 to map to an appropriate presentation size (e.g. 40 -> 54px).
         double targetSize = fontSize * 1.35;
 
-        // Count estimated wrapped lines to check for height overflow
-        final double availHeight = (size.height - 48).clamp(100.0, 10000.0);
-        final List<String> paragraphs = text.split('\n');
-        int totalLines = 0;
-        const int wrapThreshold = 45;
+        // Auto-fit: measure the REAL wrapped height with TextPainter and shrink
+        // the font until text + reference label fit the available bounds. This
+        // replaces the old character-count estimate, which underestimated the
+        // wrapped line count in portrait (text overflowed) and overestimated it
+        // in landscape (text rendered smaller than necessary).
+        final double availHeight = (size.height - 8).clamp(1.0, 10000.0);
+        final double availWidth = size.width.clamp(1.0, 10000.0);
 
-        for (final paragraph in paragraphs) {
-          final trimmed = paragraph.trim();
-          if (trimmed.isEmpty) continue;
-          if (trimmed.length <= wrapThreshold) {
-            totalLines += 1;
-          } else {
-            totalLines += (trimmed.length / wrapThreshold).ceil();
-          }
+        double finalFontSize = targetSize;
+        while (finalFontSize > 18.0) {
+          final double referenceHeight =
+              (referenceLabel != null && referenceLabel!.isNotEmpty)
+                  ? 20.0 + (finalFontSize * 0.45).clamp(20.0, 48.0)
+                  : 0.0;
+          final TextPainter tp = TextPainter(
+            text: TextSpan(
+              text: text,
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: finalFontSize,
+                fontWeight: FontWeight.w600,
+                height: 1.35,
+                letterSpacing: 0.3,
+              ),
+            ),
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.center,
+          )..layout(maxWidth: availWidth);
+
+          if (tp.height + referenceHeight <= availHeight) break;
+          finalFontSize -= 2;
         }
-        if (totalLines == 0) totalLines = 1;
-
-        // Calculate height needed at targetSize
-        final double heightNeeded = totalLines * targetSize * 1.45;
-        if (heightNeeded > availHeight) {
-          // Scale down to fit the available height
-          targetSize = availHeight / (totalLines * 1.45);
-        }
-
-        final double finalFontSize = targetSize.clamp(18.0, 180.0);
+        // Round down to a whole number so the glyphs rasterize on whole
+        // pixels — fractional font sizes render soft/blurry on mobile.
+        finalFontSize =
+            finalFontSize.floorToDouble().clamp(18.0, 180.0);
 
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 350),
@@ -139,23 +152,11 @@ class VerseText extends StatelessWidget {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontFamily: 'Outfit',
-                            color: Colors.white,
+                            color: color,
                             fontSize: finalFontSize,
                             fontWeight: FontWeight.w600,
                             height: 1.35,
                             letterSpacing: 0.3,
-                            shadows: [
-                              Shadow(
-                                offset: const Offset(0, 2),
-                                blurRadius: 12,
-                                color: Colors.black.withValues(alpha: 0.8),
-                              ),
-                              Shadow(
-                                offset: const Offset(0, 0),
-                                blurRadius: 30,
-                                color: const Color(0xFF00E5CC).withValues(alpha: 0.12),
-                              ),
-                            ],
                           ),
                         ),
                       ),
@@ -197,13 +198,6 @@ class ReferenceLabel extends StatelessWidget {
           fontWeight: FontWeight.w500,
           color: const Color(0xFF00E5CC).withValues(alpha: 0.85),
           letterSpacing: 0.5,
-          shadows: [
-            Shadow(
-              offset: const Offset(0, 1),
-              blurRadius: 8,
-              color: Colors.black.withValues(alpha: 0.6),
-            ),
-          ],
         ),
       ),
     );
