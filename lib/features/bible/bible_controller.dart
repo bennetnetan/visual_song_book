@@ -16,6 +16,7 @@ class BibleController extends StateNotifier<BibleState> {
   static const _recentSearchesKey = 'bible_recent_searches';
   static const _fontSizeKey = 'bible_font_size';
   static const _readingFontKey = 'bible_reading_font';
+  static const _legacySerifFontKey = 'bible_use_serif_font';
   static const _lastReadBookKey = 'bible_last_read_book';
   static const _lastReadChapterKey = 'bible_last_read_chapter';
   static const _lastReadVerseKey = 'bible_last_read_verse';
@@ -31,9 +32,13 @@ class BibleController extends StateNotifier<BibleState> {
     final prefs = await SharedPreferences.getInstance();
     final recentBookIds = prefs.getStringList(_recentBooksKey)?.map(int.parse).toList() ?? [];
     final recentSearches = prefs.getStringList(_recentSearchesKey) ?? [];
-    final fontSize = prefs.getDouble(_fontSizeKey) ?? 15.0;
-    final readingFontFamily =
-        prefs.getString(_readingFontKey) ?? kBibleReadingFontDefault;
+    final fontSize = prefs.getDouble(_fontSizeKey) ?? 17.0;
+    String readingFontFamily = prefs.getString(_readingFontKey) ?? kBibleReadingFontDefault;
+    if (prefs.containsKey(_legacySerifFontKey) && !prefs.containsKey(_readingFontKey)) {
+      final useSerif = prefs.getBool(_legacySerifFontKey) ?? false;
+      readingFontFamily = useSerif ? 'EBGaramond' : 'Inter';
+      await prefs.setString(_readingFontKey, readingFontFamily);
+    }
     final lastReadBook = prefs.getInt(_lastReadBookKey);
     final lastReadChapter = prefs.getInt(_lastReadChapterKey);
     final lastReadVerse = prefs.getInt(_lastReadVerseKey);
