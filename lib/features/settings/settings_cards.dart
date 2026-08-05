@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,6 +11,7 @@ import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/data/importers/vsbook_importer.dart';
 import 'package:visual_song_book/data/services/linked_songbooks_service.dart';
+import 'package:visual_song_book/features/projection/projection_appearance_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/projection/projection_theme.dart';
 
@@ -237,26 +237,10 @@ class AppearanceCard extends ConsumerWidget {
 class ProjectionAppearanceCard extends ConsumerWidget {
   const ProjectionAppearanceCard({super.key});
 
-  static const List<Color> _palette = [
-    Color(0xFFFFFFFF),
-    Color(0xFF000000),
-    Color(0xFF00E5CC),
-    Color(0xFF0A1A18),
-    Color(0xFF0D47A1),
-    Color(0xFF4A148C),
-    Color(0xFFB71C1C),
-    Color(0xFFF57F17),
-    Color(0xFF2E7D32),
-    Color(0xFFF48FB1),
-    Color(0xFF795548),
-    Color(0xFF37474F),
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = ref.watch(projectionThemeProvider);
     final notifier = ref.read(projectionThemeProvider.notifier);
-    final appTheme = Theme.of(context);
 
     return SettingsCard(
       child: Column(
@@ -268,110 +252,10 @@ class ProjectionAppearanceCard extends ConsumerWidget {
             color: Colors.teal,
           ),
           const SizedBox(height: 24),
-
-          // ── Slide text color ──
-          Text(
-            'Slide Text Color',
-            style: GoogleFonts.plusJakartaSans(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
+          ProjectionAppearanceControls(
+            theme: theme,
+            onChanged: notifier.setTheme,
           ),
-          const SizedBox(height: 6),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(
-              'Auto text color',
-              style: GoogleFonts.plusJakartaSans(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
-            subtitle: Text(
-              'Pick a readable color automatically from the background',
-              style: GoogleFonts.plusJakartaSans(fontSize: 12),
-            ),
-            value: theme.autoContrastText,
-            onChanged: notifier.setAutoContrast,
-          ),
-          if (!theme.autoContrastText) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                for (final color in _palette)
-                  _ColorSwatch(
-                    color: color,
-                    selected: theme.textColor == color,
-                    onTap: () => notifier.setTextColor(color),
-                  ),
-              ],
-            ),
-          ],
-
-          const Divider(height: 32),
-
-          // ── Background style ──
-          Text(
-            'Background Style',
-            style: GoogleFonts.plusJakartaSans(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'The backdrop behind the projected lyrics.',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              color: appTheme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 12),
-          SegmentedButton<ProjectionBackgroundType>(
-            segments: const [
-              ButtonSegment(
-                value: ProjectionBackgroundType.gradient,
-                label: Text('Gradient'),
-                icon: Icon(Icons.gradient, size: 16),
-              ),
-              ButtonSegment(
-                value: ProjectionBackgroundType.solid,
-                label: Text('Color Block'),
-                icon: Icon(Icons.format_color_fill, size: 16),
-              ),
-              ButtonSegment(
-                value: ProjectionBackgroundType.image,
-                label: Text('Image'),
-                icon: Icon(Icons.image, size: 16),
-              ),
-            ],
-            selected: {theme.backgroundType},
-            onSelectionChanged: (val) {
-              notifier.setBackgroundType(val.first);
-            },
-            showSelectedIcon: false,
-          ),
-          const SizedBox(height: 16),
-
-          switch (theme.backgroundType) {
-            ProjectionBackgroundType.gradient => _GradientColorEditor(
-              colors: theme.gradientColors,
-              palette: _palette,
-              onChanged: notifier.setGradientColors,
-            ),
-            ProjectionBackgroundType.solid => _SolidColorEditor(
-              color: theme.solidColor,
-              palette: _palette,
-              onChanged: notifier.setSolidColor,
-            ),
-            ProjectionBackgroundType.image => _ImageBackgroundEditor(
-              imagePath: theme.imagePath,
-              onChanged: notifier.setImagePath,
-            ),
-          },
-
           const Divider(height: 32),
 
           // ── Preview ──
@@ -383,7 +267,7 @@ class ProjectionAppearanceCard extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 12),
-          _ProjectionPreview(theme: theme),
+          ProjectionPreview(theme: theme),
 
           const SizedBox(height: 24),
           Align(
@@ -400,258 +284,6 @@ class ProjectionAppearanceCard extends ConsumerWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ColorSwatch extends StatelessWidget {
-  final Color color;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ColorSwatch({
-    required this.color,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final checkColor = ThemeData.estimateBrightnessForColor(color) ==
-            Brightness.dark
-        ? Colors.white
-        : Colors.black;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: selected ? theme.colorScheme.primary : Colors.black26,
-            width: selected ? 3 : 1,
-          ),
-        ),
-        child: selected
-            ? Icon(Icons.check, color: checkColor, size: 18)
-            : null,
-      ),
-    );
-  }
-}
-
-class _ColorPickerRow extends StatelessWidget {
-  final String label;
-  final Color selected;
-  final List<Color> palette;
-  final ValueChanged<Color> onChanged;
-
-  const _ColorPickerRow({
-    required this.label,
-    required this.selected,
-    required this.palette,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            for (final color in palette)
-              _ColorSwatch(
-                color: color,
-                selected: color == selected,
-                onTap: () => onChanged(color),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _GradientColorEditor extends StatelessWidget {
-  final List<Color> colors;
-  final List<Color> palette;
-  final ValueChanged<List<Color>> onChanged;
-
-  const _GradientColorEditor({
-    required this.colors,
-    required this.palette,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final start = colors.isNotEmpty ? colors.first : Colors.black;
-    final end = colors.length > 1 ? colors.last : start;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _ColorPickerRow(
-          label: 'Center color',
-          selected: start,
-          palette: palette,
-          onChanged: (c) => onChanged([c, end]),
-        ),
-        const SizedBox(height: 12),
-        _ColorPickerRow(
-          label: 'Edge color',
-          selected: end,
-          palette: palette,
-          onChanged: (c) => onChanged([start, c]),
-        ),
-      ],
-    );
-  }
-}
-
-class _SolidColorEditor extends StatelessWidget {
-  final Color color;
-  final List<Color> palette;
-  final ValueChanged<Color> onChanged;
-
-  const _SolidColorEditor({
-    required this.color,
-    required this.palette,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return _ColorPickerRow(
-      label: 'Fill color',
-      selected: color,
-      palette: palette,
-      onChanged: onChanged,
-    );
-  }
-}
-
-class _ImageBackgroundEditor extends StatelessWidget {
-  final String? imagePath;
-  final ValueChanged<String?> onChanged;
-
-  const _ImageBackgroundEditor({
-    required this.imagePath,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        FilledButton.tonalIcon(
-          onPressed: () async {
-            final result = await FilePicker.platform.pickFiles(
-              type: FileType.image,
-            );
-            if (result == null || result.files.single.path == null) return;
-            onChanged(result.files.single.path);
-          },
-          icon: const Icon(Icons.add_photo_alternate, size: 18),
-          label: Text(
-            imagePath == null ? 'Choose Image' : 'Change Image',
-            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
-          ),
-        ),
-        if (imagePath != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            imagePath!,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: () => onChanged(null),
-            icon: const Icon(Icons.delete_outline, size: 18),
-            label: const Text('Remove image'),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _ProjectionPreview extends StatelessWidget {
-  final ProjectionTheme theme;
-
-  const _ProjectionPreview({required this.theme});
-
-  @override
-  Widget build(BuildContext context) {
-    final bool useImage = theme.backgroundType ==
-            ProjectionBackgroundType.image &&
-        theme.imagePath != null &&
-        !kIsWeb;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        height: 140,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: theme.backgroundType == ProjectionBackgroundType.gradient
-              ? RadialGradient(
-                  center: Alignment.center,
-                  radius: 1.2,
-                  colors: theme.gradientColors.isNotEmpty
-                      ? theme.gradientColors
-                      : const [Color(0xFF0A1A18), Color(0xFF000000)],
-                )
-              : null,
-          color: theme.backgroundType == ProjectionBackgroundType.solid
-              ? theme.solidColor
-              : null,
-          image: useImage
-              ? DecorationImage(
-                  image: FileImage(File(theme.imagePath!)),
-                  fit: BoxFit.cover,
-                )
-              : null,
-        ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (useImage)
-              ColoredBox(color: Colors.black.withValues(alpha: 0.35)),
-            Center(
-              child: Text(
-                'Sample lyrics',
-                style: TextStyle(
-                  fontFamily: 'Outfit',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 22,
-                  color: theme.effectiveTextColor,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

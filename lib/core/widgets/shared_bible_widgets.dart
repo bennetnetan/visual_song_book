@@ -103,12 +103,10 @@ class VerseText extends StatelessWidget {
           if (tp.height + referenceHeight <= availHeight) break;
           finalFontSize -= 2;
         }
-        finalFontSize = finalFontSize.clamp(18.0, 180.0);
-
-        // Dark text (light backgrounds) needs soft light shadows, not the
-        // heavy black ones used for light text on dark backdrops.
-        final bool lightText =
-            ThemeData.estimateBrightnessForColor(color) == Brightness.dark;
+        // Round down to a whole number so the glyphs rasterize on whole
+        // pixels — fractional font sizes render soft/blurry on mobile.
+        finalFontSize =
+            finalFontSize.floorToDouble().clamp(18.0, 180.0);
 
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 350),
@@ -159,32 +157,6 @@ class VerseText extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                             height: 1.35,
                             letterSpacing: 0.3,
-                            shadows: lightText
-                                ? [
-                                    Shadow(
-                                      offset: const Offset(0, 2),
-                                      blurRadius: 12,
-                                      color: Colors.black.withValues(
-                                        alpha: 0.8,
-                                      ),
-                                    ),
-                                    Shadow(
-                                      offset: const Offset(0, 0),
-                                      blurRadius: 30,
-                                      color: const Color(
-                                        0xFF00E5CC,
-                                      ).withValues(alpha: 0.12),
-                                    ),
-                                  ]
-                                : [
-                                    Shadow(
-                                      offset: const Offset(0, 1),
-                                      blurRadius: 8,
-                                      color: Colors.white.withValues(
-                                        alpha: 0.5,
-                                      ),
-                                    ),
-                                  ],
                           ),
                         ),
                       ),
@@ -226,13 +198,6 @@ class ReferenceLabel extends StatelessWidget {
           fontWeight: FontWeight.w500,
           color: const Color(0xFF00E5CC).withValues(alpha: 0.85),
           letterSpacing: 0.5,
-          shadows: [
-            Shadow(
-              offset: const Offset(0, 1),
-              blurRadius: 8,
-              color: Colors.black.withValues(alpha: 0.6),
-            ),
-          ],
         ),
       ),
     );

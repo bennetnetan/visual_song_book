@@ -156,23 +156,9 @@ class ProjectionThemeNotifier extends StateNotifier<ProjectionTheme> {
     }
   }
 
-  void setTextColor(Color? color) =>
-      _persist(state.copyWith(textColor: () => color));
-
-  void setAutoContrast(bool value) =>
-      _persist(state.copyWith(autoContrastText: value));
-
-  void setBackgroundType(ProjectionBackgroundType type) =>
-      _persist(state.copyWith(backgroundType: type));
-
-  void setGradientColors(List<Color> colors) =>
-      _persist(state.copyWith(gradientColors: colors));
-
-  void setSolidColor(Color color) =>
-      _persist(state.copyWith(solidColor: color));
-
-  void setImagePath(String? path) =>
-      _persist(state.copyWith(imagePath: () => path));
+  /// Applies a complete theme. Used by the Settings card (live preview) and
+  /// the floating appearance sheet (commit of a staged configuration).
+  Future<void> setTheme(ProjectionTheme theme) => _persist(theme);
 
   void reset() => _persist(const ProjectionTheme());
 }

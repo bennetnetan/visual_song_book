@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/win32_window_helper.dart';
 import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
+import 'package:visual_song_book/features/projection/projection_appearance_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/projection/projection_theme.dart';
 
@@ -233,12 +234,21 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
         : [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
   }
 
-  /// Closes the fullscreen projection and opens the Settings tab so the
-  /// presenter can configure the projection appearance.
-  void _openProjectionSettings() {
+  /// Opens a floating appearance sheet (mobile only) with a live preview that
+  /// reflows for portrait/landscape, a commit button, and restore defaults.
+  void _openProjectionAppearance() {
     if (_isSecondaryWindow) return;
-    ref.read(activeDashboardTabProvider.notifier).state = 5;
-    if (context.mounted) context.go('/');
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => const ProjectionAppearanceSheet(),
+    );
   }
 
   Future<void> _sendNavigateToMain(String action) async {
@@ -544,7 +554,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                               color: Colors.white,
                               size: 18,
                             ),
-                            onPressed: _openProjectionSettings,
+                            onPressed: _openProjectionAppearance,
                             tooltip: 'Projection appearance',
                             splashRadius: 20,
                             padding: const EdgeInsets.all(6),
@@ -882,6 +892,96 @@ class _DefaultProjectionBackground extends StatelessWidget {
           center: Alignment.center,
           radius: 1.2,
           colors: [Color(0xFF0A1A18), Color(0xFF000000)],
+        ),
+      ),
+    );
+  }
+}
+
+/// Floating projection-appearance options (mobile). Edits a staged theme
+/// locally so the preview can be reviewed before committing; the projection
+/// behind the sheet only updates on commit.
+class ProjectionAppearanceSheet extends ConsumerStatefulWidget {
+  const ProjectionAppearanceSheet({super.key});
+
+  @override
+  ConsumerState<ProjectionAppearanceSheet> createState() =>
+      _ProjectionAppearanceSheetState();
+}
+
+class _ProjectionAppearanceSheetState
+    extends ConsumerState<ProjectionAppearanceSheet> {
+  late ProjectionTheme _staged = ref.read(projectionThemeProvider);
+
+  void _commit() {
+    ref.read(projectionThemeProvider.notifier).setTheme(_staged);
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+
+    final Widget controls = SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: ProjectionAppearanceControls(
+        theme: _staged,
+        onChanged: (value) => setState(() => _staged = value),
+      ),
+    );
+
+    // Reflow so the preview stays visible in both orientations: preview on
+    // top in portrait, on the side in landscape.
+    final Widget content = isLandscape
+        ? Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 220,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 16, bottom: 8),
+                  child: ProjectionPreview(theme: _staged),
+                ),
+              ),
+              Expanded(child: controls),
+            ],
+          )
+        : Column(
+            children: [
+              ProjectionPreview(theme: _staged),
+              const SizedBox(height: 8),
+              Expanded(child: controls),
+            ],
+          );
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        // mainAxisSize.max (default): the content flexes to whatever height
+        // the draggable sheet currently allows, so it never overflows.
+        child: Column(
+          children: [
+            Expanded(child: content),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: () => setState(() {
+                    _staged = const ProjectionTheme();
+                  }),
+                  icon: const Icon(Icons.restore, size: 18),
+                  label: const Text('Restore Defaults'),
+                ),
+                const Spacer(),
+                FilledButton.icon(
+                  onPressed: _commit,
+                  icon: const Icon(Icons.check, size: 18),
+                  label: const Text('Commit Changes'),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
