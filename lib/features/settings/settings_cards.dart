@@ -295,6 +295,52 @@ class AppearanceCard extends ConsumerWidget {
               if (font != null) bibleNotifier.setReadingFontFamily(font);
             },
           ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+          Text(
+            'Bible Font Size',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Adjust the text size for scripture in the Bible reader and search.',
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Slider(
+                  value: bibleState.bibleFontSize,
+                  min: 14,
+                  max: 36,
+                  divisions: 11,
+                  label: bibleState.bibleFontSize.toStringAsFixed(0),
+                  onChanged: (value) => bibleNotifier.setBibleFontSize(value),
+                ),
+              ),
+              SizedBox(
+                width: 44,
+                child: Text(
+                  bibleState.bibleFontSize.toStringAsFixed(0),
+                  textAlign: TextAlign.end,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

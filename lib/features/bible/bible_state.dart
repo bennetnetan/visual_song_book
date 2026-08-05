@@ -66,7 +66,7 @@ class BibleState {
     this.bookmarkedVerseIds = const {},
     this.selectionMode = false,
     this.selectedVerseIds = const {},
-    this.bibleFontSize = 17.0,
+    this.bibleFontSize = 20.0,
     this.readingFontFamily = kBibleReadingFontDefault,
     this.recentBookIds = const [],
     this.lastReadBookId,
