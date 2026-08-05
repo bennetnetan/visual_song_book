@@ -779,7 +779,7 @@ class SourceModeCard extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-          _SourceModeSelector(),
+          const _SourceModeSelector(),
         ],
       ),
     );
