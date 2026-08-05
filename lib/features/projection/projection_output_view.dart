@@ -39,6 +39,10 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
   Offset _panStartOffset = Offset.zero;
   double _panDeltaX = 0.0;
 
+  /// Whether the projection is currently locked to portrait orientation.
+  /// Defaults to false so behaviour matches the historic landscape lock.
+  bool _isPortraitMode = false;
+
   /// True on Android and iOS — used to select mobile-friendly UI variants
   /// (always-visible controls rather than hover-gated desktop controls).
   bool get _isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
@@ -211,6 +215,16 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
 
 
 
+
+  /// Toggles the mobile projection between landscape and portrait full-screen.
+  /// Mobile only: desktop projection windows manage their own size/fullscreen.
+  Future<void> _toggleOrientation() async {
+    final goPortrait = !_isPortraitMode;
+    setState(() => _isPortraitMode = goPortrait);
+    await SystemChrome.setPreferredOrientations(goPortrait
+        ? [DeviceOrientation.portraitUp]
+        : [DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
+  }
 
   Future<void> _sendNavigateToMain(String action) async {
     try {
@@ -481,6 +495,38 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                   ),
                 ),
               ),
+
+              // Orientation toggle — mobile only. Switches the projection
+              // between landscape and portrait full-screen via
+              // SystemChrome.setPreferredOrientations. The icon previews the
+              // orientation that tapping will switch TO.
+              if (_isMobile)
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: AnimatedOpacity(
+                    opacity: 0.45,
+                    duration: const Duration(milliseconds: 300),
+                    child: SafeArea(
+                      child: IconButton(
+                        icon: Icon(
+                          _isPortraitMode
+                              ? Icons.crop_landscape
+                              : Icons.crop_portrait,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        onPressed: _toggleOrientation,
+                        tooltip: _isPortraitMode
+                            ? 'Switch to landscape'
+                            : 'Switch to portrait',
+                        splashRadius: 20,
+                        padding: const EdgeInsets.all(6),
+                        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                      ),
+                    ),
+                  ),
+                ),
 
               // Navigation arrows — mobile fullscreen only.
               // Desktop projection screens stay clean: the operator navigates
