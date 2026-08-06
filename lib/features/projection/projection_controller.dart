@@ -517,18 +517,6 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     }
   }
 
-  Future<void> _syncSecondaryWindowWithRetry() async {
-    for (var attempt = 0; attempt < 10; attempt++) {
-      if (_secondaryWindow == null) return;
-      await Future.delayed(const Duration(milliseconds: 300));
-      if (await _syncSecondaryWindow()) {
-        _log.fine('Secondary window synced on attempt $attempt');
-        return;
-      }
-    }
-    _log.warning('Secondary window sync timed out after 10 attempts.');
-  }
-
   void setSecondaryWindowOpen(bool isOpen) {
     state = state.copyWith(isSecondaryWindowOpen: isOpen);
   }
@@ -556,7 +544,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         } else if (call.method == 'secondary_window_ready') {
           _log.fine('Secondary window reported ready. Placing and syncing current slide...');
           _placeOnSecondScreenAndFullscreen();
-          _syncSecondaryWindowWithRetry();
+          _syncSecondaryWindow();
         } else if (call.method == 'close_secondary_window') {
           // On Linux, the secondary window can't close itself via window_manager
           // (it would crash), so it asks us to do it via WindowController.hide().
