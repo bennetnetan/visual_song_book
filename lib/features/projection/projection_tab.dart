@@ -150,13 +150,13 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
                                   const SizedBox(width: 16),
                                   Expanded(
                                     flex: 3,
-                                    child: _LivePreviewPanel(state: state, notifier: notifier),
+                                    child: _LivePreviewPanel(state: state, notifier: notifier, projectionFocus: _projectionFocus),
                                   ),
                                 ],
                               )
                             : Column(
                                 children: [
-                                  _LivePreviewPanel(state: state, notifier: notifier),
+                                  _LivePreviewPanel(state: state, notifier: notifier, projectionFocus: _projectionFocus),
                                   const SizedBox(height: 12),
                                   _SetNavigatorPanel(
                                     state: state,
@@ -596,8 +596,13 @@ class _SlideLabelBadge extends StatelessWidget {
 class _LivePreviewPanel extends StatelessWidget {
   final ProjectionState state;
   final ProjectionController notifier;
+  final FocusNode projectionFocus;
 
-  const _LivePreviewPanel({required this.state, required this.notifier});
+  const _LivePreviewPanel({
+    required this.state,
+    required this.notifier,
+    required this.projectionFocus,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -755,7 +760,7 @@ class _LivePreviewPanel extends StatelessWidget {
                 letterSpacing: 1.2,
               ),
             ),
-            _ProjectionSearchAnchor(notifier: notifier),
+             _ProjectionSearchAnchor(notifier: notifier, returnFocusTo: projectionFocus),
           ],
         ),
         const SizedBox(height: 12),
@@ -1059,9 +1064,7 @@ class _SetNavigatorPanelState extends ConsumerState<_SetNavigatorPanel> {
     // Determine which song is currently on screen
     final currentSongId = widget.state.currentSong?.id;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeInOut,
+    return Container(
       margin: const EdgeInsets.only(top: 8),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainer.withValues(alpha: 0.4),
@@ -1070,9 +1073,12 @@ class _SetNavigatorPanelState extends ConsumerState<_SetNavigatorPanel> {
           color: theme.colorScheme.primary.withValues(alpha: 0.25),
         ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
           // Header bar
           InkWell(
             borderRadius: BorderRadius.circular(16),
@@ -1235,6 +1241,7 @@ class _SetNavigatorPanelState extends ConsumerState<_SetNavigatorPanel> {
             ),
         ],
       ),
+      ),
     );
   }
 }
@@ -1341,8 +1348,9 @@ class _ModeChip extends StatelessWidget {
 
 class _ProjectionSearchAnchor extends ConsumerStatefulWidget {
   final ProjectionController notifier;
+  final FocusNode returnFocusTo;
 
-  const _ProjectionSearchAnchor({required this.notifier});
+  const _ProjectionSearchAnchor({required this.notifier, required this.returnFocusTo});
 
   @override
   ConsumerState<_ProjectionSearchAnchor> createState() =>
@@ -1424,6 +1432,7 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
           onPressed: () {
             ref.read(projectionSearchProvider.notifier).clear();
             _searchController.closeView(null);
+            widget.returnFocusTo.requestFocus();
           },
         ),
       ),
@@ -1443,6 +1452,7 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
             ref.read(setRepositoryProvider).recordBibleProjection(v.reference, v.text);
             ref.read(projectionSearchProvider.notifier).clear();
             _searchController.closeView(null);
+            widget.returnFocusTo.requestFocus();
           }
         } else {
           final songs = searchState.songResults;
@@ -1451,6 +1461,7 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
             widget.notifier.setSong(songs[idx]);
             ref.read(projectionSearchProvider.notifier).clear();
             _searchController.closeView(null);
+            widget.returnFocusTo.requestFocus();
           }
         }
       },
@@ -1540,6 +1551,7 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
             controller: controller,
             notifier: widget.notifier,
             selectedIndex: _selectedIndex,
+            returnFocusTo: widget.returnFocusTo,
           ),
         ];
       },
@@ -1551,11 +1563,13 @@ class _SuggestionsList extends ConsumerStatefulWidget {
   final SearchController controller;
   final ProjectionController notifier;
   final ValueNotifier<int> selectedIndex;
+  final FocusNode returnFocusTo;
 
   const _SuggestionsList({
     required this.controller,
     required this.notifier,
     required this.selectedIndex,
+    required this.returnFocusTo,
   });
 
   @override
@@ -1629,6 +1643,7 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
     }
     searchRef.clear();
     widget.controller.closeView(null);
+    widget.returnFocusTo.requestFocus();
   }
 
   KeyEventResult _handleKey(KeyEvent event, ProjectionSearchState searchState) {
