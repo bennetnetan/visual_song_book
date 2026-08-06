@@ -151,8 +151,11 @@ class AppDatabase extends _$AppDatabase {
   Future<int> deleteLinkedSongbookByPath(String path) =>
       (delete(linkedSongbookRegistry)..where((t) => t.path.equals(path))).go();
 
-  Future<int> countLinkedSongbooks() async =>
-      (await select(linkedSongbookRegistry).get()).length;
+  Future<int> countLinkedSongbooks() async {
+    final countExp = countAll();
+    final query = selectOnly(linkedSongbookRegistry)..addColumns([countExp]);
+    return query.map((row) => row.read(countExp)!).getSingle();
+  }
 
   @override
   MigrationStrategy get migration => MigrationStrategy(

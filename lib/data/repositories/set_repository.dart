@@ -166,12 +166,16 @@ class SetRepository {
 
   Future<void> reorderSetItems(int setId, List<int> songIds) async {
     await db.transaction(() async {
-      for (var i = 0; i < songIds.length; i++) {
-        await (db.update(db.songSetItems)..where(
-              (t) => t.setId.equals(setId) & t.songId.equals(songIds[i]),
-            ))
-            .write(SongSetItemsCompanion(position: Value(i)));
-      }
+      await db.batch((batch) {
+        for (var i = 0; i < songIds.length; i++) {
+          batch.update(
+            db.songSetItems,
+            SongSetItemsCompanion(position: Value(i)),
+            where: (t) =>
+                t.setId.equals(setId) & t.songId.equals(songIds[i]),
+          );
+        }
+      });
     });
   }
 
@@ -240,9 +244,11 @@ class SetRepository {
   }
 
   Future<int> getSongCountForSet(int setId) async {
-    return (db.select(
-      db.songSetItems,
-    )..where((t) => t.setId.equals(setId))).get().then((r) => r.length);
+    final countExp = countAll();
+    final query = db.selectOnly(db.songSetItems)
+      ..addColumns([countExp])
+      ..where(db.songSetItems.setId.equals(setId));
+    return query.map((row) => row.read(countExp)!).getSingle();
   }
 
   // Bookmarks

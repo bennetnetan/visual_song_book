@@ -198,10 +198,16 @@ class LinkedSongbooksService extends AutoDisposeAsyncNotifier<List<LinkedSongboo
   }
 
   Future<void> remove(String path) async {
+    final canonical = _canonicalizePath(path);
+    if (!await _isPathAllowed(canonical)) {
+      _log.warning('Refusing to unlink disallowed path: $path');
+      return;
+    }
+
     final db = ref.watch(databaseProvider);
-    await db.deleteLinkedSongbookByPath(path);
+    await db.deleteLinkedSongbookByPath(canonical);
     await _refresh();
-    _log.info('Unlinked songbook: $path');
+    _log.info('Unlinked songbook: $canonical');
   }
 
   Future<void> markImported(String path) async {

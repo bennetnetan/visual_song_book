@@ -81,9 +81,17 @@ class BibleDatabase {
 
     _db = sqlite3.open(dbPath);
     try {
-      _db!.execute("UPDATE books SET name = 'Revelation' WHERE name LIKE 'Revelation%'");
+      final legacy = _db!.select(
+        "SELECT COUNT(*) FROM books WHERE name LIKE 'Revelation%' AND name != 'Revelation'",
+      );
+      if ((legacy.first.values.first as int) > 0) {
+        _db!.execute(
+          "UPDATE books SET name = 'Revelation' WHERE name LIKE 'Revelation%'",
+        );
+        _log.info('Migrated legacy "Revelation of John" book name in place.');
+      }
     } catch (e, st) {
-      _log.fine('Revelation name patch skipped: $e', e, st);
+      _log.fine('Legacy Revelation name check skipped: $e', e, st);
     }
   }
 
