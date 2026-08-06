@@ -90,7 +90,7 @@ void main() {
     tempDir.deleteSync(recursive: true);
 
     archive.addFile(ArchiveFile('songs.db', dbBytes.length, dbBytes));
-    return Uint8List.fromList(ZipEncoder().encode(archive)!);
+    return Uint8List.fromList(ZipEncoder().encodeBytes(archive));
   }
 
   test('imports songs with INTEGER (unix) modified timestamps', () async {

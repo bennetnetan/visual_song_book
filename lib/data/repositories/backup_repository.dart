@@ -44,12 +44,7 @@ class BackupRepository {
     );
 
     // Encode Zip file
-    final zipEncoder = ZipEncoder();
-    final zipBytes = zipEncoder.encode(archive);
-
-    if (zipBytes == null) {
-      throw Exception('Failed to generate zip backup.');
-    }
+    final zipBytes = ZipEncoder().encodeBytes(archive);
 
     // Write to destination
     final targetFile = File(targetPath);
