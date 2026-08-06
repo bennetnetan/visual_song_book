@@ -75,7 +75,7 @@ class ProjectionTheme {
     this.solidColor = const Color(0xFF000000),
     this.imagePaths = const <String>[],
     this.videoPaths = const <String>[],
-    this.mediaRotationMode = MediaRotationMode.perSlide,
+    this.mediaRotationMode = MediaRotationMode.manual,
     this.selectedMediaIndex = 0,
   });
 
