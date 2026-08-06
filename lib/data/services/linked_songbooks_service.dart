@@ -131,7 +131,7 @@ class LinkedSongbook {
   }
 }
 
-class LinkedSongbooksService extends AutoDisposeAsyncNotifier<List<LinkedSongbook>> {
+class LinkedSongbooksService extends AsyncNotifier<List<LinkedSongbook>> {
   static const _prefsKey = 'linked_songbooks';
 
   @override

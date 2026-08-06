@@ -935,7 +935,7 @@ class _ProjectionBackground extends StatelessWidget {
             Image.file(
               File(path),
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const _DefaultProjectionBackground(),
+              errorBuilder: (_, _, _) => const _DefaultProjectionBackground(),
             ),
             const _DarkScrim(),
           ],

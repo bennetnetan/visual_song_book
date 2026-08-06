@@ -64,9 +64,8 @@ class MdbToolsImporter implements SongbookImporter {
           : null;
       final rawSongs = _normalizeMdbCsv(songsResult.stdout as String);
 
-      const csvConverter = CsvToListConverter(
-        eol: '\n',
-        shouldParseNumbers: false,
+      const csvConverter = CsvDecoder(
+        dynamicTyping: false,
       );
 
       final categoriesRows = rawCategories != null

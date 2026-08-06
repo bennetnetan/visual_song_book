@@ -1094,7 +1094,7 @@ class LinkedSongbooksCard extends ConsumerWidget {
   }
 
   Future<void> _linkFile(BuildContext context, WidgetRef ref) async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['vsbook', 'vsb'],
     );

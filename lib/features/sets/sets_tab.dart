@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
@@ -41,7 +42,7 @@ class SetsTab extends ConsumerWidget {
                 onPressed: () async {
                   Navigator.pop(ctx);
                   try {
-                    final result = await FilePicker.platform.pickFiles(
+                    final result = await FilePicker.pickFiles(
                       type: FileType.custom,
                       allowedExtensions: ['json', 'vsbset'],
                     );
@@ -144,7 +145,7 @@ class SetsTab extends ConsumerWidget {
       final jsonString = await ref.read(setsControllerProvider.notifier).getSetJsonString(setId);
       final sanitizedName = setName.replaceAll(RegExp(r'[^\w\s\-]'), '').replaceAll(' ', '_');
 
-      final path = await FilePicker.platform.saveFile(
+      final path = await FilePicker.saveFile(
         dialogTitle: 'Export Set List (.json)',
         fileName: '${sanitizedName}_set.json',
         type: FileType.custom,
@@ -179,7 +180,7 @@ class SetsTab extends ConsumerWidget {
       final textString = await ref.read(setsControllerProvider.notifier).getSetPlainText(setId);
       final sanitizedName = setName.replaceAll(RegExp(r'[^\w\s\-]'), '').replaceAll(' ', '_');
 
-      final path = await FilePicker.platform.saveFile(
+      final path = await FilePicker.saveFile(
         dialogTitle: 'Export Plain Text Lyrics (.txt)',
         fileName: '${sanitizedName}_lyrics.txt',
         type: FileType.any,

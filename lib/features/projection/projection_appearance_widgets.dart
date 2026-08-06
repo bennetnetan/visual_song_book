@@ -307,7 +307,7 @@ class _PreviewImage extends StatelessWidget {
     return Image.file(
       File(path),
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => const _DefaultPreviewGradient(),
+      errorBuilder: (_, _, _) => const _DefaultPreviewGradient(),
     );
   }
 }
@@ -425,7 +425,7 @@ class _ImageBackgroundEditor extends StatelessWidget {
   });
 
   Future<void> _pickFromDisk(BuildContext context) async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image);
+    final result = await FilePicker.pickFiles(type: FileType.image);
     if (result == null) return;
     final path = result.files.single.path;
     if (path == null) {
@@ -503,7 +503,7 @@ class _VideoBackgroundEditor extends StatelessWidget {
   });
 
   Future<void> _pickFromDisk(BuildContext context) async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.video);
+    final result = await FilePicker.pickFiles(type: FileType.video);
     if (result == null) return;
     final path = result.files.single.path;
     if (path == null) {

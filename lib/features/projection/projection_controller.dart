@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:visual_song_book/core/models/projection_mode.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
@@ -138,7 +139,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     // Push appearance changes to an open projector window immediately.
     // Theme sync otherwise only happens on slide navigation, so changing
     // colors in Settings wouldn't reach an already-open PC projector window.
-    ref.listen(projectionThemeProvider, (_, __) {
+    ref.listen(projectionThemeProvider, (_, _) {
       _syncSecondaryWindow();
     });
   }

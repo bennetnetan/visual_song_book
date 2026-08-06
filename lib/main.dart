@@ -158,7 +158,7 @@ class MyApp extends ConsumerWidget {
             body: Center(child: CircularProgressIndicator()),
           ),
         ),
-        error: (_, __) => MaterialApp.router(
+        error: (_, _) => MaterialApp.router(
           title: 'Visual Song Book',
           debugShowCheckedModeBanner: false,
           theme: lightTheme,

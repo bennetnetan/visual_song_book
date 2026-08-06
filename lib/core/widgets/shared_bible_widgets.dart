@@ -121,7 +121,7 @@ class VerseText extends StatelessWidget {
               alignment: Alignment.center,
               children: [
                 ...previousChildren,
-                if (currentChild != null) currentChild,
+                ?currentChild,
               ],
             );
           },
