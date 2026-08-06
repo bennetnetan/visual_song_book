@@ -65,7 +65,7 @@ class _BibleRightSidebarState extends State<BibleRightSidebar> {
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                     children: [
                       if (state.activeVerse != null) ...[
-                        _SectionLabel(title: 'Cross-References'),
+                        const _SectionLabel(title: 'Cross-References'),
                         const SizedBox(height: 12),
                         if (isLoadingCrossRefs)
                           const Center(child: Padding(
@@ -84,7 +84,7 @@ class _BibleRightSidebarState extends State<BibleRightSidebar> {
                           ...crossRefs.take(8).map((cr) => _CrossRefTile(cr: cr)),
                         const SizedBox(height: 20),
                       ],
-                      _SectionLabel(title: 'Bookmarks'),
+                      const _SectionLabel(title: 'Bookmarks'),
                       const SizedBox(height: 12),
                       const BibleBookmarkList(),
                     ],

@@ -120,8 +120,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   Widget _buildAppearanceContent(bool isLargeScreen) {
     return SingleChildScrollView(
       padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
-      child: Column(
-        children: const [
+      child: const Column(
+        children: [
           AppearanceCard(),
           SizedBox(height: 24),
         ],
@@ -132,8 +132,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   Widget _buildProjectionContent(bool isLargeScreen) {
     return SingleChildScrollView(
       padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
-      child: Column(
-        children: const [
+      child: const Column(
+        children: [
           ProjectionAppearanceCard(),
           SizedBox(height: 24),
           ProjectionPreferencesCard(),
