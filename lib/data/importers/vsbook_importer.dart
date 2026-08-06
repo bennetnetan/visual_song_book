@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite3;
+import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/importers/vsb_importer.dart';
 
@@ -30,6 +31,8 @@ Value<bool> _parseIsActive(Object? value) {
   if (value is bool) return Value(value);
   return const Value<bool>.absent();
 }
+
+final _log = AppLogger.get('VsBookImporter');
 
 class VsBookImporter implements SongbookImporter {
   final AppDatabase db;
@@ -143,8 +146,9 @@ class VsBookImporter implements SongbookImporter {
             );
           }
         }
-      } catch (_) {
+      } catch (e, st) {
         // Table categories might not exist or be empty, skip it
+        _log.fine('Failed to read categories from temporary .vsbook database: $e', e, st);
       }
 
       // Read Songs
@@ -204,8 +208,7 @@ class VsBookImporter implements SongbookImporter {
       final dedupResult = deduplicateSongs(songCompanions);
       final dedupedSongs = dedupResult.deduplicated;
       if (dedupResult.duplicatesRemoved > 0) {
-        // ignore: avoid_print
-        print(
+        _log.info(
           'Deduplicated ${dedupResult.duplicatesRemoved} duplicate songs from .vsbook import '
           '(kept ${dedupedSongs.length} unique entries).',
         );
@@ -325,7 +328,9 @@ class VsBookImporter implements SongbookImporter {
             );
           }
         }
-      } catch (_) {}
+      } catch (e, st) {
+        _log.fine('Failed to read categories from temporary .vsbook database: $e', e, st);
+      }
 
       final List<SongsCompanion> songCompanions = [];
       final songRows = tempDb.select('''
@@ -365,8 +370,7 @@ class VsBookImporter implements SongbookImporter {
       final dedupResult = deduplicateSongs(songCompanions);
       final dedupedSongs = dedupResult.deduplicated;
       if (dedupResult.duplicatesRemoved > 0) {
-        // ignore: avoid_print
-        print(
+        _log.info(
           'Deduplicated ${dedupResult.duplicatesRemoved} duplicate songs from .vsbook reimport '
           '(kept ${dedupedSongs.length} unique entries).',
         );
@@ -442,8 +446,7 @@ class VsBookImporter implements SongbookImporter {
     final dedupResult = deduplicateSongs(songCompanions);
     final dedupedSongs = dedupResult.deduplicated;
     if (dedupResult.duplicatesRemoved > 0) {
-      // ignore: avoid_print
-      print(
+      _log.info(
         'Deduplicated ${dedupResult.duplicatesRemoved} duplicate songs from .vsbook reimport '
         '(kept ${dedupedSongs.length} unique entries).',
       );
@@ -539,8 +542,7 @@ class VsBookImporter implements SongbookImporter {
     final dedupResult = deduplicateSongs(songCompanions);
     final dedupedSongs = dedupResult.deduplicated;
     if (dedupResult.duplicatesRemoved > 0) {
-      // ignore: avoid_print
-      print(
+      _log.info(
         'Deduplicated ${dedupResult.duplicatesRemoved} duplicate songs from .vsbook import '
         '(kept ${dedupedSongs.length} unique entries).',
       );

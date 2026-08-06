@@ -166,9 +166,9 @@ class BibleRepository {
       JOIN books b ON b.id = v.book_id
       WHERE v.text LIKE ?
       ORDER BY v.book_id, v.chapter, v.verse
-      LIMIT $limit OFFSET $offset
+      LIMIT ? OFFSET ?
     ''',
-      [like],
+      [like, limit, offset],
     );
     return rows
         .map(

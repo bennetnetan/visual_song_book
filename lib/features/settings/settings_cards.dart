@@ -373,11 +373,6 @@ class ProjectionAppearanceCard extends ConsumerWidget {
             title: 'Projection Appearance',
           ),
           const SizedBox(height: 24),
-          ProjectionAppearanceControls(
-            theme: theme,
-            onChanged: notifier.setTheme,
-          ),
-          const Divider(height: 32),
 
           // ── Preview ──
           const Text(
@@ -390,6 +385,11 @@ class ProjectionAppearanceCard extends ConsumerWidget {
           const SizedBox(height: 12),
           ProjectionPreview(theme: theme),
 
+          const SizedBox(height: 24),
+          ProjectionAppearanceControls(
+            theme: theme,
+            onChanged: notifier.setTheme,
+          ),
           const SizedBox(height: 24),
           Align(
             alignment: Alignment.centerLeft,

@@ -4,7 +4,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/features/projection/projection_theme.dart';
+
+final _log = AppLogger.get('ProjectionAppearance');
 
 /// Reusable projection appearance controls (slide text color + background
 /// style). Shared by the Settings card and the mobile floating sheet so both
@@ -358,8 +361,9 @@ class _ProjectionVideoBackgroundState extends State<ProjectionVideoBackground> {
       await _controller.setVolume(0.0);
       await _controller.play();
       if (mounted) setState(() {});
-    } catch (_) {
+    } catch (e, st) {
       // ignore: unplayable file — show a plain black backdrop
+      _log.fine('Failed to initialize projection video background: $e', e, st);
       if (mounted) setState(() => _failed = true);
     }
   }

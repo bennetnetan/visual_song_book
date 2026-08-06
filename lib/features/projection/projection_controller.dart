@@ -171,8 +171,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       if (state.keepAwake) {
         WakelockPlus.enable();
       }
-    } catch (_) {
+    } catch (e, st) {
       // ignore: missing prefs on first launch
+      _log.fine('Failed to load projection settings from preferences: $e', e, st);
     }
   }
 
@@ -588,8 +589,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
             _secondaryWindow = null;
             state = state.copyWith(isSecondaryWindowOpen: false);
           }
-        } catch (_) {
+        } catch (e, st) {
           // ignore: missing prefs on first launch
+          _log.fine('Failed to check secondary window status after window change: $e', e, st);
         }
       });
     } catch (e) {

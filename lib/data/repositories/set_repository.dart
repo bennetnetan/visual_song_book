@@ -75,10 +75,12 @@ class SetRepository {
   }
 
   Future<void> deleteSet(int setId) async {
-    await (db.delete(
-      db.songSetItems,
-    )..where((t) => t.setId.equals(setId))).go();
-    await (db.delete(db.songSets)..where((t) => t.id.equals(setId))).go();
+    await db.transaction(() async {
+      await (db.delete(
+        db.songSetItems,
+      )..where((t) => t.setId.equals(setId))).go();
+      await (db.delete(db.songSets)..where((t) => t.id.equals(setId))).go();
+    });
   }
 
   Future<List<SongSetItem>> getSetItems(int setId) async {

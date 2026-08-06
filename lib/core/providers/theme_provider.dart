@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:visual_song_book/core/utils/app_logger.dart';
+
+final _log = AppLogger.get('ThemeProvider');
 
 class ThemeNotifier extends StateNotifier<ThemeMode> {
   ThemeNotifier() : super(ThemeMode.dark) {
@@ -14,7 +17,9 @@ class ThemeNotifier extends StateNotifier<ThemeMode> {
       if (saved != null) {
         state = ThemeMode.values[saved];
       }
-    } catch (_) {}
+    } catch (e, st) {
+      _log.fine('Failed to load theme mode from preferences: $e', e, st);
+    }
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
@@ -22,7 +27,9 @@ class ThemeNotifier extends StateNotifier<ThemeMode> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('theme_mode', mode.index);
-    } catch (_) {}
+    } catch (e, st) {
+      _log.fine('Failed to persist theme mode to preferences: $e', e, st);
+    }
   }
 }
 

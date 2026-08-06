@@ -95,6 +95,16 @@ class MyApp extends ConsumerWidget {
       ref.watch(linkedSongbooksSyncProvider);
     }
 
+    // Eagerly copy/open the bundled Bible DB at startup (first run copies
+    // ~29 MB) so it never blocks the first Bible search. Shown behind the
+    // first-run setup splash below.
+    final bibleInitAsync = isProjectionWindow
+        ? const AsyncValue<void>.data(null)
+        : ref.watch(bibleDatabaseInitProvider);
+    final seedAsync = isProjectionWindow
+        ? const AsyncValue<void>.data(null)
+        : ref.watch(appSeedProvider);
+
     // Check onboarding state for non-projection windows
     final onboardingAsync = isProjectionWindow
         ? const AsyncValue.data(true)
@@ -102,6 +112,20 @@ class MyApp extends ConsumerWidget {
 
     final lightTheme = buildAppTheme(Brightness.light);
     final darkTheme = buildAppTheme(Brightness.dark);
+
+    // First-run setup: the bundled songbook seed and Bible DB copy can take
+    // 5-15s on low-end devices. Show progress instead of a frozen screen.
+    if (!isProjectionWindow &&
+        (seedAsync.isLoading || bibleInitAsync.isLoading)) {
+      return MaterialApp(
+        title: 'Visual Song Book',
+        debugShowCheckedModeBanner: false,
+        theme: lightTheme,
+        darkTheme: darkTheme,
+        themeMode: themeMode,
+        home: const _FirstRunSplash(),
+      );
+    }
 
     return onboardingAsync.when(
       data: (completed) {
@@ -139,6 +163,45 @@ class MyApp extends ConsumerWidget {
         darkTheme: darkTheme,
         themeMode: themeMode,
         routerConfig: isProjectionWindow ? projectionRouter : appRouter,
+      ),
+    );
+  }
+}
+
+class _FirstRunSplash extends StatelessWidget {
+  const _FirstRunSplash();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 320),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                'assets/images/logo.png',
+                width: 96,
+                height: 96,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Preparing your song library…',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'First launch can take a minute.',
+                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+              ),
+              const SizedBox(height: 24),
+              const LinearProgressIndicator(),
+            ],
+          ),
+        ),
       ),
     );
   }

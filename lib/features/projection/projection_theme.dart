@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:visual_song_book/core/utils/app_logger.dart';
 
 /// The kind of background rendered behind projected slides.
 enum ProjectionBackgroundType { gradient, solid, image, video }
@@ -28,6 +29,8 @@ String fileNameOf(String path) {
   final last = normalized.substring(normalized.lastIndexOf('/') + 1);
   return last.isEmpty ? path : last;
 }
+
+final _log = AppLogger.get('ProjectionTheme');
 
 /// Appearance configuration for the projection output (slide text color and
 /// background). Persisted in SharedPreferences and applied live in
@@ -226,8 +229,9 @@ class ProjectionThemeNotifier extends StateNotifier<ProjectionTheme> {
           jsonDecode(raw) as Map<String, dynamic>,
         );
       }
-    } catch (_) {
+    } catch (e, st) {
       // ignore: missing or corrupt prefs on first launch
+      _log.fine('Failed to load projection theme from preferences: $e', e, st);
     }
   }
 
@@ -236,8 +240,9 @@ class ProjectionThemeNotifier extends StateNotifier<ProjectionTheme> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('projection_theme', jsonEncode(theme.toJson()));
-    } catch (_) {
+    } catch (e, st) {
       // ignore: missing prefs on first launch
+      _log.fine('Failed to persist projection theme to preferences: $e', e, st);
     }
   }
 

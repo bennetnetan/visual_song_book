@@ -14,6 +14,8 @@ void main() {
         overrides: [
           databaseProvider.overrideWithValue(testDb),
           hasCompletedOnboardingProvider.overrideWith((ref) => true),
+          appSeedProvider.overrideWith((ref) async {}),
+          bibleDatabaseInitProvider.overrideWith((ref) async {}),
         ],
         child: const MyApp(),
       ),

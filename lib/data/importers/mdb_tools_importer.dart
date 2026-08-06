@@ -1,8 +1,11 @@
 import 'dart:io';
 import 'package:csv/csv.dart';
 import 'package:drift/drift.dart';
+import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/importers/vsb_importer.dart';
+
+final _log = AppLogger.get('MdbToolsImporter');
 
 class MdbToolsImporter implements SongbookImporter {
   final AppDatabase db;
@@ -249,8 +252,7 @@ class MdbToolsImporter implements SongbookImporter {
       final dedupResult = deduplicateSongs(songCompanions);
       final dedupedSongs = dedupResult.deduplicated;
       if (dedupResult.duplicatesRemoved > 0) {
-        // ignore: avoid_print
-        print(
+        _log.info(
           'Deduplicated ${dedupResult.duplicatesRemoved} duplicate songs from .vsb import '
           '(kept ${dedupedSongs.length} unique entries).',
         );
@@ -379,7 +381,8 @@ class MdbToolsImporter implements SongbookImporter {
       }
 
       return DateTime(year, month, day, hour, minute, second);
-    } catch (_) {
+    } catch (e, st) {
+      _log.fine('Failed to parse MDB date "$dateStr": $e', e, st);
       return null;
     }
   }

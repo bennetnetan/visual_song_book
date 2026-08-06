@@ -2,6 +2,9 @@ import 'dart:ffi';
 import 'dart:io';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
+import 'package:visual_song_book/core/utils/app_logger.dart';
+
+final _log = AppLogger.get('Win32WindowHelper');
 
 // Win32 function typedefs using standard FFI types (HWND = IntPtr)
 typedef GetForegroundWindowNative = IntPtr Function();
@@ -220,7 +223,9 @@ class Win32WindowHelper {
           calloc.free(ptr);
         }
       }
-    } catch (_) {}
+    } catch (e, st) {
+      _log.fine('Failed to query monitor bounds during fullscreen restore; using primary metrics: $e', e, st);
+    }
 
     setWindowBounds(hwnd, screenX, screenY, screenWidth, screenHeight,
         frameChanged: true);
@@ -261,8 +266,9 @@ class Win32WindowHelper {
                   hWnd != foregroundHwnd) {
                 foundHwnds.add(hWnd);
               }
-            } catch (_) {
+            } catch (e, st) {
               // Swallow per-window errors to continue enumeration
+              _log.fine('Failed to query a window during HWND enumeration; continuing: $e', e, st);
             }
             return true; // Continue enumeration
           },

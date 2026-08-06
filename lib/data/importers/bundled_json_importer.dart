@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/importers/vsb_importer.dart';
+
+final _log = AppLogger.get('BundledJsonImporter');
 
 /// Platform-agnostic importer that reads pre-exported JSON songbook data from
 /// Flutter assets. This works on every platform (Android, iOS, desktop, web)
@@ -94,8 +97,7 @@ class BundledJsonImporter implements SongbookImporter {
       final dedupResult = deduplicateSongs(songCompanions);
       final dedupedSongs = dedupResult.deduplicated;
       if (dedupResult.duplicatesRemoved > 0) {
-        // ignore: avoid_print
-        print(
+        _log.info(
           'Deduplicated ${dedupResult.duplicatesRemoved} duplicate songs from bundled JSON '
           '(kept ${dedupedSongs.length} unique entries).',
         );

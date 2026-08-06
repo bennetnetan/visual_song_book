@@ -8,11 +8,14 @@ import 'package:desktop_multi_window/desktop_multi_window.dart';
 
 import 'package:go_router/go_router.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
+import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/core/utils/win32_window_helper.dart';
 import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_appearance_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/projection/projection_theme.dart';
+
+final _log = AppLogger.get('ProjectionOutputView');
 
 class ProjectionOutputView extends ConsumerStatefulWidget {
   const ProjectionOutputView({super.key});
@@ -268,8 +271,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
         if (c.windowId == currentWindow.windowId) continue;
         await c.invokeMethod('navigate_slide', {'action': action});
       }
-    } catch (_) {
+    } catch (e, st) {
       // ignore: non-critical IPC navigation
+      _log.fine('Failed to send IPC navigation request to secondary window: $e', e, st);
     }
   }
 
@@ -294,8 +298,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
         if (c.windowId == currentWindow.windowId) continue;
         await c.invokeMethod('secondary_window_closed');
       }
-    } catch (_) {
+    } catch (e, st) {
       // ignore: non-critical IPC close notification
+      _log.fine('Failed to notify main window of secondary window close: $e', e, st);
     }
   }
 
@@ -316,8 +321,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
         if (c.windowId == currentWindow.windowId) continue;
         await c.invokeMethod('close_secondary_window');
       }
-    } catch (_) {
+    } catch (e, st) {
       // ignore: non-critical IPC close request
+      _log.fine('Failed to request secondary window close via IPC: $e', e, st);
     }
   }
 

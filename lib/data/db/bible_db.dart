@@ -1,15 +1,49 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:sqlite3/sqlite3.dart';
+import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/data/services/app_storage.dart';
+
+final _log = AppLogger.get('BibleDatabase');
+
+class _BibleQueryRequest {
+  final String path;
+  final String sql;
+  final List<Object?> params;
+
+  _BibleQueryRequest(this.path, this.sql, this.params);
+}
+
+List<Map<String, dynamic>> _runReadonlyQuery(_BibleQueryRequest request) {
+  final db = sqlite3.open(request.path, mode: OpenMode.readOnly);
+  try {
+    final resultSet = db.select(request.sql, request.params);
+    final columns = resultSet.columnNames;
+    final result = <Map<String, dynamic>>[];
+    for (final Row row in resultSet) {
+      final map = <String, dynamic>{};
+      for (var i = 0; i < columns.length; i++) {
+        // ignore: collection_methods_unrelated_type
+        map[columns[i]] = row[i];
+      }
+      result.add(map);
+    }
+    return result;
+  } finally {
+    db.dispose();
+  }
+}
 
 class BibleDatabase {
   Database? _db;
+  String? _dbPath;
 
   Future<void> ensureInitialized() async {
     if (_db != null) return;
 
     final dbPath = await getAppStorageFilePath('kjv_bible.sqlite');
+    _dbPath = dbPath;
 
     final file = File(dbPath);
     bool shouldCopy = false;
@@ -25,25 +59,32 @@ class BibleDatabase {
         if (tables.isEmpty) {
           shouldCopy = true;
         }
-      } catch (e) {
+      } catch (e, st) {
+        _log.warning('Failed to validate existing Bible DB, re-copying: $e', e, st);
         shouldCopy = true;
       }
     }
 
     if (shouldCopy) {
+      _log.info('Copying bundled KJV Bible database to app storage...');
       if (await file.exists()) {
         try {
           await file.delete();
-        } catch (_) {}
+        } catch (e, st) {
+          _log.warning('Failed to delete stale Bible DB before re-copy: $e', e, st);
+        }
       }
       final data = await rootBundle.load('assets/databases/kjv_bible.sqlite');
       await file.writeAsBytes(data.buffer.asUint8List());
+      _log.info('Bible database copy complete.');
     }
 
     _db = sqlite3.open(dbPath);
     try {
       _db!.execute("UPDATE books SET name = 'Revelation' WHERE name LIKE 'Revelation%'");
-    } catch (_) {}
+    } catch (e, st) {
+      _log.fine('Revelation name patch skipped: $e', e, st);
+    }
   }
 
   Database get db {
@@ -78,11 +119,18 @@ class BibleDatabase {
     List<Object?> params = const [],
   ]) async {
     await ensureInitialized();
-    return query(sql, params);
+    final path = _dbPath;
+    if (path == null) {
+      return query(sql, params);
+    }
+    // Run the query on a background isolate using a fresh read-only
+    // connection so LIKE scans across 31k verses don't jank the UI thread.
+    return compute(_runReadonlyQuery, _BibleQueryRequest(path, sql, params));
   }
 
   void close() {
     _db?.dispose();
     _db = null;
+    _dbPath = null;
   }
 }

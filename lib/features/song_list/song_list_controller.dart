@@ -2,9 +2,12 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:visual_song_book/core/models/source_mode.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
+import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/importers/bundled_json_importer.dart';
 import 'package:visual_song_book/data/repositories/song_repository.dart';
+
+final _log = AppLogger.get('SongListController');
 
 enum SongSortMode { byNumber, byTitle, byKey }
 
@@ -146,8 +149,9 @@ class SongListController extends StateNotifier<SongListState> {
     try {
       final paths = await _repository.getSourcePathCounts();
       state = state.copyWith(sourcePaths: paths);
-    } catch (_) {
+    } catch (e, st) {
       // Source paths are optional - don't fail if the query doesn't work
+      _log.fine('Failed to load source path counts; source paths are optional: $e', e, st);
     }
   }
 

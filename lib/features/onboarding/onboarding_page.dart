@@ -64,7 +64,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
         }
       }
     } catch (e) {
-      // Best effort — don't block onboarding
+      // Don't block onboarding, but surface the error so the user knows the
+      // link didn't succeed.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not link songbook: $e')),
+        );
+      }
     }
   }
 

@@ -20,7 +20,9 @@ String _canonicalizePath(String path) {
     if (file.existsSync()) {
       return file.resolveSymbolicLinksSync();
     }
-  } on IOException catch (_) {}
+  } on IOException catch (e, st) {
+    _log.fine('Failed to resolve symbolic links for $path: $e', e, st);
+  }
   return path;
 }
 
@@ -28,7 +30,8 @@ Future<bool> _isPathAllowed(String path) async {
   String canonical;
   try {
     canonical = File(path).resolveSymbolicLinksSync();
-  } on IOException catch (_) {
+  } on IOException catch (e, st) {
+    _log.fine('Failed to resolve symbolic links for $path; using original path: $e', e, st);
     canonical = path;
   }
   canonical = p.normalize(canonical);
@@ -43,8 +46,9 @@ Future<bool> _isPathAllowed(String path) async {
     final appStorage = await getAppStoragePath();
     final appStorageDir = p.normalize(appStorage);
     if (canonical == appStorageDir || canonical.startsWith('$appStorageDir${p.separator}')) return true;
-  } catch (_) {
+  } catch (e, st) {
     // ignore: app storage path not yet initialized
+    _log.fine('Failed to get app storage path; skipping storage-path check: $e', e, st);
   }
 
   return false;
@@ -106,7 +110,8 @@ class LinkedSongbook {
   DateTime? get fileLastModified {
     try {
       return File(path).statSync().modified;
-    } catch (_) {
+    } catch (e, st) {
+      _log.fine('Failed to stat file $path: $e', e, st);
       return null;
     }
   }

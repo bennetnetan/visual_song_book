@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
@@ -212,6 +212,9 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
       final source = ImportSource.fromFile(path);
 
       if (lower.endsWith('.vsbook')) {
+        final confirmed = await _confirmFullImport();
+        if (!confirmed) return;
+
         final importer = importers.firstWhere((imp) => imp is VsBookImporter);
         final importResult = await importer.import(source);
         if (importResult.success) {
@@ -257,6 +260,35 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
         _importStatus = null;
       });
     }
+  }
+
+  Future<bool> _confirmFullImport() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Replace existing library?'),
+        content: const Text(
+          'Importing a .vsbook replaces your current library: existing songs, '
+          'categories, and all play history will be permanently deleted. '
+          'Consider exporting a backup first.\n\nContinue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+              foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Replace Library'),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
   }
 
   Future<void> _importBundled() async {
@@ -462,7 +494,7 @@ class _DataSourcesCard extends ConsumerWidget {
                         ),
                       ),
                       title: Text(
-                        source.split(Platform.pathSeparator).last,
+                        p.basename(source),
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 13,

@@ -40,6 +40,13 @@ final bibleDatabaseProvider = Provider<BibleDatabase>((ref) {
   return db;
 });
 
+// Eagerly initialise the bundled Bible DB at startup so the first-run asset
+// copy happens behind the setup splash instead of blocking the first search.
+final bibleDatabaseInitProvider = FutureProvider<void>((ref) async {
+  final db = ref.watch(bibleDatabaseProvider);
+  await db.ensureInitialized();
+});
+
 // Bible Repository Provider
 final bibleRepositoryProvider = Provider<BibleRepository>((ref) {
   final db = ref.watch(bibleDatabaseProvider);
