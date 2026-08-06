@@ -156,41 +156,7 @@ class _BibleReadingViewState extends State<BibleReadingView> {
           curve: Curves.easeInOut,
           alignment: 0.3,
         );
-        return;
       }
-
-      if (!_scrollController.hasClients) return;
-      final index = widget.verses.indexWhere((verse) => verse.id == v.id);
-      if (index < 0) return;
-
-      final mediaQuery = MediaQuery.of(context);
-      // ignore: use_build_context_synchronously
-      Future.delayed(const Duration(milliseconds: 80), () {
-        if (!mounted || !_scrollController.hasClients) return;
-        final ctx = _activeVerseKey.currentContext;
-        if (ctx != null) {
-          Scrollable.ensureVisible(
-            // ignore: use_build_context_synchronously
-            ctx,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            alignment: 0.3,
-          );
-          return;
-        }
-        final viewportHeight = _scrollController.position.viewportDimension;
-        final headerHeight = kToolbarHeight +
-            mediaQuery.padding.top +
-            (widget.selectedChapter != null ? 52.0 : 0.0) +
-            (widget.selectionMode ? 48.0 : 0.0) +
-            24.0;
-        final targetOffset = (index * 60.0) - (viewportHeight * 0.3) + headerHeight;
-        _scrollController.animateTo(
-          targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      });
     });
   }
 
@@ -405,14 +371,14 @@ class _BibleReadingViewState extends State<BibleReadingView> {
               widget.onFontSizeChanged?.call(newSize);
             }
           },
-          child: ListView.builder(
+          child: SingleChildScrollView(
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             controller: _scrollController,
             padding: EdgeInsets.fromLTRB(
                 24, 12, 24, MediaQuery.of(context).padding.bottom + 80),
-          itemCount: widget.verses.length,
-          itemBuilder: (context, index) {
-            final v = widget.verses[index];
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: widget.verses.map((v) {
             final isActive = widget.activeVerse?.id == v.id;
             final isBookmarked = widget.bookmarkedVerseIds.contains(v.verse);
             final isSelected = widget.selectedVerseIds.contains(v.id);
@@ -523,8 +489,9 @@ class _BibleReadingViewState extends State<BibleReadingView> {
                  ),
                ),
              );
-          },
-        ),
+          }).toList(),
+            ),
+          ),
         ),
         if (widget.verses.length > 30)
           Positioned(

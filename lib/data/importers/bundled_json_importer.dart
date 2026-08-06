@@ -1,9 +1,14 @@
 import 'dart:convert';
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/importers/vsb_importer.dart';
+
+Map<String, dynamic> _parseJson(String jsonString) {
+  return json.decode(jsonString) as Map<String, dynamic>;
+}
 
 final _log = AppLogger.get('BundledJsonImporter');
 
@@ -40,7 +45,7 @@ class BundledJsonImporter implements SongbookImporter {
   }) async {
     try {
       final jsonString = await rootBundle.loadString(assetPath);
-      final Map<String, dynamic> data = json.decode(jsonString) as Map<String, dynamic>;
+      final Map<String, dynamic> data = await compute(_parseJson, jsonString);
 
       final List<dynamic> songsJson = data['songs'] as List<dynamic>? ?? [];
 
