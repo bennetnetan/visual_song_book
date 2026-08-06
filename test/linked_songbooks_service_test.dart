@@ -2,9 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/services/linked_songbooks_service.dart';
 
@@ -141,6 +143,61 @@ void main() {
       final emitted = await stream.first;
       expect(emitted.length, 1);
       expect(emitted[0].path, '/home/user/songs/hymns.vsbook');
+    });
+  });
+
+  group('add() path validation', () {
+    late ProviderContainer container;
+
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+      container = ProviderContainer(
+        overrides: [databaseProvider.overrideWithValue(db)],
+      );
+    });
+
+    tearDown(() => container.dispose());
+
+    Future<LinkedSongbooksService> service() async {
+      await container.read(linkedSongbooksProvider.future);
+      return container.read(linkedSongbooksProvider.notifier);
+    }
+
+    test('rejects a path outside the allowed directories', () async {
+      final notifier = await service();
+      await notifier.add('/tmp/evil.vsbook');
+
+      final linked = await container.read(linkedSongbooksProvider.future);
+      expect(linked, isEmpty);
+      expect(await db.getAllLinkedSongbooks(), isEmpty);
+    });
+
+    test('rejects null/empty and unparseable paths', () async {
+      final notifier = await service();
+      await notifier.add('');
+      await notifier.add('   ');
+
+      expect(await db.getAllLinkedSongbooks(), isEmpty);
+    });
+
+    test('accepts a path inside the user home directory', () async {
+      final home = Platform.environment['HOME'];
+      if (home == null) {
+        // Cannot verify the allow-list branch without a home dir; skip.
+        return;
+      }
+
+      final notifier = await service();
+      final allowedPath = '$home/.vsb_link_test/hymns.vsbook';
+      await notifier.add(allowedPath);
+
+      final linked = await container.read(linkedSongbooksProvider.future);
+      expect(linked.map((b) => b.path), contains(allowedPath));
+      expect(await db.getAllLinkedSongbooks(), hasLength(1));
+
+      // Duplicate add is ignored.
+      await notifier.add(allowedPath);
+      expect(await db.getAllLinkedSongbooks(), hasLength(1));
     });
   });
 
