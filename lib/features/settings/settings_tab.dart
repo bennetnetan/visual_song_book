@@ -122,175 +122,98 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   }
 
   Widget _buildAppearanceContent(bool isLargeScreen) {
-    Widget content = const Column(
-      children: [
-        AppearanceCard(),
-        SizedBox(height: 24),
-      ],
-    );
-
-    if (isLargeScreen) {
-      content = Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: content,
-        ),
-      );
-    }
-
     return SingleChildScrollView(
       padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
-      child: content,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AppearanceCard(),
+              SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildProjectionContent(bool isLargeScreen) {
-    if (isLargeScreen) {
-      return SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Expanded(
-              child: ProjectionAppearanceCard(),
-            ),
-            const SizedBox(width: 24),
-            const Expanded(
-              child: ProjectionPreferencesCard(),
-            ),
-          ],
-        ),
-      );
-    }
-
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: const Column(
-        children: [
-          ProjectionAppearanceCard(),
-          SizedBox(height: 24),
-          ProjectionPreferencesCard(),
-          SizedBox(height: 24),
-        ],
+      padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ProjectionAppearanceCard(),
+              SizedBox(height: 20),
+              ProjectionPreferencesCard(),
+              SizedBox(height: 20),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildDataSourcesContent(ThemeData theme, bool isLargeScreen) {
-    if (isLargeScreen) {
-      return SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                children: [
-                  const SourceModeCard(),
-                  const SizedBox(height: 20),
-                  ImportExportCard(
-                    isImporting: _isImporting,
-                    importStatus: _importStatus,
-                    isExporting: _isExporting,
-                    onImportFile: _importFile,
-                    onImportBundled: _importBundled,
-                    onExportVsBook: _exportVsBook,
-                  ),
-                  const SizedBox(height: 20),
-                  const _SongCollectionsCard(),
-                ],
-              ),
-            ),
-            const SizedBox(width: 24),
-            Expanded(
-              child: Column(
-                children: [
-                  const LinkedSongbooksCard(),
-                  const SizedBox(height: 20),
-                  const _DataSourcesCard(),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          const SourceModeCard(),
-          const SizedBox(height: 16),
-          const LinkedSongbooksCard(),
-          const SizedBox(height: 16),
-          ImportExportCard(
-            isImporting: _isImporting,
-            importStatus: _importStatus,
-            isExporting: _isExporting,
-            onImportFile: _importFile,
-            onImportBundled: _importBundled,
-            onExportVsBook: _exportVsBook,
+      padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SourceModeCard(),
+              const SizedBox(height: 20),
+              const LinkedSongbooksCard(),
+              const SizedBox(height: 20),
+              ImportExportCard(
+                isImporting: _isImporting,
+                importStatus: _importStatus,
+                isExporting: _isExporting,
+                onImportFile: _importFile,
+                onImportBundled: _importBundled,
+                onExportVsBook: _exportVsBook,
+              ),
+              const SizedBox(height: 20),
+              const _DataSourcesCard(),
+              const SizedBox(height: 20),
+              const _SongCollectionsCard(),
+              const SizedBox(height: 32),
+            ],
           ),
-          const SizedBox(height: 16),
-          const _DataSourcesCard(),
-          const SizedBox(height: 16),
-          const _SongCollectionsCard(),
-          const SizedBox(height: 32),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildSystemContent(ThemeData theme) {
     final isLargeScreen = getLayoutMode(context) == LayoutMode.desktop;
-
-    if (isLargeScreen) {
-      return SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                children: [
-                  const AboutCard(),
-                  const SizedBox(height: 20),
-                  const _DiagnosticsCard(),
-                  const SizedBox(height: 20),
-                  const _MaintenanceCard(),
-                ],
-              ),
-            ),
-            const SizedBox(width: 24),
-            Expanded(
-              child: Column(
-                children: [
-                  const ChangelogCard(),
-                  const SizedBox(height: 24),
-                  _buildFooter(theme),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          const AboutCard(),
-          const SizedBox(height: 16),
-          const _DiagnosticsCard(),
-          const SizedBox(height: 16),
-          const _MaintenanceCard(),
-          const SizedBox(height: 16),
-          const ChangelogCard(),
-          const SizedBox(height: 32),
-          _buildFooter(theme),
-        ],
+      padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const AboutCard(),
+              const SizedBox(height: 20),
+              const _DiagnosticsCard(),
+              const SizedBox(height: 20),
+              const _MaintenanceCard(),
+              const SizedBox(height: 20),
+              const ChangelogCard(),
+              const SizedBox(height: 32),
+              _buildFooter(theme),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -531,16 +454,9 @@ class _DataSourcesCard extends ConsumerWidget {
           const SectionHeader(
             icon: Icons.folder_copy_rounded,
             title: 'Manage Data Sources',
+            subtitle: 'View and remove imported songbook collections',
           ),
-          const SizedBox(height: 8),
-          Text(
-            'View and remove imported songbook collections.',
-            style: TextStyle(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           FutureBuilder<List<String>>(
             future: repo.getDistinctSourcePaths(),
             builder: (context, snapshot) {
@@ -725,17 +641,9 @@ class _SongCollectionsCardState extends ConsumerState<_SongCollectionsCard> {
           const SectionHeader(
             icon: Icons.collections_bookmark_outlined,
             title: 'Song Collections',
+            subtitle: 'Categories grouping your songs. Deleting a category keeps songs as Uncategorized.',
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Collections group songs into categories. Deleting a collection '
-            'keeps its songs — they become Uncategorized.',
-            style: TextStyle(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           if (_loading)
             const Center(child: CircularProgressIndicator())
           else if (_categories.isEmpty)
