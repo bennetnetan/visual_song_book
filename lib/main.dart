@@ -113,11 +113,12 @@ class MyApp extends ConsumerWidget {
     final lightTheme = buildAppTheme(Brightness.light);
     final darkTheme = buildAppTheme(Brightness.dark);
 
+    final Widget app;
     // First-run setup: the bundled songbook seed and Bible DB copy can take
     // 5-15s on low-end devices. Show progress instead of a frozen screen.
     if (!isProjectionWindow &&
         (seedAsync.isLoading || bibleInitAsync.isLoading)) {
-      return MaterialApp(
+      app = MaterialApp(
         title: 'Visual Song Book',
         debugShowCheckedModeBanner: false,
         theme: lightTheme,
@@ -125,47 +126,84 @@ class MyApp extends ConsumerWidget {
         themeMode: themeMode,
         home: const _FirstRunSplash(),
       );
-    }
-
-    return onboardingAsync.when(
-      data: (completed) {
-        if (!completed) {
-          return MaterialApp(
+    } else {
+      app = onboardingAsync.when(
+        data: (completed) {
+          if (!completed) {
+            return MaterialApp(
+              title: 'Visual Song Book',
+              debugShowCheckedModeBanner: false,
+              theme: lightTheme,
+              darkTheme: darkTheme,
+              themeMode: themeMode,
+              home: const OnboardingPage(),
+            );
+          }
+          return MaterialApp.router(
             title: 'Visual Song Book',
             debugShowCheckedModeBanner: false,
             theme: lightTheme,
             darkTheme: darkTheme,
             themeMode: themeMode,
-            home: const OnboardingPage(),
+            routerConfig: isProjectionWindow ? projectionRouter : appRouter,
           );
-        }
-        return MaterialApp.router(
+        },
+        loading: () => MaterialApp(
+          title: 'Visual Song Book',
+          debugShowCheckedModeBanner: false,
+          theme: lightTheme,
+          darkTheme: darkTheme,
+          themeMode: themeMode,
+          home: const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          ),
+        ),
+        error: (_, __) => MaterialApp.router(
           title: 'Visual Song Book',
           debugShowCheckedModeBanner: false,
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: themeMode,
           routerConfig: isProjectionWindow ? projectionRouter : appRouter,
-        );
-      },
-      loading: () => MaterialApp(
-        title: 'Visual Song Book',
-        debugShowCheckedModeBanner: false,
-        theme: lightTheme,
-        darkTheme: darkTheme,
-        themeMode: themeMode,
-        home: const Scaffold(body: Center(child: CircularProgressIndicator())),
-      ),
-      error: (_, __) => MaterialApp.router(
-        title: 'Visual Song Book',
-        debugShowCheckedModeBanner: false,
-        theme: lightTheme,
-        darkTheme: darkTheme,
-        themeMode: themeMode,
-        routerConfig: isProjectionWindow ? projectionRouter : appRouter,
-      ),
-    );
+        ),
+      );
+    }
+
+    return _LifecycleGuard(child: app);
   }
+}
+
+/// Wraps the app so the read-only Bible database handle is released when the
+/// OS detaches from the engine (app backgrounding/kill on Android, window
+/// close on desktop), letting SQLite flush any pending state.
+class _LifecycleGuard extends ConsumerStatefulWidget {
+  final Widget child;
+
+  const _LifecycleGuard({required this.child});
+
+  @override
+  ConsumerState<_LifecycleGuard> createState() => _LifecycleGuardState();
+}
+
+class _LifecycleGuardState extends ConsumerState<_LifecycleGuard> {
+  AppLifecycleListener? _listener;
+
+  @override
+  void initState() {
+    super.initState();
+    _listener = AppLifecycleListener(onDetach: () {
+      ref.read(bibleDatabaseProvider).close();
+    });
+  }
+
+  @override
+  void dispose() {
+    _listener?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class _FirstRunSplash extends StatelessWidget {

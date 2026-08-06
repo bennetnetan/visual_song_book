@@ -102,27 +102,6 @@ flutter:
         - asset: assets/fonts/Lora-Regular.ttf
           weight: 400
 
-    - family: RobotoMono
-      fonts:
-        - asset: assets/fonts/RobotoMono-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/RobotoMono-Bold.ttf
-          weight: 700
-
-    - family: Plus Jakarta Sans
-      fonts:
-        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/PlusJakartaSans-Italic.ttf
-          weight: 400
-          style: italic
-        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
-          weight: 700
-
     - family: EBGaramond
       fonts:
         - asset: assets/fonts/EBGaramond-Regular.ttf

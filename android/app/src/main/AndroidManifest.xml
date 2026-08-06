@@ -1,4 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- File picker on API < 33 -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <!-- File picker photo/video on API >= 33 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    <!-- Keep the screen awake during projection (wakelock_plus) -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <application
         android:label="visual_song_book"
         android:name="${applicationName}"
