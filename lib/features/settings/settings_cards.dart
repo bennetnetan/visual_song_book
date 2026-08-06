@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:visual_song_book/core/models/projection_mode.dart';
 import 'package:visual_song_book/core/models/source_mode.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
@@ -132,27 +133,27 @@ class ProjectionPreferencesCard extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
-            SegmentedButton<String>(
+            SegmentedButton<ProjectionMode>(
               segments: const [
                 ButtonSegment(
-                  value: 'single',
+                  value: ProjectionMode.single,
                   label: Text('Single Screen'),
                   icon: Icon(Icons.screenshot_monitor, size: 16),
                 ),
                 ButtonSegment(
-                  value: 'duplicate',
+                  value: ProjectionMode.duplicate,
                   label: Text('Duplicate'),
                   icon: Icon(Icons.copy, size: 16),
                 ),
                 ButtonSegment(
-                  value: 'extended',
+                  value: ProjectionMode.extended,
                   label: Text('Extended'),
                   icon: Icon(Icons.picture_in_picture, size: 16),
                 ),
               ],
               selected: {state.projectionMode},
               onSelectionChanged: (val) {
-                if (val.first == 'duplicate') {
+                if (val.first == ProjectionMode.duplicate) {
                   ScaffoldMessenger.of(context)
                     ..hideCurrentSnackBar()
                     ..showSnackBar(

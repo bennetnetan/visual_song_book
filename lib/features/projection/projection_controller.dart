@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:visual_song_book/core/models/projection_mode.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/core/utils/verse_parser.dart';
@@ -31,7 +32,7 @@ class ProjectionState {
   final int? bibleBookId;
   final int? bibleChapter;
   final String? bibleBookName;
-  final String projectionMode; // 'single', 'duplicate', 'extended'
+  final ProjectionMode projectionMode;
 
   ProjectionState({
     this.currentSong,
@@ -62,7 +63,7 @@ class ProjectionState {
     int? Function()? bibleBookId,
     int? Function()? bibleChapter,
     String? Function()? bibleBookName,
-    String? projectionMode,
+    ProjectionMode? projectionMode,
   }) {
     return ProjectionState(
       currentSong: currentSong != null ? currentSong() : this.currentSong,
@@ -96,7 +97,7 @@ class ProjectionState {
       bibleBookId: null,
       bibleChapter: null,
       bibleBookName: null,
-      projectionMode: 'extended',
+      projectionMode: ProjectionMode.extended,
     );
   }
 
@@ -157,9 +158,11 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       final savedAutoChorus = _prefs?.getBool('projection_auto_chorus') ?? true;
       final savedMode = _prefs?.getString('projection_mode') ?? 'extended';
       // 'duplicate' is not implemented yet — fall back to 'extended'.
-      final effectiveMode = (savedMode == 'single' || savedMode == 'extended')
-          ? savedMode
-          : 'extended';
+      final effectiveMode =
+          (savedMode == ProjectionMode.single.name ||
+                  savedMode == ProjectionMode.extended.name)
+              ? ProjectionMode.fromWireName(savedMode)
+              : ProjectionMode.extended;
 
       state = state.copyWith(
         fontSize: savedFontSize,
@@ -277,9 +280,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     }
   }
 
-  Future<void> setProjectionMode(String mode) async {
+  Future<void> setProjectionMode(ProjectionMode mode) async {
     state = state.copyWith(projectionMode: mode);
-    await _prefs?.setString('projection_mode', mode);
+    await _prefs?.setString('projection_mode', mode.name);
   }
 
   /// Project a list of Bible verses. [title] is the passage heading shown in
@@ -454,7 +457,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       // previous app sessions whose channels are unregistered.
       final window = await WindowController.create(
         WindowConfiguration(
-          arguments: 'Projection Output:${state.projectionMode}',
+          arguments: 'Projection Output:${state.projectionMode.name}',
         ),
       );
       await window.show();
@@ -489,7 +492,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     if (_secondaryWindow == null) return;
     // In 'single' mode the window stays a normal decorated window on the
     // primary display — no auto-move and no fullscreen.
-    if (state.projectionMode == 'single') return;
+    if (state.projectionMode == ProjectionMode.single) return;
     try {
       await _secondaryWindow!.invokeMethod('go_fullscreen', {});
       _log.fine('Sent go_fullscreen IPC to secondary window.');

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 
 import 'package:go_router/go_router.dart';
+import 'package:visual_song_book/core/models/projection_mode.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/core/utils/win32_window_helper.dart';
@@ -88,7 +89,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
     // 'single' mode opens a normal decorated window on the primary display —
     // no auto-fullscreen, no placement, no decoration stripping.
     final isExtendedMode =
-        ref.read(projectionWindowModeProvider) != 'single';
+        ref.read(projectionWindowModeProvider) != ProjectionMode.single;
 
     if (isProjectionEngine) {
       _setupSecondaryWindowChannel();
@@ -138,7 +139,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Timer.run(() {
         if (!mounted) return;
-        if (ref.read(projectionWindowModeProvider) != 'single') {
+        if (ref.read(projectionWindowModeProvider) != ProjectionMode.single) {
           _goFullscreenOnBestDisplay();
         }
       });
@@ -175,7 +176,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
         // Skipped in 'single' mode.
         if (!_isGoingFullscreen &&
             _originalWindowStyle == 0 &&
-            ref.read(projectionWindowModeProvider) != 'single') {
+            ref.read(projectionWindowModeProvider) != ProjectionMode.single) {
           await _goFullscreenOnBestDisplay();
         }
       }

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:visual_song_book/core/models/projection_mode.dart';
 import 'package:visual_song_book/data/db/bible_db.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/importers/vsb_importer.dart';
@@ -71,9 +72,11 @@ final importersProvider = Provider<List<SongbookImporter>>((ref) {
 final isProjectionWindowProvider = Provider<bool>((ref) => false);
 
 // Projection window placement mode passed from the main window at creation time:
-// 'extended' (default) = place on a second display and go fullscreen;
-// 'single' = normal decorated window on the primary display, no auto-move.
-final projectionWindowModeProvider = Provider<String>((ref) => 'extended');
+// extended (default) = place on a second display and go fullscreen;
+// single = normal decorated window on the primary display, no auto-move.
+final projectionWindowModeProvider = Provider<ProjectionMode>(
+  (ref) => ProjectionMode.extended,
+);
 
 // Onboarding state — true when the user has completed the first-launch wizard
 final hasCompletedOnboardingProvider = FutureProvider<bool>((ref) async {
