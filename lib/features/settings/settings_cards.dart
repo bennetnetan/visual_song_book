@@ -601,44 +601,44 @@ class _ChangelogCardState extends State<ChangelogCard> {
     final theme = Theme.of(context);
     final recentEntries = [
       const _ChangelogEntryWidget(
+        version: 'v2.1.0',
+        date: '2026-08-06',
+        changes: [
+          'Settings: professional redesign across all four tabs with centered single-column layout (max-width 800)',
+          'SectionHeader replaced with slim all-caps label + icon — removes chunky coloured icon boxes',
+          'ImportExportCard: compact action rows replace full-width mega-buttons',
+          'AboutCard: horizontal compact layout with logo inline',
+          'Projection search focus restored after overlay closes — arrow key navigation always works',
+          'Set Navigator list now expands and scrolls correctly',
+          'Footer moved into the System tab scroll area',
+        ],
+      ),
+      const _ChangelogEntryWidget(
         version: 'v2.0.0',
         date: '2026-08-05',
         changes: [
           'Settings restructured into tabbed sections: Appearance, Projection, Data Sources, System',
-          'Bible reader UI refinements: active verse options, subtle selection colors, increased verse spacing',
+          'System tab: live diagnostics card with database status, storage path, and SQLite file sizes',
+          'Maintenance card: clear logs/history, re-verify Bible databases, reset settings',
+          'Bible reader UI refinements: active verse options, selection colours, increased spacing',
           'Cross-references displayed at top of sidebar with auto-scroll',
-          'Continue Reading button redesigned to filled button style',
-          'Verse options menu restricted to active verse only',
-          'Default Bible font changed to Lora at 19pt with adjustable font size slider in settings',
-          'Legacy Bible serif font preference migrated to new font family setting',
-          'Removed google_fonts dependency and restored bundled font usage',
-          'Fixed missing imports and analyzer errors across Bible and settings modules',
+          'Default Bible font: Lora 19 pt with adjustable slider in Appearance settings',
+          'First-run JSON parsing offloaded to background isolate — no more UI freeze on splash',
+          'Bible scroll fixed: replaced lazy ListView.builder to resolve erratic cross-reference navigation',
+          'Removed google_fonts dependency; restored bundled fonts',
         ],
       ),
       const _ChangelogEntryWidget(
         version: 'v1.9.0',
         date: '2026-08-04',
         changes: [
-          'Projection mode — extended (secondary window) or single (in-window on primary display)',
+          'Projection mode — extended (secondary window) or single (in-window)',
           'Reopening projection reuses the hidden window — no duplicate engines',
           'Bible projection: load more verses for long passages',
-          'Projection screen cleanup — position indicator and nav arrows hidden on desktop, kept on mobile fullscreen',
-          'Font-size cap unified (16–160); pinch-zoom persists once when the gesture ends',
           'Search: Enter/click projects the keyboard-highlighted result',
-          'History: set and Bible entries refresh live and can be cleared; Continue Reading survives restart',
-          'Categories: filter songs by collection; deleting a category keeps its songs (moved to Uncategorized)',
+          'History: set and Bible entries refresh live and can be cleared',
           '.vsbook import no longer crashes on modified timestamps; deleted songs stay deleted',
-          'Hygiene: dead code and unused dependencies removed, explicit lint rules, macOS target 11.0, CI with hermetic tests',
-        ],
-      ),
-      const _ChangelogEntryWidget(
-        version: 'v1.7.1',
-        date: '2026-07-31',
-        changes: [
-          'Fixed projection crash caused by background enumeration on Windows',
-          'Eliminated title bar flash on secondary projection screen (Windows)',
-          'Improved Enter-key interaction and responsiveness for search results',
-          'Improved projection UI and controls visibility on Android/touch devices',
+          'Hygiene: dead code removed, explicit lint rules, macOS target 11.0, CI with hermetic tests',
         ],
       ),
     ];
@@ -814,7 +814,7 @@ class AboutCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(5),
                       ),
                       child: Text(
-                        'v2.0.0',
+                        'v2.1.0',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,

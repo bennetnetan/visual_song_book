@@ -2,6 +2,57 @@
 
 All notable changes to Visual Song Book are documented here. Newest first.
 
+## [2.1.0] - 2026-08-06
+
+### UI/UX
+- **Settings — professional redesign across all four tabs** (Appearance, Projection, Data Sources, System)
+  - Replaced multi-column side-by-side card grids with a centered, single-column layout constrained to 800 px max-width — eliminates unequal column heights and empty voids on wide screens.
+  - `SectionHeader` redesigned: removed chunky coloured icon box, replaced with a slim all-caps label + small inline icon and optional subtitle.
+  - `SettingsCard` tightened: thinner border (30 % opacity), 20 px symmetric padding, 12 px corner radius.
+  - `AppearanceCard`: theme toggle now sits inline (label left, SegmentedButton right); font size shown as `## pt` beside the label.
+  - `ImportExportCard`: replaced three full-width mega-buttons with compact `_ActionRow` widgets (icon + description left, action button right).
+  - `AboutCard`: compact horizontal layout — 52 px logo + text block instead of a centred hero.
+  - `ProjectionPreferencesCard`: manual `Row + Switch` replaces `SwitchListTile` for consistent padding.
+- Footer moved into the System tab scroll area — no longer floats as a separate panel.
+
+### Bug Fixes
+- Projection search keyboard focus restored after overlay closes — arrow key navigation now always works without clicking the screen first.
+- Set Navigator list now expands and scrolls correctly (replaced `AnimatedContainer` with `AnimatedSize`).
+
+## [2.0.0] - 2026-08-05
+
+### Features
+- Settings restructured into tabbed sections: **Appearance**, **Projection**, **Data Sources**, **System**.
+- **System tab** — live diagnostics card: database connection status with info-icon tooltip, storage path with copy-to-clipboard, real-time SQLite file sizes.
+- **Maintenance card** — warning-dialog protected actions to clear logs/history, re-verify Bible databases, or reset app settings.
+- Bible reader: active verse options menu, subtle selection colours, increased verse spacing.
+- Cross-references displayed at the top of the sidebar with auto-scroll.
+- Default Bible font changed to Lora at 19 pt; font size adjustable via slider in Appearance settings.
+- Bible font family preference persisted and migrated from legacy serif boolean setting.
+
+### Performance
+- First-run JSON parsing (22 MB bundled songbook) offloaded to a background isolate via `compute()` — eliminates UI freeze on splash screen.
+- Bible chapter scroll replaced lazy `ListView.builder` with `SingleChildScrollView + Column` so `Scrollable.ensureVisible` always has a valid element context — fixes erratic cross-reference and search-result navigation.
+
+### Fixes / Hygiene
+- Removed `google_fonts` dependency; restored bundled font assets.
+- Fixed missing `layout_utils` import in `bible_reading_widgets.dart`.
+- `DropdownButtonFormField` updated to use `initialValue` instead of deprecated `value`.
+- All Dart analyzer issues resolved (zero warnings/errors).
+
+## [1.9.0] - 2026-08-04
+
+- Projection mode — extended (secondary window) or single (in-window on primary display).
+- Reopening projection reuses the hidden window — no duplicate engines.
+- Bible projection: load more verses for long passages.
+- Projection screen cleanup — position indicator and nav arrows hidden on desktop, kept on mobile fullscreen.
+- Font-size cap unified (16–160); pinch-zoom persists once when the gesture ends.
+- Search: Enter/click projects the keyboard-highlighted result.
+- History: set and Bible entries refresh live and can be cleared; Continue Reading survives restart.
+- Categories: filter songs by collection; deleting a category keeps its songs (moved to Uncategorized).
+- `.vsbook` import no longer crashes on modified timestamps; deleted songs stay deleted.
+- Hygiene: dead code and unused dependencies removed, explicit lint rules, macOS target 11.0, CI with hermetic tests.
+
 ## [1.8.0] - 2026-08-04
 
 - Projection mode — extended (secondary window) or single (in-window on primary display).
