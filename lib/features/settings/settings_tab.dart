@@ -122,20 +122,49 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   }
 
   Widget _buildAppearanceContent(bool isLargeScreen) {
+    Widget content = const Column(
+      children: [
+        AppearanceCard(),
+        SizedBox(height: 24),
+      ],
+    );
+
+    if (isLargeScreen) {
+      content = Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: content,
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
-      child: const Column(
-        children: [
-          AppearanceCard(),
-          SizedBox(height: 24),
-        ],
-      ),
+      child: content,
     );
   }
 
   Widget _buildProjectionContent(bool isLargeScreen) {
+    if (isLargeScreen) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Expanded(
+              child: ProjectionAppearanceCard(),
+            ),
+            const SizedBox(width: 24),
+            const Expanded(
+              child: ProjectionPreferencesCard(),
+            ),
+          ],
+        ),
+      );
+    }
+
     return SingleChildScrollView(
-      padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
+      padding: const EdgeInsets.all(16),
       child: const Column(
         children: [
           ProjectionAppearanceCard(),
@@ -148,8 +177,47 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   }
 
   Widget _buildDataSourcesContent(ThemeData theme, bool isLargeScreen) {
+    if (isLargeScreen) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                children: [
+                  const SourceModeCard(),
+                  const SizedBox(height: 20),
+                  ImportExportCard(
+                    isImporting: _isImporting,
+                    importStatus: _importStatus,
+                    isExporting: _isExporting,
+                    onImportFile: _importFile,
+                    onImportBundled: _importBundled,
+                    onExportVsBook: _exportVsBook,
+                  ),
+                  const SizedBox(height: 20),
+                  const _SongCollectionsCard(),
+                ],
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              child: Column(
+                children: [
+                  const LinkedSongbooksCard(),
+                  const SizedBox(height: 20),
+                  const _DataSourcesCard(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return SingleChildScrollView(
-      padding: EdgeInsets.all(isLargeScreen ? 24 : 16),
+      padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           const SourceModeCard(),
@@ -175,6 +243,40 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   }
 
   Widget _buildSystemContent(ThemeData theme) {
+    final isLargeScreen = getLayoutMode(context) == LayoutMode.desktop;
+
+    if (isLargeScreen) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                children: [
+                  const AboutCard(),
+                  const SizedBox(height: 20),
+                  const _DiagnosticsCard(),
+                  const SizedBox(height: 20),
+                  const _MaintenanceCard(),
+                ],
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              child: Column(
+                children: [
+                  const ChangelogCard(),
+                  const SizedBox(height: 24),
+                  _buildFooter(theme),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
