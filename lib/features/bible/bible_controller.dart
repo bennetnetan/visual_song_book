@@ -373,6 +373,27 @@ class BibleController extends StateNotifier<BibleState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_recentSearchesKey);
   }
+
+  Future<String> getSelectedPassageText() async {
+    final selected = state.verses
+        .where((v) => state.selectedVerseIds.contains(v.id))
+        .toList()
+      ..sort((a, b) => a.verse.compareTo(b.verse));
+
+    if (selected.isEmpty) return '';
+
+    final bookName = selected.first.bookName ?? '';
+    final chapter = selected.first.chapter;
+    final buffer = StringBuffer();
+    buffer.writeln('📖 $bookName $chapter');
+    buffer.writeln('');
+
+    for (final v in selected) {
+      buffer.writeln('${v.verse}. ${v.text}');
+    }
+
+    return buffer.toString();
+  }
 }
 
 final bibleControllerProvider =

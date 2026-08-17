@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:visual_song_book/core/services/share_service.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/features/sets/sets_tab.dart';
@@ -426,13 +427,48 @@ class _SetDetailState extends ConsumerState<SetDetail> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // DEFAULT: Share via WhatsApp
               ListTile(
-                leading: const Icon(Icons.share_outlined),
-                title: const Text('Export for Another Device (.json)'),
-                subtitle: const Text('Includes lyrics, metadata — importable on other devices'),
-                onTap: () {
+                leading: const Icon(Icons.chat, color: Colors.green),
+                title: const Text('Share via WhatsApp', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Share set list as plain text message'),
+                onTap: () async {
                   Navigator.pop(ctx);
-                  widget.onShareJson();
+                  try {
+                    final textString = await ref.read(setsControllerProvider.notifier).getSetPlainText(widget.setObj.id);
+                    await ShareService.shareViaWhatsApp(textString);
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to share: $e')),
+                      );
+                    }
+                  }
+                },
+              ),
+              const Divider(height: 1),
+              // OTHER OPTIONS
+              ListTile(
+                leading: const Icon(Icons.copy_outlined),
+                title: const Text('Copy Plain Text List'),
+                subtitle: const Text('Copy list of songs and keys to clipboard'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  try {
+                    final textString = await ref.read(setsControllerProvider.notifier).getSetPlainText(widget.setObj.id);
+                    await Clipboard.setData(ClipboardData(text: textString));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Set list copied to clipboard!')),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to copy: $e')),
+                      );
+                    }
+                  }
                 },
               ),
               ListTile(
@@ -444,9 +480,17 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                   widget.onShareText();
                 },
               ),
-              const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.copy_outlined),
+                leading: const Icon(Icons.share_outlined),
+                title: const Text('Export for Another Device (.json)'),
+                subtitle: const Text('Includes lyrics, metadata — importable on other devices'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  widget.onShareJson();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.content_copy_outlined),
                 title: const Text('Copy to Clipboard (Shareable JSON)'),
                 subtitle: const Text('Copy JSON data to clipboard for easy sharing'),
                 onTap: () async {
@@ -463,29 +507,6 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Failed to copy JSON: $e')),
-                      );
-                    }
-                  }
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.content_copy_outlined),
-                title: const Text('Copy Plain Text List'),
-                subtitle: const Text('Copy list of songs and keys to clipboard'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  try {
-                    final textString = await ref.read(setsControllerProvider.notifier).getSetPlainText(widget.setObj.id);
-                    await Clipboard.setData(ClipboardData(text: textString));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Set list copied to clipboard!')),
-                      );
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to copy lyrics: $e')),
                       );
                     }
                   }

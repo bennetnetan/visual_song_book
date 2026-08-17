@@ -117,6 +117,8 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
                   onGoBible: () {
                     ref.read(activeDashboardTabProvider.notifier).state = 2;
                   },
+                  notifier: notifier,
+                  returnFocusTo: _projectionFocus,
                 )
               : Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -185,8 +187,15 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
 class _EmptyProjectionState extends StatelessWidget {
   final VoidCallback onGoSongs;
   final VoidCallback onGoBible;
+  final ProjectionController notifier;
+  final FocusNode returnFocusTo;
 
-  const _EmptyProjectionState({required this.onGoSongs, required this.onGoBible});
+  const _EmptyProjectionState({
+    required this.onGoSongs,
+    required this.onGoBible,
+    required this.notifier,
+    required this.returnFocusTo,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -215,7 +224,12 @@ class _EmptyProjectionState extends StatelessWidget {
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
+            _ProjectionSearchAnchor(
+              notifier: notifier,
+              returnFocusTo: returnFocusTo,
+            ),
+            const SizedBox(height: 24),
             Row(
               children: [
                 Expanded(
@@ -343,6 +357,15 @@ class _ProjectionHeader extends StatelessWidget {
             child: _AutoChorusToggle(
               value: state.autoInsertChorus,
               onChanged: notifier.setAutoInsertChorus,
+            ),
+          ),
+        if (state.hasContent)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              icon: const Icon(Icons.share_outlined, size: 18),
+              tooltip: 'Share',
+              onPressed: notifier.shareCurrentSlide,
             ),
           ),
         ElevatedButton.icon(

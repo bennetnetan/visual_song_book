@@ -11,6 +11,12 @@ analyzer:
     - build/**
     - '**/*.g.dart'
     - tool/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
 
 linter:
   rules:

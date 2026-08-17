@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:visual_song_book/core/models/projection_mode.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
+import 'package:visual_song_book/core/services/share_service.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/core/utils/verse_parser.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
@@ -632,6 +633,27 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       // Actual window closure is handled by onWindowsChanged and IPC.
       return false;
     }
+  }
+
+  /// Shares the current slide text via WhatsApp.
+  Future<void> shareCurrentSlide() async {
+    final slide = state.currentSlide;
+    if (slide == null) return;
+
+    final buffer = StringBuffer();
+    if (state.isBibleMode) {
+      buffer.writeln('📖 ${slide.label}');
+      buffer.writeln('');
+    } else if (state.currentSong != null) {
+      final song = state.currentSong!;
+      buffer.writeln('🎵 ${song.title}');
+      if (song.songNum > 0) buffer.writeln('Song #${song.songNum}');
+      if (song.key != null && song.key!.isNotEmpty) buffer.writeln('Key: ${song.key}');
+      buffer.writeln('');
+    }
+    buffer.writeln(slide.text);
+
+    await ShareService.shareViaWhatsApp(buffer.toString());
   }
 }
 

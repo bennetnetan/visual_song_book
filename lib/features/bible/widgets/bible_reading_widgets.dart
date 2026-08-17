@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:visual_song_book/core/services/share_service.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/features/bible/bible_controller.dart';
 import 'package:visual_song_book/features/bible/bible_repository.dart';
@@ -285,6 +286,12 @@ class _BibleReadingViewState extends State<BibleReadingView> {
           ),
           const SizedBox(width: 8),
           FilledButton.icon(
+            onPressed: selected > 0 ? _shareSelectedVerses : null,
+            icon: const Icon(Icons.share_outlined, size: 16),
+            label: Text('Share ($selected)', style: const TextStyle(fontSize: 12)),
+          ),
+          const SizedBox(width: 8),
+          FilledButton.icon(
             onPressed: selected > 0 ? _projectSelectedVerses : null,
             icon: const Icon(Icons.tv, size: 16),
             label: Text('Project ($selected)', style: const TextStyle(fontSize: 12)),
@@ -292,6 +299,15 @@ class _BibleReadingViewState extends State<BibleReadingView> {
         ],
       ),
     );
+  }
+
+  Future<void> _shareSelectedVerses() async {
+    final container = ProviderScope.containerOf(context);
+    final text = await container
+        .read(bibleControllerProvider.notifier)
+        .getSelectedPassageText();
+    if (text.isEmpty) return;
+    await ShareService.shareViaWhatsApp(text);
   }
 
   void _projectSelectedVerses() {
@@ -591,6 +607,14 @@ class _BibleReadingViewState extends State<BibleReadingView> {
           ),
         ),
         const PopupMenuItem(
+          value: 'share',
+          child: ListTile(
+            leading: Icon(Icons.share_outlined, size: 18),
+            title: Text('Share Verse', style: TextStyle(fontSize: 13)),
+            dense: true,
+          ),
+        ),
+        const PopupMenuItem(
           value: 'select',
           child: ListTile(
             leading: Icon(Icons.checklist, size: 18),
@@ -599,7 +623,7 @@ class _BibleReadingViewState extends State<BibleReadingView> {
           ),
         ),
       ],
-    ).then((action) {
+    ).then((action) async {
       if (action == 'project') {
         widget.onProjectPassage(verse.chapter, [verse]);
       } else if (action == 'navigate') {
@@ -608,6 +632,9 @@ class _BibleReadingViewState extends State<BibleReadingView> {
             .navigateToVerse(verse.bookId, verse.chapter, verse.verse);
       } else if (action == 'bookmark') {
         widget.onToggleBookmark(verse);
+      } else if (action == 'share') {
+        final text = '📖 ${verse.reference}\n\n${verse.text}';
+        await ShareService.shareViaWhatsApp(text);
       } else if (action == 'select') {
         container
             .read(bibleControllerProvider.notifier)
@@ -652,6 +679,9 @@ class BibleVersePopupMenu extends StatelessWidget {
       onSelected: (action) {
         if (action == 'project') {
           onProject();
+        } else if (action == 'share') {
+          final text = '📖 ${verse.reference}\n\n${verse.text}';
+          ShareService.shareViaWhatsApp(text);
         } else if (action == 'bookmark') {
           onBookmark();
         } else if (action == 'navigate') {
@@ -677,6 +707,14 @@ class BibleVersePopupMenu extends StatelessWidget {
               dense: true,
             ),
           ),
+        const PopupMenuItem(
+          value: 'share',
+          child: ListTile(
+            leading: Icon(Icons.share_outlined, size: 18),
+            title: Text('Share Verse', style: TextStyle(fontSize: 13)),
+            dense: true,
+          ),
+        ),
         PopupMenuItem(
           value: 'bookmark',
           child: ListTile(
