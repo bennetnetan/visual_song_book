@@ -432,21 +432,21 @@ class _SetDetailState extends ConsumerState<SetDetail> {
     final songsInSetColumn = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (isLargeScreen)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Text(
-              'Songs in Set',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: Text(
+            'Songs in Set',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.8,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
+        ),
         if (widget.items.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
             child: Row(
               children: [
                 Icon(
@@ -510,13 +510,17 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                           children: [
                             ReorderableDragStartListener(
                               index: index,
-                              child: Icon(
-                                Icons.drag_handle,
-                                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                                size: 20,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                                color: Colors.transparent,
+                                child: Icon(
+                                  Icons.drag_handle,
+                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                  size: 22,
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 4),
                             Text(
                               '${index + 1}',
                               style: TextStyle(
@@ -669,18 +673,18 @@ class _SetDetailState extends ConsumerState<SetDetail> {
     final allSongsColumn = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (isLargeScreen)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Text(
-              'All Songs',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: Text(
+            'Song Library',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.8,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: TextField(

@@ -237,6 +237,7 @@ class SetsTab extends ConsumerWidget {
                       width: 280,
                       child: SetList(
                         sets: state.sets,
+                        songCounts: state.songCounts,
                         selectedId: state.selectedSetId,
                         onSelect: notifier.selectSet,
                         onCreate: () => _showCreateDialog(context, ref),
@@ -274,6 +275,7 @@ class SetsTab extends ConsumerWidget {
               : state.selectedSetId == null
                   ? SetList(
                       sets: state.sets,
+                      songCounts: state.songCounts,
                       selectedId: state.selectedSetId,
                       onSelect: notifier.selectSet,
                       onCreate: () => _showCreateDialog(context, ref),

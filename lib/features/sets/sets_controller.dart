@@ -15,6 +15,7 @@ class SetsState {
   final int? selectedSetId;
   final List<SongSetItem> setItems;
   final List<Song> availableSongs;
+  final Map<int, int> songCounts;
   final bool isLoading;
 
   SetsState({
@@ -22,6 +23,7 @@ class SetsState {
     this.selectedSetId,
     required this.setItems,
     required this.availableSongs,
+    this.songCounts = const {},
     required this.isLoading,
   });
 
@@ -30,6 +32,7 @@ class SetsState {
     int? Function()? selectedSetId,
     List<SongSetItem>? setItems,
     List<Song>? availableSongs,
+    Map<int, int>? songCounts,
     bool? isLoading,
   }) {
     return SetsState(
@@ -39,12 +42,18 @@ class SetsState {
           : this.selectedSetId,
       setItems: setItems ?? this.setItems,
       availableSongs: availableSongs ?? this.availableSongs,
+      songCounts: songCounts ?? this.songCounts,
       isLoading: isLoading ?? this.isLoading,
     );
   }
 
-  factory SetsState.initial() =>
-      SetsState(sets: [], setItems: [], availableSongs: [], isLoading: true);
+  factory SetsState.initial() => SetsState(
+        sets: [],
+        setItems: [],
+        availableSongs: [],
+        songCounts: const {},
+        isLoading: true,
+      );
 }
 
 class SetsController extends StateNotifier<SetsState> {
@@ -59,7 +68,7 @@ class SetsController extends StateNotifier<SetsState> {
   }
 
   void _init() {
-    _setsSub = _repo.watchAllSets().listen((sets) {
+    _setsSub = _repo.watchAllSets().listen((sets) async {
       _log.fine('Sets stream update: ${sets.length} set(s). '
           'selectedSetId=${state.selectedSetId}');
       
@@ -72,7 +81,12 @@ class SetsController extends StateNotifier<SetsState> {
         clearSelection();
       }
 
-      state = state.copyWith(sets: sets, isLoading: false);
+      final counts = <int, int>{};
+      for (final s in sets) {
+        counts[s.id] = await _repo.getSongCountForSet(s.id);
+      }
+
+      state = state.copyWith(sets: sets, songCounts: counts, isLoading: false);
     });
 
     _songsSub = _songRepo.watchAllSongs().listen((songs) {
@@ -97,7 +111,9 @@ class SetsController extends StateNotifier<SetsState> {
     _itemsSub = _repo.watchSetItems(setId).listen((items) {
       _log.fine('Set items updated reactively for set $setId: ${items.length} item(s).');
       if (mounted && state.selectedSetId == setId) {
-        state = state.copyWith(setItems: items);
+        final updatedCounts = Map<int, int>.from(state.songCounts);
+        updatedCounts[setId] = items.length;
+        state = state.copyWith(setItems: items, songCounts: updatedCounts);
       }
     });
   }
