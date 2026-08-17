@@ -1030,17 +1030,17 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                     FilledButton.tonal(
                       onPressed: widget.items.isEmpty ? null : widget.onProject,
                       style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.tv, size: 16),
+                          Icon(Icons.slideshow, size: 16),
                           SizedBox(width: 6),
                           Text(
-                            'Project Set',
+                            'Start Presentation',
                             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                           ),
                         ],

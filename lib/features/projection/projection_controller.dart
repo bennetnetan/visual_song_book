@@ -400,7 +400,11 @@ class ProjectionController extends StateNotifier<ProjectionState> {
           autoInsertChorus: state.autoInsertChorus,
         );
         if (sequence.isNotEmpty) {
-          slides.addAll(sequence);
+          final taggedSequence = sequence.map((v) => v.copyWith(
+            songTitle: song.title,
+            songNum: song.songNum,
+          )).toList();
+          slides.addAll(taggedSequence);
         }
         _songRepository.addToHistory(song.id);
       }

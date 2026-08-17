@@ -15,6 +15,7 @@ import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_appearance_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/projection/projection_theme.dart';
+import 'package:visual_song_book/features/sets/sets_tab.dart';
 
 final _log = AppLogger.get('ProjectionOutputView');
 
@@ -236,6 +237,163 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
 
 
 
+
+  void _showMobileSetPlaylistSheet(BuildContext context, WidgetRef ref) {
+    final setsState = ref.read(setsControllerProvider);
+    final projectionState = ref.read(projectionControllerProvider);
+    final theme = Theme.of(context);
+    final setObj = setsState.sets
+        .where((s) => s.id == setsState.selectedSetId)
+        .firstOrNull;
+
+    if (setObj == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  Icon(Icons.playlist_play, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      setObj.name,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Text(
+                    '${setsState.setItems.length} songs',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.5,
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: setsState.setItems.length,
+                  itemBuilder: (context, i) {
+                    final item = setsState.setItems[i];
+                    final song = setsState.availableSongs
+                        .where((s) => s.id == item.songId)
+                        .firstOrNull;
+                    if (song == null) return const SizedBox.shrink();
+
+                    // Check if current slide belongs to this song
+                    final currentSlide = projectionState.currentSlide;
+                    final isCurrentSong = currentSlide?.songTitle == song.title;
+                    final keyText = item.key ?? song.key;
+
+                    return ListTile(
+                      dense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      leading: CircleAvatar(
+                        radius: 12,
+                        backgroundColor: isCurrentSong
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.surfaceContainerHighest,
+                        child: Text(
+                          '${i + 1}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isCurrentSong
+                                ? theme.colorScheme.onPrimary
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      title: Text(
+                        song.title,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: isCurrentSong ? FontWeight.bold : FontWeight.w500,
+                          color: isCurrentSong ? theme.colorScheme.primary : null,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: item.notes != null && item.notes!.isNotEmpty
+                          ? Text(
+                              '📝 ${item.notes!}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontStyle: FontStyle.italic,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            )
+                          : null,
+                      trailing: keyText != null && keyText.isNotEmpty
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.6),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                keyText,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                ),
+                              ),
+                            )
+                          : null,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        // Jump to first slide of this song in the projected sequence
+                        final slideIdx = projectionState.slides.indexWhere(
+                          (v) => v.songTitle == song.title,
+                        );
+                        if (slideIdx >= 0) {
+                          ref.read(projectionControllerProvider.notifier).selectSlide(slideIdx);
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   /// Toggles the mobile projection between landscape and portrait full-screen.
   /// Mobile only: desktop projection windows manage their own size/fullscreen.
@@ -595,20 +753,41 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                 ),
               ),
 
-              // Appearance + orientation controls — mobile only, top-right.
-              // The palette icon jumps to Settings to configure the screen;
-              // the orientation icon switches between landscape/portrait.
+              // Appearance, orientation + set playlist controls — mobile only, top-right.
               if (_isMobile)
                 Positioned(
                   top: 4,
                   right: 4,
                   child: AnimatedOpacity(
-                    opacity: 0.45,
+                    opacity: 0.55,
                     duration: const Duration(milliseconds: 300),
                     child: SafeArea(
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          Consumer(
+                            builder: (context, ref, _) {
+                              final setsState = ref.watch(setsControllerProvider);
+                              if (setsState.selectedSetId == null || setsState.setItems.isEmpty) {
+                                return const SizedBox.shrink();
+                              }
+                              return IconButton(
+                                icon: const Icon(
+                                  Icons.playlist_play,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                onPressed: () => _showMobileSetPlaylistSheet(context, ref),
+                                tooltip: 'Songs in Set',
+                                splashRadius: 20,
+                                padding: const EdgeInsets.all(6),
+                                constraints: const BoxConstraints(
+                                  minWidth: 36,
+                                  minHeight: 36,
+                                ),
+                              );
+                            },
+                          ),
                           IconButton(
                             icon: const Icon(
                               Icons.palette,

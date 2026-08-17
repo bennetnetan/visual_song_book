@@ -233,9 +233,9 @@ class SetList extends StatelessWidget {
                                   value: 'project',
                                   child: Row(
                                     children: [
-                                      Icon(Icons.tv, size: 18),
+                                      Icon(Icons.slideshow, size: 18),
                                       SizedBox(width: 12),
-                                      Text('Project Set'),
+                                      Text('Present Set'),
                                     ],
                                   ),
                                 ),

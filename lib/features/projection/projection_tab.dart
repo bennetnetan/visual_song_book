@@ -482,45 +482,92 @@ class _SlideListState extends State<_SlideList> {
       itemBuilder: (context, index) {
         final slide = widget.state.slides[index];
         final isSelected = index == widget.state.currentSlideIndex;
-        return Card(
-          elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                color: isSelected
-                    ? theme.colorScheme.primary.withValues(alpha: 0.5)
-                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
-                width: isSelected ? 1.5 : 1,
-              ),
-            ),
-            color: isSelected
-                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.35)
-                : theme.colorScheme.surfaceContainer.withValues(alpha: 0.3),
-            margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-            child: ListTile(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              leading: _SlideLabelBadge(
-                label: slide.label,
-                isSelected: isSelected,
-                isBible: widget.state.isBibleMode,
-              ),
-              title: Text(
-                slide.text,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontWeight:
-                      isSelected ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 14,
-                  height: 1.3,
+        final prevSlide = index > 0 ? widget.state.slides[index - 1] : null;
+        final isNewSong = slide.songTitle != null &&
+            (prevSlide == null || prevSlide.songTitle != slide.songTitle);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isNewSong)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 16, 12, 6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: theme.colorScheme.secondary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.music_note,
+                        size: 14,
+                        color: theme.colorScheme.onSecondaryContainer,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          slide.songNum != null && slide.songNum! > 0
+                              ? '${slide.songTitle} (#${slide.songNum})'
+                              : (slide.songTitle ?? ''),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSecondaryContainer,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              onTap: () => widget.notifier.selectSlide(index),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                  color: isSelected
+                      ? theme.colorScheme.primary.withValues(alpha: 0.5)
+                      : theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+                  width: isSelected ? 1.5 : 1,
+                ),
+              ),
+              color: isSelected
+                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.35)
+                  : theme.colorScheme.surfaceContainer.withValues(alpha: 0.3),
+              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+              child: ListTile(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                leading: _SlideLabelBadge(
+                  label: slide.label,
+                  isSelected: isSelected,
+                  isBible: widget.state.isBibleMode,
+                ),
+                title: Text(
+                  slide.text,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 14,
+                    height: 1.3,
+                  ),
+                ),
+                onTap: () => widget.notifier.selectSlide(index),
+              ),
             ),
-          );
-        },
-      );
+          ],
+        );
+      },
+    );
     }
   }
 
