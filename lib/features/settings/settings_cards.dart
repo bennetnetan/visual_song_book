@@ -246,28 +246,30 @@ class AppearanceCard extends ConsumerWidget {
                       fontSize: 12,
                       color: theme.colorScheme.onSurfaceVariant)),
               const SizedBox(height: 12),
-              SegmentedButton<ThemeMode>(
-                expandedInsets: EdgeInsets.zero,
-                segments: const [
-                  ButtonSegment(
-                    value: ThemeMode.light,
-                    icon: Icon(Icons.light_mode, size: 15),
-                    label: Text('Light'),
-                  ),
-                  ButtonSegment(
-                    value: ThemeMode.dark,
-                    icon: Icon(Icons.dark_mode, size: 15),
-                    label: Text('Dark'),
-                  ),
-                  ButtonSegment(
-                    value: ThemeMode.system,
-                    icon: Icon(Icons.settings_brightness, size: 15),
-                    label: Text('System'),
-                  ),
-                ],
-                selected: {themeMode},
-                onSelectionChanged: (val) => notifier.setThemeMode(val.first),
-                showSelectedIcon: false,
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 360),
+                child: SegmentedButton<ThemeMode>(
+                  segments: const [
+                    ButtonSegment(
+                      value: ThemeMode.light,
+                      icon: Icon(Icons.light_mode, size: 15),
+                      label: Text('Light'),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.dark,
+                      icon: Icon(Icons.dark_mode, size: 15),
+                      label: Text('Dark'),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      icon: Icon(Icons.settings_brightness, size: 15),
+                      label: Text('System'),
+                    ),
+                  ],
+                  selected: {themeMode},
+                  onSelectionChanged: (val) => notifier.setThemeMode(val.first),
+                  showSelectedIcon: false,
+                ),
               ),
             ],
           ),
@@ -871,6 +873,7 @@ class _SourceModeSelector extends ConsumerStatefulWidget {
 
 class _SourceModeSelectorState extends ConsumerState<_SourceModeSelector> {
   SourceMode _currentMode = SourceMode.unified;
+  bool _pendingRestart = false;
 
   @override
   void initState() {
@@ -889,17 +892,11 @@ class _SourceModeSelectorState extends ConsumerState<_SourceModeSelector> {
   Future<void> _changeMode(SourceMode mode) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('default_source_mode', mode.name);
-    setState(() => _currentMode = mode);
-
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Source mode changed to "${mode.label}". '
-            'Restart the app to apply.',
-          ),
-        ),
-      );
+      setState(() {
+        _currentMode = mode;
+        _pendingRestart = true;
+      });
     }
   }
 
@@ -907,40 +904,71 @@ class _SourceModeSelectorState extends ConsumerState<_SourceModeSelector> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SegmentedButton<SourceMode>(
-          segments: const [
-            ButtonSegment(
-              value: SourceMode.bundled,
-              label: Text('Bundled'),
-              icon: Icon(Icons.library_books, size: 16),
-            ),
-            ButtonSegment(
-              value: SourceMode.linked,
-              label: Text('Linked'),
-              icon: Icon(Icons.link, size: 16),
-            ),
-            ButtonSegment(
-              value: SourceMode.unified,
-              label: Text('Both'),
-              icon: Icon(Icons.layers, size: 16),
-            ),
-          ],
-          selected: {_currentMode},
-          onSelectionChanged: (Set<SourceMode> selection) {
-            if (selection.isNotEmpty) {
-              _changeMode(selection.first);
-            }
-          },
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: SegmentedButton<SourceMode>(
+            segments: const [
+              ButtonSegment(
+                value: SourceMode.bundled,
+                label: Text('Bundled'),
+                icon: Icon(Icons.library_books, size: 16),
+              ),
+              ButtonSegment(
+                value: SourceMode.linked,
+                label: Text('Linked'),
+                icon: Icon(Icons.link, size: 16),
+              ),
+              ButtonSegment(
+                value: SourceMode.unified,
+                label: Text('Both'),
+                icon: Icon(Icons.layers, size: 16),
+              ),
+            ],
+            selected: {_currentMode},
+            onSelectionChanged: (Set<SourceMode> selection) {
+              if (selection.isNotEmpty) {
+                _changeMode(selection.first);
+              }
+            },
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Text(
           _currentMode.description,
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
-          textAlign: TextAlign.center,
         ),
+        if (_pendingRestart) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 14,
+                  color: theme.colorScheme.onSecondaryContainer,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Restart the app to apply this change.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1121,7 +1149,7 @@ class LinkedSongbooksCard extends ConsumerWidget {
                   icon: const Icon(Icons.link, size: 18),
                   label: const Text('Link File'),
                   style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   ),
                 ),
               ),
@@ -1133,7 +1161,7 @@ class LinkedSongbooksCard extends ConsumerWidget {
                     icon: const Icon(Icons.sync, size: 18),
                     label: const Text('Sync Now'),
                     style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     ),
                   ),
                 ),

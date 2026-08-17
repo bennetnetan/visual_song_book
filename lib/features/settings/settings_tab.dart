@@ -131,7 +131,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               AppearanceCard(),
-              SizedBox(height: 20),
+              SizedBox(height: 32),
             ],
           ),
         ),
@@ -184,6 +184,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
               const _DataSourcesCard(),
               const SizedBox(height: 20),
               const _SongCollectionsCard(),
+              const SizedBox(height: 20),
+              const _DangerZoneCard(),
               const SizedBox(height: 32),
             ],
           ),
@@ -548,8 +550,6 @@ class _DataSourcesCard extends ConsumerWidget {
               );
             },
           ),
-          const SizedBox(height: 24),
-          const _DangerZoneSection(),
         ],
       ),
     );
@@ -766,58 +766,47 @@ class _SongCollectionsCardState extends ConsumerState<_SongCollectionsCard> {
 }
 
 // Danger Zone
-class _DangerZoneSection extends ConsumerWidget {
-  const _DangerZoneSection();
+class _DangerZoneCard extends ConsumerWidget {
+  const _DangerZoneCard();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Divider(),
-        const SizedBox(height: 16),
-        Row(
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.error.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'DANGER ZONE',
-                style: TextStyle(
-                  color: theme.colorScheme.onErrorContainer,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
-                  letterSpacing: 0.8,
-                ),
+            SectionHeader(
+              icon: Icons.warning_amber_rounded,
+              title: 'Danger Zone',
+              color: theme.colorScheme.error,
+              subtitle: 'These actions are irreversible. Proceed with caution.',
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () => _confirmDeleteAll(context, ref),
+              icon: const Icon(Icons.delete_forever_rounded, size: 18),
+              label: const Text('Remove All Collections'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: theme.colorScheme.error,
+                side: BorderSide(color: theme.colorScheme.error.withValues(alpha: 0.6)),
+                minimumSize: const Size.fromHeight(44),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        Text(
-          'These actions are irreversible. Please proceed with extreme caution.',
-          style: TextStyle(
-            color: theme.colorScheme.onSurfaceVariant,
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 16),
-        OutlinedButton.icon(
-          onPressed: () => _confirmDeleteAll(context, ref),
-          icon: const Icon(Icons.delete_forever_rounded, size: 18),
-          label: const Text('Remove All Collections'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: theme.colorScheme.error,
-            side: BorderSide(color: theme.colorScheme.error.withValues(alpha: 0.6)),
-            minimumSize: const Size.fromHeight(44),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -919,15 +908,10 @@ class _DiagnosticsCardState extends ConsumerState<_DiagnosticsCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.analytics_outlined, color: theme.colorScheme.primary, size: 22),
-              const SizedBox(width: 8),
-              Text(
-                'System Diagnostics',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-            ],
+          const SectionHeader(
+            icon: Icons.analytics_outlined,
+            title: 'System Diagnostics',
+            subtitle: 'Live database and storage status',
           ),
           const SizedBox(height: 16),
           _buildRow('Status', Row(
@@ -1026,20 +1010,10 @@ class _MaintenanceCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.build_circle_outlined, color: theme.colorScheme.primary, size: 22),
-              const SizedBox(width: 8),
-              Text(
-                'Maintenance',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Keep your application running smoothly by purging temporary state, resetting preferences, or re-verifying system assets.',
-            style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+          const SectionHeader(
+            icon: Icons.build_circle_outlined,
+            title: 'Maintenance',
+            subtitle: 'Reset, re-verify, and purge temporary state',
           ),
           const SizedBox(height: 20),
           _buildActionItem(
@@ -1047,6 +1021,7 @@ class _MaintenanceCard extends ConsumerWidget {
             title: 'Clear Projection History',
             description: 'Wipes recent song, set list, and scripture projections. Does not delete actual songs or sets.',
             onPressed: () => _confirmClearHistory(context, ref),
+            buttonLabel: 'Clear',
             theme: theme,
           ),
           const Divider(height: 24),
@@ -1055,6 +1030,7 @@ class _MaintenanceCard extends ConsumerWidget {
             title: 'Re-verify Bible Assets',
             description: 'Closes and safely re-copies the default 29MB Bible database if you experience search issues.',
             onPressed: () => _confirmReverifyBible(context, ref),
+            buttonLabel: 'Verify',
             theme: theme,
           ),
           const Divider(height: 24),
@@ -1063,6 +1039,7 @@ class _MaintenanceCard extends ConsumerWidget {
             title: 'Factory Reset Settings',
             description: 'Resets font sizes, themes, and sources to defaults. Triggers the onboarding sequence on next start.',
             onPressed: () => _confirmResetSettings(context, ref),
+            buttonLabel: 'Reset',
             theme: theme,
           ),
         ],
@@ -1075,6 +1052,7 @@ class _MaintenanceCard extends ConsumerWidget {
     required String title,
     required String description,
     required VoidCallback onPressed,
+    required String buttonLabel,
     required ThemeData theme,
   }) {
     return Row(
@@ -1101,7 +1079,7 @@ class _MaintenanceCard extends ConsumerWidget {
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
           ),
-          child: const Text('Execute', style: TextStyle(fontSize: 11)),
+          child: Text(buttonLabel, style: const TextStyle(fontSize: 11)),
         ),
       ],
     );
