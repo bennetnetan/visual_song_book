@@ -162,7 +162,7 @@ class _SetDetailState extends ConsumerState<SetDetail> {
               widget.onAddSong(song.id, key: null);
               Navigator.pop(ctx);
             },
-            child: const Text('Add Unset'),
+            child: const Text('Add (no key)'),
           ),
           TextButton(
             onPressed: () {
@@ -285,14 +285,15 @@ class _SetDetailState extends ConsumerState<SetDetail> {
   void _showShareMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (ctx) => SafeArea(
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.code),
-                title: const Text('Share as App Format (.json)'),
+                leading: const Icon(Icons.share_outlined),
+                title: const Text('Export for Another Device (.json)'),
                 subtitle: const Text('Includes lyrics, metadata — importable on other devices'),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -300,9 +301,9 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.text_snippet),
-                title: const Text('Share as Plain Text (.txt)'),
-                subtitle: const Text('Export a plain text list of songs in this set'),
+                leading: const Icon(Icons.text_snippet_outlined),
+                title: const Text('Export as Printable List (.txt)'),
+                subtitle: const Text('Export a plain text list of songs and keys in this set'),
                 onTap: () {
                   Navigator.pop(ctx);
                   widget.onShareText();
@@ -310,9 +311,9 @@ class _SetDetailState extends ConsumerState<SetDetail> {
               ),
               const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.copy),
-                title: const Text('Copy as App Format (JSON)'),
-                subtitle: const Text('Copy JSON data of the set to clipboard'),
+                leading: const Icon(Icons.copy_outlined),
+                title: const Text('Copy to Clipboard (Shareable JSON)'),
+                subtitle: const Text('Copy JSON data to clipboard for easy sharing'),
                 onTap: () async {
                   Navigator.pop(ctx);
                   try {
@@ -333,9 +334,9 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.content_copy),
+                leading: const Icon(Icons.content_copy_outlined),
                 title: const Text('Copy Plain Text List'),
-                subtitle: const Text('Copy list of songs in set to clipboard'),
+                subtitle: const Text('Copy list of songs and keys to clipboard'),
                 onTap: () async {
                   Navigator.pop(ctx);
                   try {
@@ -449,17 +450,16 @@ class _SetDetailState extends ConsumerState<SetDetail> {
             child: Row(
               children: [
                 Icon(
-                  Icons.info_outline,
+                  Icons.drag_handle,
                   size: 14,
                   color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'Drag the ☰ handle to reorder the service sequence',
+                    'Hold and drag the handle to reorder songs',
                     style: TextStyle(
                       fontSize: 11,
-                      fontStyle: FontStyle.italic,
                       color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
                     ),
                   ),
@@ -562,7 +562,7 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                                               Text(
                                                 item.key != null && item.key!.isNotEmpty
                                                     ? 'Key: ${item.key}'
-                                                    : 'Key: Unset',
+                                                    : 'Set Key',
                                                 style: TextStyle(
                                                   fontSize: 10,
                                                   fontWeight: item.key != null && item.key!.isNotEmpty
@@ -811,7 +811,7 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                   if (isLargeScreen)
                     FilledButton.tonalIcon(
                       icon: const Icon(Icons.tv, size: 18),
-                      label: const Text('Project All'),
+                      label: const Text('Project Set'),
                       onPressed: widget.items.isEmpty ? null : widget.onProject,
                     )
                   else
@@ -828,7 +828,7 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                           Icon(Icons.tv, size: 16),
                           SizedBox(width: 6),
                           Text(
-                            'Project',
+                            'Project Set',
                             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                           ),
                         ],

@@ -56,11 +56,43 @@ class SetList extends StatelessWidget {
         Expanded(
           child: sets.isEmpty
               ? Center(
-                  child: Text(
-                    'No sets yet',
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                      fontSize: 14,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.playlist_add,
+                          size: 56,
+                          color: theme.colorScheme.onSurfaceVariant
+                              .withValues(alpha: 0.35),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No sets yet',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tap "New Set" above to build your first service plan.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: theme.colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.6),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        FilledButton.tonalIcon(
+                          icon: const Icon(Icons.add, size: 18),
+                          label: const Text('New Set'),
+                          onPressed: onCreate,
+                        ),
+                      ],
                     ),
                   ),
                 )
@@ -106,6 +138,7 @@ class SetList extends StatelessWidget {
                             size: 18,
                             color: theme.colorScheme.error.withValues(alpha: 0.8),
                           ),
+                          tooltip: 'Delete set',
                           onPressed: () => onDelete(setObj.id),
                         ),
                         onTap: () => onSelect(setObj.id),

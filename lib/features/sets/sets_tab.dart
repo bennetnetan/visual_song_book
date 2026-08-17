@@ -211,23 +211,23 @@ class SetsTab extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: !isLargeScreen && state.selectedSetId == null
-          ? null
-          : AppBar(
-              leading: !isLargeScreen && state.selectedSetId != null
-                  ? IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: notifier.clearSelection,
-                    )
-                  : null,
-              title: Text(
-                !isLargeScreen && state.selectedSetId != null
-                    ? notifier.selectedSet?.name ?? 'Set'
-                    : 'Sets',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              actions: const [],
-            ),
+      appBar: AppBar(
+        leading: !isLargeScreen && state.selectedSetId != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: notifier.clearSelection,
+              )
+            : null,
+        title: Text(
+          !isLargeScreen && state.selectedSetId != null
+              ? notifier.selectedSet?.name ?? 'Set'
+              : 'Sets',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        actions: const [],
+        // Hide the toolbar height on large screens where the AppBar adds no value
+        toolbarHeight: isLargeScreen && state.selectedSetId == null ? 0 : kToolbarHeight,
+      ),
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : isLargeScreen
@@ -331,13 +331,16 @@ class SetsTab extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('New Set'),
+        title: const Text('Create New Set'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameCtrl,
-              decoration: const InputDecoration(labelText: 'Set Name'),
+              decoration: const InputDecoration(
+                labelText: 'Set Name',
+                hintText: 'e.g. Sunday Morning Service',
+              ),
               autofocus: true,
             ),
             const SizedBox(height: 12),
@@ -345,6 +348,7 @@ class SetsTab extends ConsumerWidget {
               controller: occasionCtrl,
               decoration: const InputDecoration(
                 labelText: 'Occasion (optional)',
+                hintText: 'e.g. Youth, Communion, Christmas',
               ),
             ),
           ],
@@ -354,7 +358,7 @@ class SetsTab extends ConsumerWidget {
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () {
               if (nameCtrl.text.trim().isNotEmpty) {
                 ref.read(setsControllerProvider.notifier).createSet(
@@ -388,15 +392,16 @@ class SetsTab extends ConsumerWidget {
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+              foregroundColor: Theme.of(ctx).colorScheme.onError,
+            ),
             onPressed: () {
               Navigator.pop(ctx);
               ref.read(setsControllerProvider.notifier).deleteSet(id);
             },
-            child: Text(
-              'Delete',
-              style: TextStyle(color: Theme.of(ctx).colorScheme.error),
-            ),
+            child: const Text('Delete'),
           ),
         ],
       ),
