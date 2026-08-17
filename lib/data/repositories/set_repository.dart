@@ -59,17 +59,52 @@ class SetRepository {
     return (db.select(db.songSets)..where((t) => t.id.equals(id))).getSingle();
   }
 
+  Future<SongSet> duplicateSet(int setId, {String? newName}) async {
+    final original = await (db.select(db.songSets)..where((t) => t.id.equals(setId))).getSingleOrNull();
+    if (original == null) throw Exception('Original set not found');
+
+    final items = await getSetItems(setId);
+    final targetName = newName ?? '${original.name} (Copy)';
+    final newUuid = UuidGenerator.generate();
+
+    return db.transaction(() async {
+      final newSet = await createSetWithUuid(
+        name: targetName,
+        uuid: newUuid,
+        notes: original.notes,
+        occasion: original.occasion,
+        createdAt: DateTime.now(),
+      );
+
+      for (final item in items) {
+        await db.into(db.songSetItems).insert(
+              SongSetItemsCompanion.insert(
+                setId: newSet.id,
+                songId: item.songId,
+                position: item.position,
+                key: Value(item.key),
+                notes: Value(item.notes),
+              ),
+            );
+      }
+
+      return newSet;
+    });
+  }
+
   Future<void> updateSet(
     int setId, {
     String? name,
     String? notes,
     String? occasion,
+    DateTime? createdAt,
   }) async {
     await (db.update(db.songSets)..where((t) => t.id.equals(setId))).write(
       SongSetsCompanion(
         name: name != null ? Value(name) : const Value.absent(),
         notes: notes != null ? Value(notes) : const Value.absent(),
         occasion: occasion != null ? Value(occasion) : const Value.absent(),
+        createdAt: createdAt != null ? Value(createdAt) : const Value.absent(),
       ),
     );
   }
@@ -97,7 +132,7 @@ class SetRepository {
         .watch();
   }
 
-  Future<void> addSongToSet(int setId, int songId, int position, {String? key}) async {
+  Future<void> addSongToSet(int setId, int songId, int position, {String? key, String? notes}) async {
     await db
         .into(db.songSetItems)
         .insert(
@@ -106,6 +141,7 @@ class SetRepository {
             songId: songId,
             position: position,
             key: Value(key),
+            notes: Value(notes),
           ),
         );
   }
@@ -116,6 +152,16 @@ class SetRepository {
         .write(
       SongSetItemsCompanion(
         key: Value(key),
+      ),
+    );
+  }
+
+  Future<void> updateSetItemNotes(int setId, int songId, String? notes) async {
+    await (db.update(db.songSetItems)
+          ..where((t) => t.setId.equals(setId) & t.songId.equals(songId)))
+        .write(
+      SongSetItemsCompanion(
+        notes: Value(notes),
       ),
     );
   }

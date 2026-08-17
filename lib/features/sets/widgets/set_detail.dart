@@ -51,31 +51,166 @@ class _SetDetailState extends ConsumerState<SetDetail> {
     super.dispose();
   }
 
-  void _showRenameDialog(BuildContext context) {
-    final controller = TextEditingController(text: widget.setObj.name);
+  void _showEditSetDialog(BuildContext context) {
+    final nameCtrl = TextEditingController(text: widget.setObj.name);
+    final occasionCtrl = TextEditingController(text: widget.setObj.occasion ?? '');
+    DateTime selectedDate = widget.setObj.createdAt;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Edit Set Details'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Set Name',
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: occasionCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Occasion',
+                  hintText: 'e.g. Sunday Morning, Youth, Easter',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Service Date',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.calendar_month, size: 16),
+                    label: const Text('Change Date'),
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2035),
+                      );
+                      if (picked != null) {
+                        setDialogState(() {
+                          selectedDate = DateTime(
+                            picked.year,
+                            picked.month,
+                            picked.day,
+                            selectedDate.hour,
+                            selectedDate.minute,
+                          );
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final newName = nameCtrl.text.trim();
+                if (newName.isNotEmpty) {
+                  ref.read(setsControllerProvider.notifier).updateSetDetails(
+                        widget.setObj.id,
+                        name: newName,
+                        occasion: occasionCtrl.text.trim().isNotEmpty ? occasionCtrl.text.trim() : null,
+                        createdAt: selectedDate,
+                      );
+                  Navigator.pop(ctx);
+                }
+              },
+              child: const Text('Save Changes'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showItemNotesDialog(SongSetItem item, Song song) {
+    final notesCtrl = TextEditingController(text: item.notes ?? '');
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Rename Set'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(labelText: 'New Set Name'),
-          autofocus: true,
+        title: Text('Notes for "${song.title}"'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: notesCtrl,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Performance / Worship Notes',
+                hintText: 'e.g. Capo 2, skip verse 3, acoustic intro, solo after chorus',
+                border: OutlineInputBorder(),
+              ),
+              autofocus: true,
+            ),
+          ],
         ),
         actions: [
+          if (item.notes != null && item.notes!.isNotEmpty)
+            TextButton(
+              onPressed: () {
+                ref.read(setsControllerProvider.notifier).updateSongNotesInSet(
+                      widget.selectedSetId,
+                      item.songId,
+                      null,
+                    );
+                Navigator.pop(ctx);
+              },
+              child: Text(
+                'Clear Notes',
+                style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+              ),
+            ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () {
-              final newName = controller.text.trim();
-              if (newName.isNotEmpty) {
-                widget.onRename(newName);
-                Navigator.pop(ctx);
-              }
+              final newNotes = notesCtrl.text.trim();
+              ref.read(setsControllerProvider.notifier).updateSongNotesInSet(
+                    widget.selectedSetId,
+                    item.songId,
+                    newNotes.isNotEmpty ? newNotes : null,
+                  );
+              Navigator.pop(ctx);
             },
-            child: const Text('Rename'),
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -387,17 +522,17 @@ class _SetDetailState extends ConsumerState<SetDetail> {
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-                          ),
+            ),
             overflow: TextOverflow.ellipsis,
           ),
         ),
         Semantics(
-          label: 'Rename Set',
+          label: 'Edit Set Details',
           button: true,
           child: IconButton(
             icon: const Icon(Icons.edit_outlined, size: 16),
-            tooltip: 'Rename Set',
-            onPressed: () => _showRenameDialog(context),
+            tooltip: 'Edit Set Details',
+            onPressed: () => _showEditSetDialog(context),
             constraints: const BoxConstraints(),
             padding: const EdgeInsets.only(left: 8),
           ),
@@ -589,8 +724,81 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                                           ),
                                         ),
                                       ),
+                                      const SizedBox(width: 6),
+                                      InkWell(
+                                        onTap: () => _showItemNotesDialog(item, song),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: item.notes != null && item.notes!.isNotEmpty
+                                                ? theme.colorScheme.tertiaryContainer.withValues(alpha: 0.7)
+                                                : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: item.notes == null || item.notes!.isEmpty
+                                                ? Border.all(
+                                                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                                                  )
+                                                : null,
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.sticky_note_2_outlined,
+                                                size: 9,
+                                                color: item.notes != null && item.notes!.isNotEmpty
+                                                    ? theme.colorScheme.onTertiaryContainer
+                                                    : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                                              ),
+                                              const SizedBox(width: 3),
+                                              Text(
+                                                item.notes != null && item.notes!.isNotEmpty
+                                                    ? 'Notes'
+                                                    : '+ Note',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: item.notes != null && item.notes!.isNotEmpty
+                                                      ? FontWeight.bold
+                                                      : FontWeight.normal,
+                                                  color: item.notes != null && item.notes!.isNotEmpty
+                                                      ? theme.colorScheme.onTertiaryContainer
+                                                      : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   ),
+                                  if (item.notes != null && item.notes!.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4.0),
+                                      child: InkWell(
+                                        onTap: () => _showItemNotesDialog(item, song),
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '📝 ',
+                                              style: const TextStyle(fontSize: 10),
+                                            ),
+                                            Expanded(
+                                              child: Text(
+                                                item.notes!,
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontStyle: FontStyle.italic,
+                                                  color: theme.colorScheme.onSurfaceVariant,
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
                                   if (item.key == null || item.key!.isEmpty)
                                     FutureBuilder<List<List<String>>>(
                                       future: Future.wait([

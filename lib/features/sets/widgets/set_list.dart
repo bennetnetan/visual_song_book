@@ -8,6 +8,8 @@ class SetList extends StatelessWidget {
   final ValueChanged<int> onSelect;
   final VoidCallback onCreate;
   final ValueChanged<int> onDelete;
+  final ValueChanged<int>? onDuplicate;
+  final ValueChanged<int>? onProject;
   final VoidCallback onImport;
 
   const SetList({
@@ -18,6 +20,8 @@ class SetList extends StatelessWidget {
     required this.onSelect,
     required this.onCreate,
     required this.onDelete,
+    this.onDuplicate,
+    this.onProject,
     required this.onImport,
   });
 
@@ -207,16 +211,68 @@ class SetList extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          trailing: IconButton(
+                          trailing: PopupMenuButton<String>(
                             icon: Icon(
-                              Icons.delete_outline,
+                              Icons.more_vert,
                               size: 18,
-                              color: theme.colorScheme.error.withValues(alpha: 0.8),
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
-                            tooltip: 'Delete set',
-                            onPressed: () => onDelete(setObj.id),
+                            tooltip: 'Set options',
+                            onSelected: (action) {
+                              if (action == 'project' && onProject != null) {
+                                onProject!(setObj.id);
+                              } else if (action == 'duplicate' && onDuplicate != null) {
+                                onDuplicate!(setObj.id);
+                              } else if (action == 'delete') {
+                                onDelete(setObj.id);
+                              }
+                            },
+                            itemBuilder: (ctx) => [
+                              if (onProject != null && count > 0)
+                                const PopupMenuItem(
+                                  value: 'project',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.tv, size: 18),
+                                      SizedBox(width: 12),
+                                      Text('Project Set'),
+                                    ],
+                                  ),
+                                ),
+                              if (onDuplicate != null)
+                                const PopupMenuItem(
+                                  value: 'duplicate',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.copy_rounded, size: 18),
+                                      SizedBox(width: 12),
+                                      Text('Duplicate Set'),
+                                    ],
+                                  ),
+                                ),
+                              PopupMenuItem(
+                                value: 'delete',
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.delete_outline,
+                                      size: 18,
+                                      color: theme.colorScheme.error,
+                                    ),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      'Delete',
+                                      style: TextStyle(color: theme.colorScheme.error),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                           onTap: () => onSelect(setObj.id),
+                          onLongPress: onProject != null && count > 0
+                              ? () => onProject!(setObj.id)
+                              : null,
                         ),
                       ),
                     );

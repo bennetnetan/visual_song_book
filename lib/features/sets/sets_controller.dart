@@ -125,8 +125,25 @@ class SetsController extends StateNotifier<SetsState> {
     state = state.copyWith(selectedSetId: () => null, setItems: []);
   }
 
-  Future<void> createSet(String name, {String? notes, String? occasion}) async {
-    await _repo.createSet(name, notes: notes, occasion: occasion);
+  Future<void> createSet(
+    String name, {
+    String? notes,
+    String? occasion,
+    DateTime? createdAt,
+  }) async {
+    final newSet = await _repo.createSet(
+      name,
+      notes: notes,
+      occasion: occasion,
+    );
+    if (createdAt != null) {
+      await _repo.updateSet(newSet.id, createdAt: createdAt);
+    }
+  }
+
+  Future<void> duplicateSet(int setId, {String? newName}) async {
+    final duplicated = await _repo.duplicateSet(setId, newName: newName);
+    selectSet(duplicated.id);
   }
 
   Future<void> deleteSet(int setId) async {
@@ -138,13 +155,33 @@ class SetsController extends StateNotifier<SetsState> {
     await _repo.updateSet(setId, name: newName);
   }
 
-  Future<void> addSongToSet(int setId, int songId, {String? key}) async {
+  Future<void> updateSetDetails(
+    int setId, {
+    String? name,
+    String? notes,
+    String? occasion,
+    DateTime? createdAt,
+  }) async {
+    await _repo.updateSet(
+      setId,
+      name: name,
+      notes: notes,
+      occasion: occasion,
+      createdAt: createdAt,
+    );
+  }
+
+  Future<void> addSongToSet(int setId, int songId, {String? key, String? notes}) async {
     final currentCount = state.setItems.length;
-    await _repo.addSongToSet(setId, songId, currentCount, key: key);
+    await _repo.addSongToSet(setId, songId, currentCount, key: key, notes: notes);
   }
 
   Future<void> updateSongKeyInSet(int setId, int songId, String? key) async {
     await _repo.updateSetItemKey(setId, songId, key);
+  }
+
+  Future<void> updateSongNotesInSet(int setId, int songId, String? notes) async {
+    await _repo.updateSetItemNotes(setId, songId, notes);
   }
 
   Future<List<String>> getLastUsedKeysForSong(int songId) async {

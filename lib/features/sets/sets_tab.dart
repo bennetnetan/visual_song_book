@@ -242,6 +242,8 @@ class SetsTab extends ConsumerWidget {
                         onSelect: notifier.selectSet,
                         onCreate: () => _showCreateDialog(context, ref),
                         onDelete: (id) => _confirmDelete(context, ref, id, state.sets),
+                        onDuplicate: (id) => _handleDuplicate(context, ref, id, state.sets),
+                        onProject: (id) => _quickProject(context, ref, id, state),
                         onImport: () => _handleImport(context, ref),
                       ),
                     ),
@@ -280,9 +282,89 @@ class SetsTab extends ConsumerWidget {
                       onSelect: notifier.selectSet,
                       onCreate: () => _showCreateDialog(context, ref),
                       onDelete: (id) => _confirmDelete(context, ref, id, state.sets),
+                      onDuplicate: (id) => _handleDuplicate(context, ref, id, state.sets),
+                      onProject: (id) => _quickProject(context, ref, id, state),
                       onImport: () => _handleImport(context, ref),
                     )
                   : _buildSetDetail(context, state, notifier, ref),
+    );
+  }
+
+  Future<void> _quickProject(
+    BuildContext context,
+    WidgetRef ref,
+    int setId,
+    SetsState state,
+  ) async {
+    final setObj = state.sets.where((s) => s.id == setId).firstOrNull;
+    if (setObj == null) return;
+    final repo = ref.read(setRepositoryProvider);
+    final items = await repo.getSetItems(setId);
+    if (items.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cannot project an empty set. Add songs first.')),
+        );
+      }
+      return;
+    }
+    await ref.read(projectionControllerProvider.notifier).projectSongSet(
+          setId,
+          setObj.name,
+          items,
+        );
+    if (!context.mounted) return;
+    await ref.read(projectionControllerProvider.notifier).triggerProjection(context, isLargeScreen);
+  }
+
+  void _handleDuplicate(
+    BuildContext context,
+    WidgetRef ref,
+    int setId,
+    List<SongSet> sets,
+  ) {
+    final setObj = sets.where((s) => s.id == setId).firstOrNull;
+    final nameCtrl = TextEditingController(
+      text: setObj != null ? '${setObj.name} (Copy)' : 'Set (Copy)',
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Duplicate Set'),
+        content: TextField(
+          controller: nameCtrl,
+          decoration: const InputDecoration(
+            labelText: 'New Set Name',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final newName = nameCtrl.text.trim();
+              Navigator.pop(ctx);
+              if (newName.isNotEmpty) {
+                await ref.read(setsControllerProvider.notifier).duplicateSet(
+                      setId,
+                      newName: newName,
+                    );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Set duplicated as "$newName"')),
+                  );
+                }
+              }
+            },
+            child: const Text('Duplicate'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -292,10 +374,6 @@ class SetsTab extends ConsumerWidget {
     SetsController notifier,
     WidgetRef ref,
   ) {
-    // Guard against the startup race: selectedSetId may be set (e.g. restored
-    // from prefs) while state.sets is still loading from the DB. In that case
-    // selectedSet resolves to null and the previous ! would crash. Show a
-    // spinner until the sets list catches up.
     final currentSet = notifier.selectedSet;
     if (currentSet == null) {
       _log.warning(
@@ -330,49 +408,105 @@ class SetsTab extends ConsumerWidget {
   void _showCreateDialog(BuildContext context, WidgetRef ref) {
     final nameCtrl = TextEditingController();
     final occasionCtrl = TextEditingController();
+    DateTime selectedDate = DateTime.now();
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Create New Set'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Set Name',
-                hintText: 'e.g. Sunday Morning Service',
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Create New Set'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Set Name',
+                  hintText: 'e.g. Sunday Morning Service',
+                  border: OutlineInputBorder(),
+                ),
+                autofocus: true,
               ),
-              autofocus: true,
+              const SizedBox(height: 12),
+              TextField(
+                controller: occasionCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Occasion (optional)',
+                  hintText: 'e.g. Youth, Communion, Christmas',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Service Date',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.calendar_month, size: 16),
+                    label: const Text('Change Date'),
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2035),
+                      );
+                      if (picked != null) {
+                        setDialogState(() {
+                          selectedDate = DateTime(
+                            picked.year,
+                            picked.month,
+                            picked.day,
+                            selectedDate.hour,
+                            selectedDate.minute,
+                          );
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: occasionCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Occasion (optional)',
-                hintText: 'e.g. Youth, Communion, Christmas',
-              ),
+            FilledButton(
+              onPressed: () {
+                if (nameCtrl.text.trim().isNotEmpty) {
+                  ref.read(setsControllerProvider.notifier).createSet(
+                        nameCtrl.text.trim(),
+                        occasion: occasionCtrl.text.trim().isNotEmpty ? occasionCtrl.text.trim() : null,
+                        createdAt: selectedDate,
+                      );
+                  Navigator.pop(ctx);
+                }
+              },
+              child: const Text('Create'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (nameCtrl.text.trim().isNotEmpty) {
-                ref.read(setsControllerProvider.notifier).createSet(
-                      nameCtrl.text.trim(),
-                      occasion: occasionCtrl.text.trim(),
-                    );
-                Navigator.pop(ctx);
-              }
-            },
-            child: const Text('Create'),
-          ),
-        ],
       ),
     );
   }
