@@ -231,28 +231,23 @@ class AppearanceCard extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
           // ── Theme row ──────────────────────────────────────────
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Application Theme',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                          color: theme.colorScheme.onSurface,
-                        )),
-                    const SizedBox(height: 2),
-                    Text('Light, dark, or follow the OS',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: theme.colorScheme.onSurfaceVariant)),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
+              Text('Application Theme',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: theme.colorScheme.onSurface,
+                  )),
+              const SizedBox(height: 2),
+              Text('Light, dark, or follow the OS',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: theme.colorScheme.onSurfaceVariant)),
+              const SizedBox(height: 12),
               SegmentedButton<ThemeMode>(
+                expandedInsets: EdgeInsets.zero,
                 segments: const [
                   ButtonSegment(
                     value: ThemeMode.light,
