@@ -307,7 +307,7 @@ class _BibleReadingViewState extends State<BibleReadingView> {
         .read(bibleControllerProvider.notifier)
         .getSelectedPassageText();
     if (text.isEmpty) return;
-    await ShareService.shareViaWhatsApp(text);
+    await ShareService.shareText(text);
   }
 
   void _projectSelectedVerses() {
@@ -634,7 +634,7 @@ class _BibleReadingViewState extends State<BibleReadingView> {
         widget.onToggleBookmark(verse);
       } else if (action == 'share') {
         final text = '📖 ${verse.reference}\n\n${verse.text}';
-        await ShareService.shareViaWhatsApp(text);
+        await ShareService.shareText(text);
       } else if (action == 'select') {
         container
             .read(bibleControllerProvider.notifier)
@@ -681,7 +681,7 @@ class BibleVersePopupMenu extends StatelessWidget {
           onProject();
         } else if (action == 'share') {
           final text = '📖 ${verse.reference}\n\n${verse.text}';
-          ShareService.shareViaWhatsApp(text);
+          ShareService.shareText(text);
         } else if (action == 'bookmark') {
           onBookmark();
         } else if (action == 'navigate') {

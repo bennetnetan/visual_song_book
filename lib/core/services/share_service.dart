@@ -1,6 +1,4 @@
-import 'package:flutter/foundation.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class ShareService {
   /// Share plain text using the native share sheet.
@@ -14,22 +12,9 @@ class ShareService {
     }
   }
 
-  /// Share text via WhatsApp. Tries to open WhatsApp directly; falls back
-  /// to the generic share sheet if WhatsApp is not available.
+  /// Share text via the system-native share sheet, allowing the user to
+  /// choose any available app (WhatsApp, Messages, Email, etc.).
   static Future<void> shareViaWhatsApp(String text) async {
-    final encoded = Uri.encodeComponent(text);
-    final url = 'https://wa.me/?text=$encoded';
-
-    try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-        return;
-      }
-    } catch (e) {
-      debugPrint('WhatsApp direct launch failed: $e');
-    }
-
     await shareText(text, subject: 'Shared via Visual Song Book');
   }
 }

@@ -635,7 +635,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     }
   }
 
-  /// Shares the current slide text via WhatsApp.
+  /// Shares the current slide text using the system-native share sheet.
   Future<void> shareCurrentSlide() async {
     final slide = state.currentSlide;
     if (slide == null) return;
@@ -653,7 +653,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     }
     buffer.writeln(slide.text);
 
-    await ShareService.shareViaWhatsApp(buffer.toString());
+    await ShareService.shareText(buffer.toString());
   }
 }
 

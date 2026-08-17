@@ -426,12 +426,30 @@ class _SetDetailState extends ConsumerState<SetDetail> {
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: [
-              // DEFAULT: Share via WhatsApp
+             children: [
+              // DEFAULT: System-native share picker (WhatsApp, Messages, Email, etc.)
+              ListTile(
+                leading: const Icon(Icons.share_outlined),
+                title: const Text('Share', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Choose where to share this set list'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  try {
+                    final textString = await ref.read(setsControllerProvider.notifier).getSetPlainText(widget.setObj.id);
+                    await ShareService.shareText(textString);
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to share: $e')),
+                      );
+                    }
+                  }
+                },
+              ),
               ListTile(
                 leading: const Icon(Icons.chat, color: Colors.green),
-                title: const Text('Share via WhatsApp', style: TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: const Text('Share set list as plain text message'),
+                title: const Text('Share via WhatsApp'),
+                subtitle: const Text('Open WhatsApp directly with this set list'),
                 onTap: () async {
                   Navigator.pop(ctx);
                   try {
