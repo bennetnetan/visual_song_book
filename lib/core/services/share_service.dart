@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -7,7 +6,9 @@ class ShareService {
   /// Share plain text using the native share sheet.
   static Future<void> shareText(String text, {String? subject}) async {
     try {
-      await Share.share(text, subject: subject ?? '');
+      await SharePlus.instance.share(
+        ShareParams(text: text, subject: subject ?? ''),
+      );
     } catch (e) {
       throw Exception('Share failed: $e');
     }
@@ -29,7 +30,6 @@ class ShareService {
       debugPrint('WhatsApp direct launch failed: $e');
     }
 
-    // Fallback to generic share sheet
     await shareText(text, subject: 'Shared via Visual Song Book');
   }
 }
