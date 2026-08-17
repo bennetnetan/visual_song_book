@@ -11,8 +11,11 @@ import 'package:go_router/go_router.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/projection/projection_search_provider.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
+import 'package:visual_song_book/core/services/share_service.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
+import 'package:visual_song_book/data/db/songbook_db.dart';
+import 'package:visual_song_book/features/bible/bible_repository.dart';
 import 'package:visual_song_book/features/sets/sets_tab.dart';
 import 'package:visual_song_book/features/song_list/song_list_controller.dart';
 
@@ -1413,35 +1416,104 @@ class _ModeChip extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Quick Search Anchor — global search with toggle (Bible / Songs)
+// Quick Search Anchor — opens full-screen search with Bible / Songs toggle
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _ProjectionSearchAnchor extends ConsumerStatefulWidget {
+class _ProjectionSearchAnchor extends ConsumerWidget {
   final ProjectionController notifier;
   final FocusNode returnFocusTo;
 
   const _ProjectionSearchAnchor({required this.notifier, required this.returnFocusTo});
 
   @override
-  ConsumerState<_ProjectionSearchAnchor> createState() =>
-      _ProjectionSearchAnchorState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isBible = ref.watch(projectionSearchProvider.select((s) => s.isBibleMode));
+    final theme = Theme.of(context);
+    final color = isBible ? theme.colorScheme.tertiary : theme.colorScheme.primary;
+
+    return ActionChip(
+      onPressed: () async {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            fullscreenDialog: true,
+            builder: (ctx) => _FullScreenSearchPage(
+              notifier: notifier,
+              returnFocusTo: returnFocusTo,
+            ),
+          ),
+        );
+      },
+      avatar: Icon(
+        isBible ? Icons.menu_book : Icons.library_music,
+        size: 16,
+        color: color,
+      ),
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            isBible ? 'Search Bible' : 'Search Songs',
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.search, size: 14, color: color),
+        ],
+      ),
+      backgroundColor: color.withValues(alpha: 0.15),
+      side: BorderSide(color: color.withValues(alpha: 0.4)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      padding: EdgeInsets.zero,
+      tooltip: isBible ? 'Search Bible' : 'Search Songs',
+    );
+  }
 }
 
-class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor> {
+// ─────────────────────────────────────────────────────────────────────────────
+// Full-screen search page — Bible / Songs toggle + results + share
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _FullScreenSearchPage extends ConsumerStatefulWidget {
+  final ProjectionController notifier;
+  final FocusNode returnFocusTo;
+
+  const _FullScreenSearchPage({
+    required this.notifier,
+    required this.returnFocusTo,
+  });
+
+  @override
+  ConsumerState<_FullScreenSearchPage> createState() => _FullScreenSearchPageState();
+}
+
+class _FullScreenSearchPageState extends ConsumerState<_FullScreenSearchPage> {
   final SearchController _searchController = SearchController();
   final ValueNotifier<int> _selectedIndex = ValueNotifier<int>(0);
+  final ScrollController _scrollController = ScrollController();
+  final FocusNode _focusNode = FocusNode(debugLabel: 'FullScreenSearchFocus');
+
+  static const Duration _navReadyDelay = Duration(milliseconds: 100);
+  bool _navReady = false;
+  Timer? _navReadyTimer;
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onQueryChanged);
+    _focusNode.requestFocus();
   }
 
   @override
   void dispose() {
+    _navReadyTimer?.cancel();
     _searchController.removeListener(_onQueryChanged);
     _searchController.dispose();
     _selectedIndex.dispose();
+    _scrollController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -1450,229 +1522,6 @@ class _ProjectionSearchAnchorState extends ConsumerState<_ProjectionSearchAnchor
     ref.read(projectionSearchProvider.notifier).search(newText);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return SearchAnchor(
-      searchController: _searchController,
-      builder: (context, controller) {
-        return Consumer(
-          builder: (context, ref, child) {
-            final isBible = ref.watch(projectionSearchProvider.select((s) => s.isBibleMode));
-            final theme = Theme.of(context);
-            final color = isBible
-                ? theme.colorScheme.tertiary
-                : theme.colorScheme.primary;
-
-            return ActionChip(
-              onPressed: () => controller.openView(),
-              avatar: Icon(
-                isBible ? Icons.menu_book : Icons.library_music,
-                size: 16,
-                color: color,
-              ),
-              label: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    isBible ? 'Search Bible' : 'Search Songs',
-                    style: TextStyle(
-                      color: color,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.search, size: 14, color: color),
-                ],
-              ),
-              backgroundColor: color.withValues(alpha: 0.15),
-              side: BorderSide(color: color.withValues(alpha: 0.4)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              padding: EdgeInsets.zero,
-              tooltip: isBible ? 'Search Bible' : 'Search Songs',
-            );
-          },
-        );
-      },
-      viewLeading: Semantics(
-        label: 'Back',
-        button: true,
-        child: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            ref.read(projectionSearchProvider.notifier).clear();
-            _searchController.closeView(null);
-            widget.returnFocusTo.requestFocus();
-          },
-        ),
-      ),
-      viewOnSubmitted: (value) {
-        final searchState = ref.read(projectionSearchProvider);
-        if (searchState.isBibleMode) {
-          final results = [
-            if (searchState.exactMatch != null) searchState.exactMatch!,
-            ...searchState.bibleResults,
-          ];
-          if (results.isNotEmpty) {
-            final idx = _selectedIndex.value.clamp(0, results.length - 1);
-            final v = results[idx];
-            widget.notifier.projectVerse(
-              v.bookId, v.chapter, v.verse, v.bookName ?? '',
-            );
-            ref.read(setRepositoryProvider).recordBibleProjection(v.reference, v.text);
-            ref.read(projectionSearchProvider.notifier).clear();
-            _searchController.closeView(null);
-            widget.returnFocusTo.requestFocus();
-          }
-        } else {
-          final songs = searchState.songResults;
-          if (songs.isNotEmpty) {
-            final idx = _selectedIndex.value.clamp(0, songs.length - 1);
-            widget.notifier.setSong(songs[idx]);
-            ref.read(projectionSearchProvider.notifier).clear();
-            _searchController.closeView(null);
-            widget.returnFocusTo.requestFocus();
-          }
-        }
-      },
-      viewTrailing: [
-        Padding(
-          padding: const EdgeInsets.only(right: 8.0),
-          child: Consumer(
-            builder: (context, ref, child) {
-              final isBibleMode = ref.watch(projectionSearchProvider.select((s) => s.isBibleMode));
-              return _SearchModeToggle(
-                isBibleMode: isBibleMode,
-                onToggle: (isBible) {
-                  ref.read(projectionSearchProvider.notifier).switchModeAndSearch(
-                    isBible,
-                    _searchController.text,
-                  );
-                },
-              );
-            },
-          ),
-        ),
-        if (!ref.watch(projectionSearchProvider.select((s) => s.isBibleMode)))
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: Consumer(
-              builder: (context, ref, child) {
-                final selectedSource = ref.watch(projectionSearchProvider.select((s) => s.selectedSourcePath));
-                final sourcePaths = ref.watch(songListControllerProvider.select((s) => s.sourcePaths));
-                if (sourcePaths.length <= 1) return const SizedBox.shrink();
-                return PopupMenuButton<String?>(
-                  icon: Icon(
-                    Icons.library_books_outlined,
-                    size: 18,
-                    color: selectedSource != null
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  tooltip: 'Filter by songbook',
-                  onSelected: (value) {
-                    ref.read(projectionSearchProvider.notifier).setSourceFilter(value);
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem<String?>(
-                      value: null,
-                      child: Row(
-                        children: [
-                          const Icon(Icons.all_inclusive, size: 16),
-                          const SizedBox(width: 8),
-                          const Text('All Books'),
-                          if (selectedSource == null) ...[
-                            const Spacer(),
-                            Icon(Icons.check, size: 16, color: Theme.of(context).colorScheme.primary),
-                          ],
-                        ],
-                      ),
-                    ),
-                    ...sourcePaths.map((source) => PopupMenuItem<String?>(
-                      value: source.path,
-                      child: Row(
-                        children: [
-                          const Icon(Icons.book_outlined, size: 16),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(source.path, overflow: TextOverflow.ellipsis)),
-                          Text(
-                            '${source.count}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          if (selectedSource == source.path) ...[
-                            const SizedBox(width: 4),
-                            Icon(Icons.check, size: 16, color: Theme.of(context).colorScheme.primary),
-                          ],
-                        ],
-                      ),
-                    )),
-                  ],
-                );
-              },
-            ),
-          ),
-      ],
-      suggestionsBuilder: (context, controller) {
-        return [
-          _SuggestionsList(
-            controller: controller,
-            notifier: widget.notifier,
-            selectedIndex: _selectedIndex,
-            returnFocusTo: widget.returnFocusTo,
-          ),
-        ];
-      },
-    );
-  }
-}
-
-class _SuggestionsList extends ConsumerStatefulWidget {
-  final SearchController controller;
-  final ProjectionController notifier;
-  final ValueNotifier<int> selectedIndex;
-  final FocusNode returnFocusTo;
-
-  const _SuggestionsList({
-    required this.controller,
-    required this.notifier,
-    required this.selectedIndex,
-    required this.returnFocusTo,
-  });
-
-  @override
-  ConsumerState<_SuggestionsList> createState() => _SuggestionsListState();
-}
-
-class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
-  final Map<int, GlobalKey> _itemKeys = {};
-  final ScrollController _scrollController = ScrollController();
-  final FocusNode _focusNode = FocusNode(debugLabel: 'SearchSuggestionsFocus');
-
-  GlobalKey _itemKey(int index) =>
-      _itemKeys.putIfAbsent(index, () => GlobalKey(debugLabel: 'result_$index'));
-
-  // ── Nav-ready dwell timer ─────────────────────────────────────────────────
-  // After the user stops typing for [_navReadyDelay], navigation mode
-  // activates: Up/Down/Left/Right scroll the results list, Enter projects the
-  // highlighted item. The moment any character is typed the query changes,
-  // which resets the timer and exits nav mode so typing continues normally.
-  static const Duration _navReadyDelay = Duration(milliseconds: 100);
-  bool _navReady = false;
-  Timer? _navReadyTimer;
-
-  @override
-  void dispose() {
-    _navReadyTimer?.cancel();
-    _scrollController.dispose();
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  /// Called whenever the search query changes (user typed a character).
-  /// Resets nav mode and restarts the dwell timer.
   void _resetNavReady() {
     _navReadyTimer?.cancel();
     if (_navReady) setState(() => _navReady = false);
@@ -1681,27 +1530,48 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
     });
   }
 
-  /// Scrolls so the selected item is visible.
   void _scrollToSelected(int index) {
-    final key = _itemKeys[index];
-    if (key?.currentContext == null) return;
-    Scrollable.ensureVisible(
-      key!.currentContext!,
-      duration: const Duration(milliseconds: 150),
-      curve: Curves.easeOut,
-    );
+    final searchState = ref.read(projectionSearchProvider);
+    final results = _resultsForState(searchState);
+    if (index < 0 || index >= results.length) return;
+    final key = GlobalKey();
+    final renderBox = key.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox != null && _scrollController.hasClients) {
+      Scrollable.ensureVisible(
+        key.currentContext!,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
-  /// Projects the item at [index] and closes the search view.
+  List<dynamic> _resultsForState(ProjectionSearchState state) {
+    if (state.isBibleMode) {
+      final results = <dynamic>[
+        if (state.exactMatch != null) state.exactMatch!,
+        ...state.bibleResults,
+      ];
+      return results;
+    }
+    return state.songResults;
+  }
+
+  int _totalItems(ProjectionSearchState state) {
+    if (state.isBibleMode) {
+      return (state.exactMatch != null ? 1 : 0) + state.bibleResults.length;
+    }
+    return state.songResults.length;
+  }
+
   void _pickItem(int index, ProjectionSearchState searchState) {
     final searchRef = ref.read(projectionSearchProvider.notifier);
     if (searchState.isBibleMode) {
-      final results = [
+      final results = <dynamic>[
         if (searchState.exactMatch != null) searchState.exactMatch!,
         ...searchState.bibleResults,
       ];
       if (index >= results.length) return;
-      final v = results[index];
+      final v = results[index] as BibleVerse;
       widget.notifier.projectVerse(
         v.bookId, v.chapter, v.verse, v.bookName ?? '',
       );
@@ -1712,8 +1582,32 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
       widget.notifier.setSong(songs[index]);
     }
     searchRef.clear();
-    widget.controller.closeView(null);
+    _searchController.clear();
+    if (mounted) Navigator.of(context).pop();
     widget.returnFocusTo.requestFocus();
+  }
+
+  Future<void> _shareItem(dynamic item, ProjectionSearchState searchState) async {
+    try {
+      if (searchState.isBibleMode && item is BibleVerse) {
+        final text = '📖 ${item.reference}\n\n${item.text}';
+        await ShareService.shareText(text);
+      } else if (!searchState.isBibleMode && item is Song) {
+        final buffer = StringBuffer();
+        buffer.writeln('🎵 ${item.title}');
+        if (item.songNum > 0) buffer.writeln('Song #${item.songNum}');
+        if (item.key != null && item.key!.isNotEmpty) buffer.writeln('Key: ${item.key}');
+        buffer.writeln('');
+        buffer.writeln(item.body);
+        await ShareService.shareText(buffer.toString());
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to share: $e')),
+        );
+      }
+    }
   }
 
   KeyEventResult _handleKey(KeyEvent event, ProjectionSearchState searchState) {
@@ -1723,70 +1617,50 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
 
     final key = event.logicalKey;
 
-    // ── Enter/Return always projects immediately — even before _navReady fires.
-    // This lets quick typists hit Enter right after their last keystroke without
-    // waiting for the 100 ms dwell timer. We check Enter first, before the
-    // _navReady gate which only gates arrow navigation (to avoid fighting the
-    // text-field cursor movement while the user is still typing).
     if (key == LogicalKeyboardKey.enter ||
         key == LogicalKeyboardKey.numpadEnter) {
-      final int totalItems = searchState.isBibleMode
-          ? (searchState.exactMatch != null ? 1 : 0) + searchState.bibleResults.length
-          : searchState.songResults.length;
+      final totalItems = _totalItems(searchState);
       if (totalItems > 0) {
-        // Clamp selected index in case results changed since last interaction.
-        final safeIndex = widget.selectedIndex.value.clamp(0, totalItems - 1);
+        final safeIndex = _selectedIndex.value.clamp(0, totalItems - 1);
         _pickItem(safeIndex, searchState);
         return KeyEventResult.handled;
       }
       return KeyEventResult.ignored;
     }
 
-    // ── If nav mode is not yet active, pass everything through so the text
-    // field can handle cursor movement and character input normally. ──────────
     if (!_navReady) return KeyEventResult.ignored;
 
-    final int totalItems = searchState.isBibleMode
-        ? (searchState.exactMatch != null ? 1 : 0) + searchState.bibleResults.length
-        : searchState.songResults.length;
-
+    final totalItems = _totalItems(searchState);
     if (totalItems == 0) return KeyEventResult.ignored;
 
     if (key == LogicalKeyboardKey.arrowDown ||
         key == LogicalKeyboardKey.arrowRight) {
-      final next = (widget.selectedIndex.value + 1).clamp(0, totalItems - 1);
-      if (next != widget.selectedIndex.value) {
-        setState(() => widget.selectedIndex.value = next);
+      final next = (_selectedIndex.value + 1).clamp(0, totalItems - 1);
+      if (next != _selectedIndex.value) {
+        setState(() => _selectedIndex.value = next);
         _scrollToSelected(next);
       }
-      // Consume — do NOT propagate to the projection screen.
       return KeyEventResult.handled;
     }
 
     if (key == LogicalKeyboardKey.arrowUp ||
         key == LogicalKeyboardKey.arrowLeft) {
-      final prev = (widget.selectedIndex.value - 1).clamp(0, totalItems - 1);
-      if (prev != widget.selectedIndex.value) {
-        setState(() => widget.selectedIndex.value = prev);
+      final prev = (_selectedIndex.value - 1).clamp(0, totalItems - 1);
+      if (prev != _selectedIndex.value) {
+        setState(() => _selectedIndex.value = prev);
         _scrollToSelected(prev);
       }
       return KeyEventResult.handled;
     }
 
-    // Any other key (printable characters, backspace, etc.) is ignored so it
-    // bubbles to the text field — typing continues as normal and will trigger
-    // the query-change listener which resets nav mode.
     return KeyEventResult.ignored;
   }
-
 
   @override
   Widget build(BuildContext context) {
     final searchState = ref.watch(projectionSearchProvider);
     final theme = Theme.of(context);
 
-    // When the query changes (user typed) → reset nav-ready dwell timer.
-    // Nav mode re-activates 100 ms after the last keystroke.
     ref.listen(
       projectionSearchProvider.select((s) => s.query),
       (prev, next) {
@@ -1794,34 +1668,154 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
       },
     );
 
-    // When results change → reset selection to first item.
     ref.listen(projectionSearchProvider, (prev, next) {
       if (prev?.bibleResults != next.bibleResults ||
           prev?.songResults != next.songResults ||
           prev?.exactMatch != next.exactMatch) {
-        if (mounted) setState(() => widget.selectedIndex.value = 0);
+        if (mounted) setState(() => _selectedIndex.value = 0);
       }
     });
 
-    if (searchState.isLoading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32.0),
-          child: CircularProgressIndicator(),
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            ref.read(projectionSearchProvider.notifier).clear();
+            _searchController.clear();
+            if (mounted) Navigator.of(context).pop();
+            widget.returnFocusTo.requestFocus();
+          },
         ),
-      );
+        titleSpacing: 0,
+        title: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: SearchBar(
+            controller: _searchController,
+            focusNode: _focusNode,
+            hintText: searchState.isBibleMode ? 'Search Bible…' : 'Search songs…',
+            trailing: [
+              if (_searchController.text.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () {
+                    _searchController.clear();
+                    ref.read(projectionSearchProvider.notifier).clear();
+                  },
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: _SearchModeToggle(
+              isBibleMode: searchState.isBibleMode,
+              onToggle: (isBible) {
+                ref.read(projectionSearchProvider.notifier).switchModeAndSearch(
+                  isBible,
+                  _searchController.text,
+                );
+              },
+            ),
+          ),
+          if (!searchState.isBibleMode)
+            Padding(
+              padding: const EdgeInsets.only(right: 12.0),
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final selectedSource = ref.watch(projectionSearchProvider.select((s) => s.selectedSourcePath));
+                  final sourcePaths = ref.watch(songListControllerProvider.select((s) => s.sourcePaths));
+                  if (sourcePaths.length <= 1) return const SizedBox.shrink();
+                  return PopupMenuButton<String?>(
+                    icon: Icon(
+                      Icons.library_books_outlined,
+                      size: 18,
+                      color: selectedSource != null
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurfaceVariant,
+                    ),
+                    tooltip: 'Filter by songbook',
+                    onSelected: (value) {
+                      ref.read(projectionSearchProvider.notifier).setSourceFilter(value);
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem<String?>(
+                        value: null,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.all_inclusive, size: 16),
+                            const SizedBox(width: 8),
+                            const Text('All Books'),
+                            if (selectedSource == null) ...[
+                              const Spacer(),
+                              Icon(Icons.check, size: 16, color: theme.colorScheme.primary),
+                            ],
+                          ],
+                        ),
+                      ),
+                      ...sourcePaths.map((source) => PopupMenuItem<String?>(
+                        value: source.path,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.book_outlined, size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(source.path, overflow: TextOverflow.ellipsis)),
+                            Text(
+                              '${source.count}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            if (selectedSource == source.path) ...[
+                              const SizedBox(width: 4),
+                              Icon(Icons.check, size: 16, color: theme.colorScheme.primary),
+                            ],
+                          ],
+                        ),
+                      )),
+                    ],
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+      body: Focus(
+        focusNode: _focusNode,
+        autofocus: true,
+        onKeyEvent: (node, event) => _handleKey(event, searchState),
+        child: Column(
+          children: [
+            if (searchState.isLoading)
+              const LinearProgressIndicator(minHeight: 3)
+            else
+              const SizedBox(height: 3),
+            Expanded(child: _buildResultsList(context, searchState)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResultsList(BuildContext context, ProjectionSearchState searchState) {
+    final theme = Theme.of(context);
+    final query = searchState.query;
+
+    if (searchState.isLoading && query.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
     }
 
-    final query = searchState.query;
     if (query.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Center(
-          child: Text(
-            searchState.isBibleMode ? 'Search Bible…' : 'Search songs…',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+      return Center(
+        child: Text(
+          searchState.isBibleMode ? 'Search Bible…' : 'Search songs…',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
       );
@@ -1837,349 +1831,331 @@ class _SuggestionsListState extends ConsumerState<_SuggestionsList> {
       );
     }
 
-    Widget list;
-
     if (searchState.isBibleMode) {
-      final results = [
-        if (searchState.exactMatch != null) searchState.exactMatch!,
-        ...searchState.bibleResults,
-      ];
-      if (results.isEmpty) {
-        list = const ListTile(title: Text('No results found'));
-      } else {
-        final hasMore =
-            searchState.bibleResults.length < searchState.totalBibleCount;
-        final itemCount = hasMore ? results.length + 1 : results.length;
-        list = ListView.builder(
-          controller: _scrollController,
-          shrinkWrap: true,
-          physics: const ClampingScrollPhysics(),
-          itemCount: itemCount,
-          itemBuilder: (context, index) {
-            if (index == results.length) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Center(
-                  child: TextButton.icon(
-                    onPressed: searchState.isLoading
-                        ? null
-                        : () => ref
-                            .read(projectionSearchProvider.notifier)
-                            .loadMoreBible(),
-                    icon: searchState.isLoading
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.expand_more),
-                    label: const Text('Load more results'),
-                  ),
-                ),
-              );
-            }
-            final v = results[index];
-            final isExact = v == searchState.exactMatch;
-            final isSelected = index == widget.selectedIndex.value;
-            return Card(
-              key: _itemKey(index),
-              elevation: 0,
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(
-                  color: isSelected
-                      ? theme.colorScheme.primary.withValues(alpha: 0.8)
-                      : isExact
-                          ? theme.colorScheme.primary.withValues(alpha: 0.5)
-                          : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-                  width: isSelected ? 2.0 : (isExact ? 1.5 : 1),
-                ),
-              ),
-              color: isSelected
-                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.30)
-                  : isExact
-                      ? theme.colorScheme.primaryContainer.withValues(alpha: 0.15)
-                      : null,
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: (isExact
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.tertiary)
-                        .withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.menu_book,
-                    size: 16,
-                    color: isExact
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.tertiary,
-                  ),
-                ),
-                title: HighlightedText(
-                  text: v.reference,
-                  query: query,
-                  style: TextStyle(
-                    fontFamily: 'Outfit',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                  highlightStyle: TextStyle(
-                    fontFamily: 'Outfit',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: theme.colorScheme.primary,
-                    backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                  ),
-                ),
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(top: 4.0),
-                  child: HighlightedText(
-                    text: v.text,
-                    query: query,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    highlightStyle: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                      backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                    ),
-                  ),
-                ),
-                trailing: isSelected
-                    ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.4),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.keyboard_return, size: 12,
-                                color: theme.colorScheme.primary),
-                            const SizedBox(width: 3),
-                            Text('Enter', style: TextStyle(
-                              fontSize: 10,
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                            )),
-                          ],
-                        ),
-                      )
-                    : Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.present_to_all,
-                          size: 16,
-                          color: theme.colorScheme.onSecondaryContainer,
-                        ),
-                      ),
-                onTap: () => _pickItem(index, searchState),
-              ),
-            );
-          },
-        );
-      }
+      return _buildBibleResults(context, searchState, theme);
     } else {
-      if (searchState.songResults.isEmpty) {
-        list = const ListTile(title: Text('No results found'));
-      } else {
-        list = ListView.builder(
-          controller: _scrollController,
-          shrinkWrap: true,
-          physics: const ClampingScrollPhysics(),
-          itemCount: searchState.songResults.length,
-          itemBuilder: (context, index) {
-            final s = searchState.songResults[index];
-            final isSelected = index == widget.selectedIndex.value;
-            return Card(
-              key: _itemKey(index),
-              elevation: 0,
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(
-                  color: isSelected
-                      ? theme.colorScheme.primary.withValues(alpha: 0.8)
-                      : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-                  width: isSelected ? 2.0 : 1.0,
-                ),
-              ),
-              color: isSelected
-                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.25)
-                  : null,
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                leading: Container(
-                  width: 36,
-                  height: 36,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    '#${s.songNum}',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                ),
-                title: HighlightedText(
-                  text: s.title,
-                  query: query,
-                  style: TextStyle(
-                    fontFamily: 'Outfit',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                  highlightStyle: TextStyle(
-                    fontFamily: 'Outfit',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: theme.colorScheme.primary,
-                    backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                  ),
-                ),
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(top: 4.0),
-                  child: Row(
-                    children: [
-                      if (s.key != null && s.key!.isNotEmpty) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'Key: ${s.key}',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      Expanded(
-                        child: Text(
-                          s.body.replaceAll('\n', ' '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                trailing: isSelected
-                    ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.4),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.keyboard_return, size: 12,
-                                color: theme.colorScheme.primary),
-                            const SizedBox(width: 3),
-                            Text('Enter', style: TextStyle(
-                              fontSize: 10,
-                              color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                            )),
-                          ],
-                        ),
-                      )
-                    : Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.present_to_all,
-                          size: 16,
-                          color: theme.colorScheme.onSecondaryContainer,
-                        ),
-                      ),
-                onTap: () => _pickItem(index, searchState),
-              ),
-            );
-          },
-        );
-      }
+      return _buildSongResults(context, searchState, theme);
+    }
+  }
+
+  Widget _buildBibleResults(BuildContext context, ProjectionSearchState searchState, ThemeData theme) {
+    final results = <dynamic>[
+      if (searchState.exactMatch != null) searchState.exactMatch!,
+      ...searchState.bibleResults,
+    ];
+
+    if (results.isEmpty) {
+      return const Center(child: Text('No results found'));
     }
 
-    // Wrap the list in a Focus widget that intercepts arrow-key navigation
-    // and Enter-to-project — events are consumed here and never reach the
-    // projection screen's Focus node (the SearchAnchor overlay is a separate
-    // route on top of the main view).
-    return Focus(
-      focusNode: _focusNode,
-      autofocus: true,
-      onKeyEvent: (node, event) => _handleKey(event, searchState),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Subtle nav-ready indicator — fades in once dwell timer fires,
-          // fades out instantly when the user resumes typing.
-          AnimatedOpacity(
-            opacity: _navReady && !searchState.isLoading && searchState.query.isNotEmpty ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 200),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+    final hasMore = searchState.bibleResults.length < searchState.totalBibleCount;
+    final itemCount = hasMore ? results.length + 1 : results.length;
+
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: itemCount,
+      itemBuilder: (context, index) {
+        if (index == results.length) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Center(
+              child: TextButton.icon(
+                onPressed: searchState.isLoading
+                    ? null
+                    : () => ref
+                        .read(projectionSearchProvider.notifier)
+                        .loadMoreBible(),
+                icon: searchState.isLoading
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.expand_more),
+                label: const Text('Load more results'),
+              ),
+            ),
+          );
+        }
+
+        final v = results[index] as BibleVerse;
+        final isExact = v == searchState.exactMatch;
+        final isSelected = index == _selectedIndex.value;
+
+        return Card(
+          elevation: 0,
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: isSelected
+                  ? theme.colorScheme.primary.withValues(alpha: 0.8)
+                  : isExact
+                      ? theme.colorScheme.primary.withValues(alpha: 0.5)
+                      : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+              width: isSelected ? 2.0 : (isExact ? 1.5 : 1),
+            ),
+          ),
+          color: isSelected
+              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.30)
+              : isExact
+                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.15)
+                  : null,
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: (isExact ? theme.colorScheme.primary : theme.colorScheme.tertiary)
+                    .withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.menu_book,
+                size: 16,
+                color: isExact ? theme.colorScheme.primary : theme.colorScheme.tertiary,
+              ),
+            ),
+            title: HighlightedText(
+              text: v.reference,
+              query: searchState.query,
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: theme.colorScheme.onSurface,
+              ),
+              highlightStyle: TextStyle(
+                fontFamily: 'Outfit',
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: theme.colorScheme.primary,
+                backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+              ),
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: HighlightedText(
+                text: v.text,
+                query: searchState.query,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                highlightStyle: TextStyle(
+                  fontSize: 12,
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                  backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                ),
+              ),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.share_outlined, size: 18),
+                  tooltip: 'Share verse',
+                  onPressed: () => _shareItem(v, searchState),
+                ),
+                if (isSelected)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.keyboard_return, size: 12, color: theme.colorScheme.primary),
+                        const SizedBox(width: 3),
+                        Text('Enter', style: TextStyle(
+                          fontSize: 10,
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        )),
+                      ],
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.present_to_all,
+                      size: 16,
+                      color: theme.colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+              ],
+            ),
+            onTap: () => _pickItem(index, searchState),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSongResults(BuildContext context, ProjectionSearchState searchState, ThemeData theme) {
+    final songs = searchState.songResults;
+
+    if (songs.isEmpty) {
+      return const Center(child: Text('No results found'));
+    }
+
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: songs.length,
+      itemBuilder: (context, index) {
+        final s = songs[index];
+        final isSelected = index == _selectedIndex.value;
+
+        return Card(
+          elevation: 0,
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: isSelected
+                  ? theme.colorScheme.primary.withValues(alpha: 0.8)
+                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+              width: isSelected ? 2.0 : 1.0,
+            ),
+          ),
+          color: isSelected
+              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.25)
+              : null,
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            leading: Container(
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                '#${s.songNum}',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+            title: HighlightedText(
+              text: s.title,
+              query: searchState.query,
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: theme.colorScheme.onSurface,
+              ),
+              highlightStyle: TextStyle(
+                fontFamily: 'Outfit',
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: theme.colorScheme.primary,
+                backgroundColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+              ),
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 4.0),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.keyboard, size: 12,
-                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
-                  const SizedBox(width: 6),
-                  Text(
-                    '↑ ↓ navigate  ·  ↵ project',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                      letterSpacing: 0.3,
+                  if (s.key != null && s.key!.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'Key: ${s.key}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: Text(
+                      s.body.replaceAll('\n', ' '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.share_outlined, size: 18),
+                  tooltip: 'Share song',
+                  onPressed: () => _shareItem(s, searchState),
+                ),
+                if (isSelected)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.keyboard_return, size: 12, color: theme.colorScheme.primary),
+                        const SizedBox(width: 3),
+                        Text('Enter', style: TextStyle(
+                          fontSize: 10,
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        )),
+                      ],
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.present_to_all,
+                      size: 16,
+                      color: theme.colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+              ],
+            ),
+            onTap: () => _pickItem(index, searchState),
           ),
-          list,
-        ],
-      ),
+        );
+      },
     );
-
   }
 }
