@@ -109,13 +109,14 @@ See [docs/SUPPORTED_PLATFORMS.md](docs/SUPPORTED_PLATFORMS.md) for details.
 
 ## Version
 
-Current: **v1.9.0** — see About → Changelog in the app for full history.
+Current: **v2.2.0** — see About → Changelog in the app for full history.
 
-### v1.9.0 Changes
-- Linked songbook separation with SourceMode enum (bundled/linked/unified)
-- LinkedSongbookRegistry DB table for persistent link metadata
-- Upsert reimport logic preserving song IDs across syncs
-- Non-tabbed grouped settings layout with footer (logo, version, creator)
+### v2.2.0 Changes
+- Full-screen projection search page replaces SearchAnchor
+- System-native share sheet with WhatsApp-first flow and Bible multi-verse sharing
+- Song separation banners in slide list and mobile set song list sheet
+- Duplicate Set, performance notes, service date scheduling, and quick-project actions
+- Song count badge, relative dates, swipe-to-delete, and larger drag touch targets in sets
 
 ---
 

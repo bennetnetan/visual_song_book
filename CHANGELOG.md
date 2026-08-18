@@ -2,6 +2,21 @@
 
 All notable changes to Visual Song Book are documented here. Newest first.
 
+## [2.2.0] - 2026-08-18
+
+### Features
+- **Projection search** — replaced SearchAnchor with a dedicated full-screen search page
+- **Sharing** — defaulted to system-native share sheet on all platforms; added WhatsApp-first share flow, projection search in empty state, and Bible multi-verse sharing
+- **Presentation** — added song separation banners in slide list, in-presentation mobile set song list sheet, and updated mobile button labels
+- **Sets** — implemented Duplicate Set, per-song performance notes, service date scheduling, and quick-project actions; added song count badge, relative dates, swipe-to-delete, and larger drag touch targets
+
+### Bug Fixes
+- **Settings** — fixed Application Theme label stacking above SegmentedButton in AppearanceCard
+- **Sets** — improved wording, dialog actions, empty state, and mobile AppBar
+
+### Dependencies
+- Upgraded `share_plus` to 12.0.2
+
 ## [2.1.0] - 2026-08-06
 
 ### UI/UX
