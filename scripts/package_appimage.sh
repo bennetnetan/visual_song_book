@@ -5,7 +5,7 @@ APP_DIR="build/AppDir"
 BUNDLE_DIR="build/linux/x64/release/bundle"
 
 # Read current version from pubspec.yaml
-APP_VERSION=$(grep '^version: ' pubspec.yaml | sed 's/version: //' | cut -d+ -f1)
+APP_VERSION=$(grep '^version: ' ../pubspec.yaml | sed 's/version: //' | cut -d+ -f1)
 OUTPUT_APPIMAGE="build/Visual_Song_Book-${APP_VERSION}-x86_64.AppImage"
 
 # Flutter binary: honor FLUTTER_BIN override, else fall back to PATH.
