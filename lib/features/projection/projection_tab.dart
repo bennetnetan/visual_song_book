@@ -1631,8 +1631,7 @@ class _FullScreenSearchPageState extends ConsumerState<_FullScreenSearchPage> {
     final totalItems = _totalItems(searchState);
     if (totalItems == 0) return KeyEventResult.ignored;
 
-    if (key == LogicalKeyboardKey.arrowDown ||
-        key == LogicalKeyboardKey.arrowRight) {
+    if (key == LogicalKeyboardKey.arrowDown) {
       final next = (_selectedIndex.value + 1).clamp(0, totalItems - 1);
       if (next != _selectedIndex.value) {
         setState(() => _selectedIndex.value = next);
@@ -1641,8 +1640,7 @@ class _FullScreenSearchPageState extends ConsumerState<_FullScreenSearchPage> {
       return KeyEventResult.handled;
     }
 
-    if (key == LogicalKeyboardKey.arrowUp ||
-        key == LogicalKeyboardKey.arrowLeft) {
+    if (key == LogicalKeyboardKey.arrowUp) {
       final prev = (_selectedIndex.value - 1).clamp(0, totalItems - 1);
       if (prev != _selectedIndex.value) {
         setState(() => _selectedIndex.value = prev);
@@ -1678,117 +1676,115 @@ class _FullScreenSearchPageState extends ConsumerState<_FullScreenSearchPage> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560, maxHeight: 640),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, size: 20),
-                    onPressed: () {
-                      ref.read(projectionSearchProvider.notifier).clear();
-                      _searchController.clear();
-                      if (mounted) Navigator.of(context).pop();
-                      widget.returnFocusTo.requestFocus();
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: SearchBar(
-                      controller: _searchController,
-                      focusNode: _focusNode,
-                      hintText: searchState.isBibleMode ? 'Search Bible…' : 'Search songs…',
-                      trailing: [
-                        if (_searchController.text.isNotEmpty)
-                          IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              ref.read(projectionSearchProvider.notifier).clear();
-                            },
-                          ),
-                      ],
+        child: Focus(
+          onKeyEvent: (node, event) => _handleKey(event, searchState),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, size: 20),
+                      onPressed: () {
+                        ref.read(projectionSearchProvider.notifier).clear();
+                        _searchController.clear();
+                        if (mounted) Navigator.of(context).pop();
+                        widget.returnFocusTo.requestFocus();
+                      },
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  _SearchModeToggle(
-                    isBibleMode: searchState.isBibleMode,
-                    onToggle: (isBible) {
-                      ref.read(projectionSearchProvider.notifier).switchModeAndSearch(
-                        isBible,
-                        _searchController.text,
-                      );
-                    },
-                  ),
-                  if (!searchState.isBibleMode)
-                    Consumer(
-                      builder: (context, ref, child) {
-                        final selectedSource = ref.watch(projectionSearchProvider.select((s) => s.selectedSourcePath));
-                        final sourcePaths = ref.watch(songListControllerProvider.select((s) => s.sourcePaths));
-                        if (sourcePaths.length <= 1) return const SizedBox.shrink();
-                        return PopupMenuButton<String?>(
-                          icon: Icon(
-                            Icons.library_books_outlined,
-                            size: 18,
-                            color: selectedSource != null
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurfaceVariant,
-                          ),
-                          tooltip: 'Filter by songbook',
-                          onSelected: (value) {
-                            ref.read(projectionSearchProvider.notifier).setSourceFilter(value);
-                          },
-                          itemBuilder: (context) => [
-                            PopupMenuItem<String?>(
-                              value: null,
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.all_inclusive, size: 16),
-                                  const SizedBox(width: 8),
-                                  const Text('All Books'),
-                                  if (selectedSource == null) ...[
-                                    const Spacer(),
-                                    Icon(Icons.check, size: 16, color: theme.colorScheme.primary),
-                                  ],
-                                ],
-                              ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: SearchBar(
+                        controller: _searchController,
+                        focusNode: _focusNode,
+                        hintText: searchState.isBibleMode ? 'Search Bible…' : 'Search songs…',
+                        trailing: [
+                          if (_searchController.text.isNotEmpty)
+                            IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                ref.read(projectionSearchProvider.notifier).clear();
+                              },
                             ),
-                            ...sourcePaths.map((source) => PopupMenuItem<String?>(
-                              value: source.path,
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.book_outlined, size: 16),
-                                  const SizedBox(width: 8),
-                                  Expanded(child: Text(source.path, overflow: TextOverflow.ellipsis)),
-                                  Text(
-                                    '${source.count}',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                  if (selectedSource == source.path) ...[
-                                    const SizedBox(width: 4),
-                                    Icon(Icons.check, size: 16, color: theme.colorScheme.primary),
-                                  ],
-                                ],
-                              ),
-                            )),
-                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    _SearchModeToggle(
+                      isBibleMode: searchState.isBibleMode,
+                      onToggle: (isBible) {
+                        ref.read(projectionSearchProvider.notifier).switchModeAndSearch(
+                          isBible,
+                          _searchController.text,
                         );
                       },
                     ),
-                ],
+                    if (!searchState.isBibleMode)
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final selectedSource = ref.watch(projectionSearchProvider.select((s) => s.selectedSourcePath));
+                          final sourcePaths = ref.watch(songListControllerProvider.select((s) => s.sourcePaths));
+                          if (sourcePaths.length <= 1) return const SizedBox.shrink();
+                          return PopupMenuButton<String?>(
+                            icon: Icon(
+                              Icons.library_books_outlined,
+                              size: 18,
+                              color: selectedSource != null
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                            tooltip: 'Filter by songbook',
+                            onSelected: (value) {
+                              ref.read(projectionSearchProvider.notifier).setSourceFilter(value);
+                            },
+                            itemBuilder: (context) => [
+                              PopupMenuItem<String?>(
+                                value: null,
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.all_inclusive, size: 16),
+                                    const SizedBox(width: 8),
+                                    const Text('All Books'),
+                                    if (selectedSource == null) ...[
+                                      const Spacer(),
+                                      Icon(Icons.check, size: 16, color: theme.colorScheme.primary),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              ...sourcePaths.map((source) => PopupMenuItem<String?>(
+                                value: source.path,
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.book_outlined, size: 16),
+                                    const SizedBox(width: 8),
+                                    Expanded(child: Text(source.path, overflow: TextOverflow.ellipsis)),
+                                    Text(
+                                      '${source.count}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                    if (selectedSource == source.path) ...[
+                                      const SizedBox(width: 4),
+                                      Icon(Icons.check, size: 16, color: theme.colorScheme.primary),
+                                    ],
+                                  ],
+                                ),
+                              )),
+                            ],
+                          );
+                        },
+                      ),
+                  ],
+                ),
               ),
-            ),
-            const Divider(height: 1),
-            Flexible(
-              child: Focus(
-                focusNode: _focusNode,
-                autofocus: true,
-                onKeyEvent: (node, event) => _handleKey(event, searchState),
+              const Divider(height: 1),
+              Flexible(
                 child: Column(
                   children: [
                     if (searchState.isLoading)
@@ -1799,8 +1795,8 @@ class _FullScreenSearchPageState extends ConsumerState<_FullScreenSearchPage> {
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
