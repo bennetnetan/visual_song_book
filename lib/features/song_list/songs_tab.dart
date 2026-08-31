@@ -398,6 +398,7 @@ class _SongsTabState extends ConsumerState<SongsTab> {
                                         ),
                                       ],
                                       selected: {listState.selectedSourceMode},
+                                      showSelectedIcon: false,
                                       onSelectionChanged: (Set<SourceMode> selection) {
                                         if (selection.isNotEmpty) {
                                           listNotifier.setSourceMode(selection.first);

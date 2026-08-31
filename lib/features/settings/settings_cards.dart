@@ -927,6 +927,7 @@ class _SourceModeSelectorState extends ConsumerState<_SourceModeSelector> {
               ),
             ],
             selected: {_currentMode},
+            showSelectedIcon: false,
             onSelectionChanged: (Set<SourceMode> selection) {
               if (selection.isNotEmpty) {
                 _changeMode(selection.first);
