@@ -226,8 +226,10 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
 
   /// Enters borderless fullscreen automatically when window opens.
   /// On the first call, the window is moved to a second monitor (if available)
-  /// before going fullscreen. On re-assertion (after focus regain), we only
-  /// re-apply the size/position without overwriting [_originalWindowStyle].
+  /// before going fullscreen. If only one monitor is detected, the window
+  /// stays in its normal windowed state to avoid covering the controls.
+  /// On re-assertion (after focus regain), we only re-apply the size/position
+  /// without overwriting [_originalWindowStyle].
   Future<void> _goFullscreenOnBestDisplay({bool isReAssertion = false}) async {
     if (_isGoingFullscreen) return; // Guard against concurrent calls
     _isGoingFullscreen = true;
@@ -237,12 +239,18 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
           if (!isReAssertion) {
             // First call: find the second monitor and move the window there
             // before stripping decorations and going fullscreen.
-            final otherMonitor = Win32WindowHelper.findOtherMonitorBounds(
-                Win32WindowHelper.findCurrentWindowHandle());
+            final hwnd = Win32WindowHelper.findCurrentWindowHandle();
+            final otherMonitor = Win32WindowHelper.findOtherMonitorBounds(hwnd);
+            if (otherMonitor == null) {
+              // No second monitor detected — keep the window in normal
+              // windowed mode so it doesn't cover the controls screen.
+              debugPrint('No second monitor found. Projection window stays in windowed mode.');
+              return;
+            }
             _originalWindowStyle = await enterBorderlessFullscreenCurrentWindow(
                 targetBounds: otherMonitor);
             if (_originalWindowStyle != 0) {
-              debugPrint('Projection window entered borderless fullscreen via Win32 API.');
+              debugPrint('Projection window entered borderless fullscreen on second monitor via Win32 API.');
             } else {
               // Fallback to maximized if borderless fullscreen failed.
               await maximizeCurrentWindow();
