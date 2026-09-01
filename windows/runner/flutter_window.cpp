@@ -30,10 +30,25 @@ static void OnSecondaryWindowCreated(void* flutter_view_controller) {
              WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
   SetWindowLongPtrW(toplevel, GWL_STYLE, style);
 
-  // Force the frame change so the OS redraws without chrome.
-  SetWindowPos(toplevel, nullptr, 0, 0, 0, 0,
-               SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
-               SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+  // Enter OS fullscreen on the monitor containing this window — mirrors
+  // Linux's gtk_window_fullscreen() in my_application.cc. The window
+  // manager places the window on whichever display desktop_multi_window
+  // assigned it to; we just fill that display.
+  HMONITOR hMon = MonitorFromWindow(toplevel, MONITOR_DEFAULTTONEAREST);
+  MONITORINFO mi = {};
+  mi.cbSize = sizeof(mi);
+  if (hMon && GetMonitorInfoW(hMon, &mi)) {
+    const RECT& rc = mi.rcMonitor;
+    SetWindowPos(toplevel, HWND_TOP,
+                 rc.left, rc.top,
+                 rc.right - rc.left, rc.bottom - rc.top,
+                 SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+  } else {
+    // Fallback: strip chrome only (no fullscreen).
+    SetWindowPos(toplevel, nullptr, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                 SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+  }
 }
 
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)

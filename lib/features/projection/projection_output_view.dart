@@ -7,10 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 
 import 'package:go_router/go_router.dart';
-import 'package:visual_song_book/core/models/projection_mode.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
-import 'package:visual_song_book/core/utils/win32_window_helper.dart';
 import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_appearance_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
@@ -40,10 +38,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
   bool _isClosing = false;
   bool _isHovering = false;
   bool _isCloseHovered = false;
-  int _originalWindowStyle = 0;
-  bool _isGoingFullscreen = false;
-  DateTime _lastReAssertion = DateTime(0); // debounce for focus-triggered re-assertion
-  VoidCallback? _focusListener; // re-asserts fullscreen on window focus gain
 
   double _baseFontSize = 40.0;
   bool _pinchActive = false;
@@ -88,34 +82,8 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS) &&
         ref.read(isProjectionWindowProvider);
 
-    // 'single' mode opens a normal decorated window on the primary display —
-    // no auto-fullscreen, no placement, no decoration stripping.
-    final isExtendedMode =
-        ref.read(projectionWindowModeProvider) != ProjectionMode.single;
-
     if (isProjectionEngine) {
       _setupSecondaryWindowChannel();
-
-      // On Windows, re-assert borderless fullscreen whenever the projection
-      // window regains focus. This handles accidental drags, ALT+TAB
-      // sequences, and display-configuration changes that drop fullscreen.
-      if (Platform.isWindows && isExtendedMode) {
-        _focusListener = () {
-          if (_focusNode.hasFocus && _originalWindowStyle != 0) {
-            // Debounce: skip if we re-asserted less than 500ms ago.
-            // setWindowPos triggers FocusManager.applyFocusChangesIfNeeded,
-            // which fires this listener again — without a cooldown this creates
-            // an infinite loop of re-assertion.
-            final now = DateTime.now();
-            if (now.difference(_lastReAssertion).inMilliseconds < 500) return;
-            _lastReAssertion = now;
-            // Use a microtask to avoid calling Win32 inside the focus
-            // notification itself (can cause re-entrant Win32 calls).
-            Future.microtask(() => _goFullscreenOnBestDisplay(isReAssertion: true));
-          }
-        };
-        _focusNode.addListener(_focusListener!);
-      }
     }
   }
 
@@ -138,15 +106,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
       }
       if (controller == null) {
         _log.severe('Failed to get WindowController after retries. IPC disabled.');
-        // Can't set up IPC, but we can still go fullscreen via Win32.
-        if (mounted && ref.read(projectionWindowModeProvider) != ProjectionMode.single) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            Timer.run(() {
-              if (!mounted) return;
-              _goFullscreenOnBestDisplay();
-            });
-          });
-        }
         return;
       }
     }
@@ -154,19 +113,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
 
     setState(() {
       _isSecondaryWindow = true;
-    });
-
-    // Request fullscreen + move to screen 2 once the window is ready.
-    // Defer with Timer.run to avoid calling Win32 SetWindowPos inside
-    // Flutter's frame lifecycle, which causes scheduler reentrancy errors.
-    // Skipped in 'single' mode (normal decorated window on the primary display).
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Timer.run(() {
-        if (!mounted) return;
-        if (ref.read(projectionWindowModeProvider) != ProjectionMode.single) {
-          _goFullscreenOnBestDisplay();
-        }
-      });
     });
 
     controller.setWindowMethodHandler((call) async {
@@ -194,15 +140,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
             );
           }
         });
-      } else if (call.method == 'go_fullscreen') {
-        // Only enter fullscreen if we haven't already — prevents double
-        // fullscreen from both the init path and the controller's fallback IPC.
-        // Skipped in 'single' mode.
-        if (!_isGoingFullscreen &&
-            _originalWindowStyle == 0 &&
-            ref.read(projectionWindowModeProvider) != ProjectionMode.single) {
-          await _goFullscreenOnBestDisplay();
-        }
       }
       return 'OK';
     });
@@ -223,56 +160,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
       }
     }
   }
-
-  /// Enters borderless fullscreen automatically when window opens.
-  /// On the first call, the window is moved to a second monitor (if available)
-  /// before going fullscreen. If only one monitor is detected, the window
-  /// stays in its normal windowed state to avoid covering the controls.
-  /// On re-assertion (after focus regain), we only re-apply the size/position
-  /// without overwriting [_originalWindowStyle].
-  Future<void> _goFullscreenOnBestDisplay({bool isReAssertion = false}) async {
-    if (_isGoingFullscreen) return; // Guard against concurrent calls
-    _isGoingFullscreen = true;
-    try {
-      if (Platform.isWindows) {
-        try {
-          if (!isReAssertion) {
-            // First call: find the second monitor and move the window there
-            // before stripping decorations and going fullscreen.
-            final hwnd = Win32WindowHelper.findCurrentWindowHandle();
-            final otherMonitor = Win32WindowHelper.findOtherMonitorBounds(hwnd);
-            if (otherMonitor == null) {
-              // No second monitor detected — keep the window in normal
-              // windowed mode so it doesn't cover the controls screen.
-              debugPrint('No second monitor found. Projection window stays in windowed mode.');
-              return;
-            }
-            _originalWindowStyle = await enterBorderlessFullscreenCurrentWindow(
-                targetBounds: otherMonitor);
-            if (_originalWindowStyle != 0) {
-              debugPrint('Projection window entered borderless fullscreen on second monitor via Win32 API.');
-            } else {
-              // Fallback to maximized if borderless fullscreen failed.
-              await maximizeCurrentWindow();
-              debugPrint('Projection window maximized (borderless fullscreen failed).');
-            }
-          } else if (_originalWindowStyle != 0) {
-            // Re-assertion: style already stripped; just reposition the window
-            // to fill the monitor (handles resolution changes / dragged windows).
-            await enterBorderlessFullscreenCurrentWindow();
-            debugPrint('Projection window re-asserted borderless fullscreen.');
-          }
-        } catch (e) {
-          debugPrint('_goFullscreenOnBestDisplay error: $e');
-        }
-      }
-    } finally {
-      _isGoingFullscreen = false;
-    }
-  }
-
-
-
 
   void _showMobileSetPlaylistSheet(BuildContext context, WidgetRef ref) {
     final setsState = ref.read(setsControllerProvider);
@@ -503,12 +390,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
     if (_isClosing) return;
     _isClosing = true;
 
-    // Restore window style before closing so the hide/cleanup is clean
-    if (_originalWindowStyle != 0) {
-      exitBorderlessFullscreenCurrentWindow(_originalWindowStyle);
-      _originalWindowStyle = 0;
-    }
-
     try {
       final controllers = await WindowController.getAll();
       final currentWindow = await WindowController.fromCurrentEngine();
@@ -542,9 +423,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
   void dispose() {
     _mediaTimer?.cancel();
     _mediaTimer = null;
-    if (_focusListener != null) {
-      _focusNode.removeListener(_focusListener!);
-    }
     _focusNode.dispose();
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -554,11 +432,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
         DeviceOrientation.landscapeLeft,
         DeviceOrientation.landscapeRight,
       ]);
-    }
-    // Restore window style if we were in borderless fullscreen
-    if (_originalWindowStyle != 0) {
-      exitBorderlessFullscreenCurrentWindow(_originalWindowStyle);
-      _originalWindowStyle = 0;
     }
     if (!kIsWeb &&
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
