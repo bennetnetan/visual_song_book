@@ -14,15 +14,16 @@
 
 ## Features
 
-- **Song Management** — full CRUD with category filtering, verse/chorus parsing, and auto-numbering
-- **KJV Bible Reader** — full-text search, cross-references (344k entries), bookmarks
-- **Song Sets** — drag-to-reorder sets for services, assign musical keys, project entire sets
+- **Song Management** — full CRUD with category filtering, verse/chorus parsing, auto-numbering, and soft-delete
+- **KJV Bible Reader** — full-text search, cross-references (344k entries), bookmarks, chapter-aware navigation
+- **Song Sets** — drag-to-reorder sets for services, assign musical keys, duplicate sets, project entire sets
 - **Live Projection** — dedicated secondary window (desktop) or fullscreen mode (mobile), adjustable font size, slide transitions, auto-insert chorus
 - **Unified Search** — search Bible or songs directly from the projection tab with structured reference parsing
 - **History** — tracks projected songs, sets, and Bible passages
 - **Import** — legacy `.mdb` (via mdb-tools), `.vsbook` backup archives, bundled JSON songbooks
 - **Export** — set sharing (JSON), database backup (`.vsbook`)
 - **Linked Songbooks** — link `.vsbook` files from Google Drive or shared folders for automatic sync
+- **Onboarding** — first-launch setup wizard for initial configuration
 
 ---
 
@@ -31,31 +32,39 @@
 ```
 lib/
 ├── core/
+│   ├── models/             # Enums (ProjectionMode, SourceMode)
 │   ├── providers/          # Riverpod providers (database, importers, theme, state)
-│   ├── utils/              # Verse parser, app logger, layout utils, Win32 helpers
-│   └── widgets/            # Shared UI components (bible widgets, settings cards)
+│   ├── services/           # ShareService (system share sheet)
+│   ├── theme/              # FlexColorScheme theming (app_theme.dart)
+│   ├── utils/              # AppLogger, VerseParser, LayoutUtils, Win32 helpers
+│   └── widgets/            # Shared UI components (bible widgets)
 ├── data/
 │   ├── db/                 # Drift SQLite schema & migrations (songs, sets, bible)
 │   ├── importers/          # MDB, VSB, bundled JSON, .vsbook importers
-│   ├── models/             # Shared data models
+│   ├── models/             # Shared data models (Verse)
 │   ├── repositories/       # SongRepository, SetRepository, BackupRepository
-│   └── services/           # AppStorage (unified data directory), SeedingService, LinkedSongbooksService
+│   └── services/           # AppStorage, SeedingService, LinkedSongbooksService
 ├── features/
 │   ├── bible/              # Bible reader tab (repository, search, UI)
 │   ├── history/            # History tab (Songs / Sets / Bible sub-tabs)
 │   ├── onboarding/         # First-launch setup wizard
 │   ├── projection/         # Projection controller, output view, search provider
 │   ├── sets/               # Song sets (controller, tab, widgets)
-│   ├── settings/           # Settings tab (Appearance, Projection, Library, About)
+│   ├── settings/           # Settings tab (Appearance, Projection, Data Sources, System)
 │   ├── song_editor/        # Song creation / editing view
 │   └── song_list/          # Main dashboard, song list, navigation sidebar
 ├── routing/
 │   └── app_router.dart     # GoRouter config (main + projection window routes)
 ├── main.dart               # App entry point, theme, window init, seeding
 └── ...platform configs     # android/, ios/, linux/, windows/, macos/, web/
+
+# Other directories:
+tools/                      # export_vsb_to_json.py/.sh (utility scripts)
+tool/                       # seed_database.dart, inspect_bible.dart (dev tools)
+scripts/                    # package_appimage.sh (Linux packaging)
 ```
 
-**Stack**: Flutter + Dart · Riverpod (state) · Drift (SQLite ORM) · GoRouter (routing) · desktop_multi_window (IPC)
+**Stack**: Flutter + Dart · Riverpod (state) · Drift (SQLite ORM) · GoRouter (routing) · desktop_multi_window (IPC) · FlexColorScheme (theming) · logging (centralized logging)
 
 ---
 
@@ -83,6 +92,12 @@ flutter pub get
 flutter build linux --release
 ./scripts/package_appimage.sh          # → build/Visual_Song_Book-*.AppImage
 
+# Desktop (Windows)
+flutter build windows --release
+
+# Desktop (macOS)
+flutter build macos --release
+
 # Android per-ABI
 # versionCode comes from --build-number; pass an explicit --build-name and
 # --build-number so they don't stay at 1 between releases.
@@ -90,7 +105,7 @@ flutter build apk --split-per-abi --release \
   --build-name 1.8.0 --build-number 12
 
 # Run
-flutter run -d linux
+flutter run -d linux       # or -d windows, -d macos, -d chrome
 ```
 
 ## Supported Platforms

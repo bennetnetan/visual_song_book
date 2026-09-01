@@ -2,6 +2,16 @@
 
 All notable changes to Visual Song Book are documented here. Newest first.
 
+## [2.2.1] - 2026-09-01
+
+### Bug Fixes
+- **Projection search** — changed from fullscreen page to centered dialog for better UX
+- **Projection search** — resolved focus conflicts; search text is now editable after opening
+- **Projection search** — simplified keyboard navigation (arrow up/down only, removed left/right)
+- **Settings** — disabled default checkmark icon on selected source mode SegmentedButton
+- **Build** — upgraded Gradle to 9.1.0 for Java 25 compatibility
+- **Build** — fixed AppImage script path in `package_appimage.sh`
+
 ## [2.2.0] - 2026-08-18
 
 ### Features
