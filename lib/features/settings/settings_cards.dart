@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:visual_song_book/core/models/projection_mode.dart';
 import 'package:visual_song_book/core/models/source_mode.dart';
+import 'package:visual_song_book/core/providers/app_font_scale_provider.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
@@ -218,6 +219,8 @@ class AppearanceCard extends ConsumerWidget {
     final notifier = ref.read(themeModeProvider.notifier);
     final bibleState = ref.watch(bibleControllerProvider);
     final bibleNotifier = ref.read(bibleControllerProvider.notifier);
+    final appFontScale = ref.watch(appFontScaleProvider);
+    final appFontScaleNotifier = ref.read(appFontScaleProvider.notifier);
     final theme = Theme.of(context);
 
     return SettingsCard(
@@ -230,6 +233,59 @@ class AppearanceCard extends ConsumerWidget {
             subtitle: 'Theme, fonts, and reading experience',
           ),
           const SizedBox(height: 20),
+          // ── App Font Size ──────────────────────────────────────
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('App Font Size',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          color: theme.colorScheme.onSurface,
+                        )),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Scale all text in the app (helpful on small screens).',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '${(appFontScale * 100).toStringAsFixed(0)}%',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Icon(Icons.text_decrease,
+                  size: 18, color: theme.colorScheme.onSurfaceVariant),
+              Expanded(
+                child: Slider(
+                  value: appFontScale,
+                  min: AppFontScaleNotifier.minScale,
+                  max: AppFontScaleNotifier.maxScale,
+                  divisions: 8,
+                  label: '${(appFontScale * 100).toStringAsFixed(0)}%',
+                  onChanged: (value) => appFontScaleNotifier.setScale(value),
+                ),
+              ),
+              Icon(Icons.text_increase,
+                  size: 18, color: theme.colorScheme.onSurfaceVariant),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(),
+          const SizedBox(height: 16),
           // ── Theme row ──────────────────────────────────────────
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,

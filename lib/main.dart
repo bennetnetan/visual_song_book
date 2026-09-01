@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logging/logging.dart';
+import 'package:visual_song_book/core/providers/app_font_scale_provider.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/providers/theme_provider.dart';
 import 'package:visual_song_book/core/theme/app_theme.dart';
@@ -89,6 +90,7 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+    final appFontScale = ref.watch(appFontScaleProvider);
 
     // Trigger bundled-songbook seeding on every cold start.
     // SeedingService is a no-op after the first successful seed.
@@ -116,6 +118,15 @@ class MyApp extends ConsumerWidget {
     final lightTheme = buildAppTheme(Brightness.light);
     final darkTheme = buildAppTheme(Brightness.dark);
 
+    Widget wrapWithFontScale(Widget child) {
+      return MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: TextScaler.linear(appFontScale),
+        ),
+        child: child,
+      );
+    }
+
     final Widget app;
     // First-run setup: the bundled songbook seed and Bible DB copy can take
     // 5-15s on low-end devices. Show progress instead of a frozen screen.
@@ -127,6 +138,7 @@ class MyApp extends ConsumerWidget {
         theme: lightTheme,
         darkTheme: darkTheme,
         themeMode: themeMode,
+        builder: (context, child) => wrapWithFontScale(child!),
         home: const _FirstRunSplash(),
       );
     } else {
@@ -139,6 +151,7 @@ class MyApp extends ConsumerWidget {
               theme: lightTheme,
               darkTheme: darkTheme,
               themeMode: themeMode,
+              builder: (context, child) => wrapWithFontScale(child!),
               home: const OnboardingPage(),
             );
           }
@@ -148,6 +161,7 @@ class MyApp extends ConsumerWidget {
             theme: lightTheme,
             darkTheme: darkTheme,
             themeMode: themeMode,
+            builder: (context, child) => wrapWithFontScale(child!),
             routerConfig: isProjectionWindow ? projectionRouter : appRouter,
           );
         },
@@ -157,6 +171,7 @@ class MyApp extends ConsumerWidget {
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: themeMode,
+          builder: (context, child) => wrapWithFontScale(child!),
           home: const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           ),
@@ -167,6 +182,7 @@ class MyApp extends ConsumerWidget {
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: themeMode,
+          builder: (context, child) => wrapWithFontScale(child!),
           routerConfig: isProjectionWindow ? projectionRouter : appRouter,
         ),
       );
