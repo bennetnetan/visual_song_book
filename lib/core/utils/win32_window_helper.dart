@@ -43,6 +43,12 @@ typedef EnumWindowsDart = bool Function(Pointer<NativeFunction<EnumWindowsProcNa
 
 typedef EnumWindowsProcNative = Bool Function(IntPtr hWnd, IntPtr lParam);
 
+// Monitor enumeration callback
+typedef MonitorEnumProcNative = Bool Function(
+    IntPtr hMonitor, IntPtr hdcMonitor, Pointer<Uint8> lprcMonitor, IntPtr dwData);
+typedef MonitorEnumProcDart = bool Function(
+    int hMonitor, int hdcMonitor, Pointer<Uint8> lprcMonitor, int dwData);
+
 // Win32 constants
 const int swMaximize = 3;
 const int swShowMaximized = 3;
@@ -63,6 +69,12 @@ const int wsMinimizebox = 0x00020000;
 // System metrics
 const int smCxscreen = 0;
 const int smCyscreen = 1;
+
+/// Simple holder for monitor rectangle bounds returned by EnumDisplayMonitors.
+class _MonitorBounds {
+  final int x, y, width, height;
+  const _MonitorBounds({required this.x, required this.y, required this.width, required this.height});
+}
 
 class Win32WindowHelper {
   static final _user32 = DynamicLibrary.open('user32.dll');
@@ -144,10 +156,112 @@ class Win32WindowHelper {
       Bool Function(IntPtr hMonitor, Pointer<Uint8> lpmi),
       bool Function(int hMonitor, Pointer<Uint8> lpmi)>('GetMonitorInfoW');
 
+  // EnumDisplayMonitors for enumerating all monitors
+  static final _enumDisplayMonitors = _user32.lookupFunction<
+      Bool Function(IntPtr hdc, Pointer<Uint8> lprcClip,
+          Pointer<NativeFunction<MonitorEnumProcNative>> lpfnEnum, IntPtr dwData),
+      bool Function(int hdc, Pointer<Uint8> lprcClip,
+          Pointer<NativeFunction<MonitorEnumProcNative>> lpfnEnum, int dwData)>('EnumDisplayMonitors');
+
+  /// Callback function for EnumDisplayMonitors. Each call appends the monitor
+  /// bounds to the list passed via [dwData].
+  static bool _monitorEnumCallback(
+      int hMonitor, int hdcMonitor, Pointer<Uint8> lprcMonitor, int dwData) {
+    // MONITORINFO rcMonitor is at offset 4 (cbSize) + 0 (start of rcMonitor)
+    // rect: left(4), top(4), right(4), bottom(4) = 16 bytes at offset 4
+    final rect = lprcMonitor.cast<Int32>();
+    final bounds = _MonitorBounds(
+      x: rect[0],
+      y: rect[1],
+      width: rect[2] - rect[0],
+      height: rect[3] - rect[1],
+    );
+
+    // We store results in a global list pointed to by dwData.
+    // Since we can't easily pass a Dart list through FFI dwData, we use
+    // a static field instead.
+    _enumCallbackResults.add(bounds);
+    return true; // continue enumeration
+  }
+
+  /// Temporary storage for monitor enumeration results.
+  static final _enumCallbackResults = <_MonitorBounds>[];
+
+  /// Queries monitor bounds for the monitor containing [hwnd].
+  /// Returns null if the query fails.
+  static ({int x, int y, int width, int height})? getMonitorBoundsForWindow(int hwnd) {
+    try {
+      final hMonitor = _monitorFromWindow(hwnd, 2); // MONITOR_DEFAULTTONEAREST
+      if (hMonitor == 0) return null;
+      final ptr = calloc<Uint8>(40);
+      try {
+        ptr.cast<Uint32>()[0] = 40; // cbSize
+        if (_getMonitorInfoW(hMonitor, ptr)) {
+          final rect = ptr.cast<Int32>();
+          final x = rect[1];
+          final y = rect[2];
+          final w = rect[3] - x;
+          final h = rect[4] - y;
+          return (x: x, y: y, width: w, height: h);
+        }
+      } finally {
+        calloc.free(ptr);
+      }
+    } catch (e) {
+      _log.fine('getMonitorBoundsForWindow failed: $e');
+    }
+    return null;
+  }
+
+  /// Finds the bounds of a monitor that does NOT contain the given [hwnd].
+  /// Useful for moving the secondary projection window to a second screen.
+  /// Returns null if only one monitor is detected.
+  static ({int x, int y, int width, int height})? findOtherMonitorBounds(int hwnd) {
+    // First, find which monitor the window is currently on.
+    final currentMonitor = getMonitorBoundsForWindow(hwnd);
+    if (currentMonitor == null) return null;
+
+    // Enumerate all monitors.
+    _enumCallbackResults.clear();
+    try {
+      final callback = NativeCallable<MonitorEnumProcNative>.isolateLocal(
+        _monitorEnumCallback,
+        exceptionalReturn: true,
+      );
+      try {
+        _enumDisplayMonitors(0, nullptr, callback.nativeFunction, 0);
+      } finally {
+        callback.close();
+      }
+    } catch (e) {
+      _log.fine('EnumDisplayMonitors failed: $e');
+      return null;
+    }
+
+    if (_enumCallbackResults.isEmpty) return null;
+
+    // Find the first monitor that is NOT the current one (different position
+    // or different size).
+    for (final m in _enumCallbackResults) {
+      if (m.x != currentMonitor.x ||
+          m.y != currentMonitor.y ||
+          m.width != currentMonitor.width ||
+          m.height != currentMonitor.height) {
+        return (x: m.x, y: m.y, width: m.width, height: m.height);
+      }
+    }
+
+    // All monitors have the same bounds — only one monitor.
+    return null;
+  }
+
   /// Enters true borderless fullscreen by stripping the title bar and
   /// resizing the window to fill the monitor containing the window.
-  /// Returns the original window style so it can be restored later.
-  static int enterBorderlessFullscreen(int hwnd) {
+  /// If [targetBounds] is provided (from [findOtherMonitorBounds]), the window
+  /// is moved to that monitor first. Returns the original window style so it
+  /// can be restored later.
+  static int enterBorderlessFullscreen(int hwnd,
+      {({int x, int y, int width, int height})? targetBounds}) {
     if (hwnd == 0) return 0;
     final originalStyle = getWindowStyle(hwnd);
 
@@ -157,35 +271,43 @@ class Win32WindowHelper {
         ~(wsCaption | wsThickframe | wsSysmenu | wsMaximizebox | wsMinimizebox);
     setWindowStyle(hwnd, newStyle);
 
-    // Query display bounds dynamically using MonitorFromWindow
-    int screenWidth = getSystemMetrics(smCxscreen);
-    int screenHeight = getSystemMetrics(smCyscreen);
-    int screenX = 0;
-    int screenY = 0;
+    int screenX, screenY, screenWidth, screenHeight;
 
-    try {
-      final hMonitor = _monitorFromWindow(hwnd, 2); // MONITOR_DEFAULTTONEAREST = 2
-      if (hMonitor != 0) {
-        // Allocate space for MONITORINFO struct:
-        // cbSize (4 bytes) + rcMonitor (16 bytes: left, top, right, bottom) + rcWork (16 bytes) + dwFlags (4 bytes) = 40 bytes total.
-        final ptr = calloc<Uint8>(40);
-        try {
-          // Set cbSize to 40
-          ptr.cast<Uint32>()[0] = 40;
-          if (_getMonitorInfoW(hMonitor, ptr)) {
-            final monitorRect = ptr.cast<Int32>();
-            screenX = monitorRect[1]; // left
-            screenY = monitorRect[2]; // top
-            screenWidth = monitorRect[3] - screenX; // right - left
-            screenHeight = monitorRect[4] - screenY; // bottom - top
-            debugPrint('Detected monitor bounds: ($screenX, $screenY, $screenWidth, $screenHeight)');
+    if (targetBounds != null) {
+      // Use the explicitly provided target monitor bounds (e.g. second screen).
+      screenX = targetBounds.x;
+      screenY = targetBounds.y;
+      screenWidth = targetBounds.width;
+      screenHeight = targetBounds.height;
+      debugPrint('Using target monitor bounds: ($screenX, $screenY, $screenWidth, $screenHeight)');
+    } else {
+      // Query display bounds dynamically using MonitorFromWindow
+      screenX = 0;
+      screenY = 0;
+      screenWidth = getSystemMetrics(smCxscreen);
+      screenHeight = getSystemMetrics(smCyscreen);
+
+      try {
+        final hMonitor = _monitorFromWindow(hwnd, 2); // MONITOR_DEFAULTTONEAREST = 2
+        if (hMonitor != 0) {
+          final ptr = calloc<Uint8>(40);
+          try {
+            ptr.cast<Uint32>()[0] = 40;
+            if (_getMonitorInfoW(hMonitor, ptr)) {
+              final monitorRect = ptr.cast<Int32>();
+              screenX = monitorRect[1]; // left
+              screenY = monitorRect[2]; // top
+              screenWidth = monitorRect[3] - screenX; // right - left
+              screenHeight = monitorRect[4] - screenY; // bottom - top
+              debugPrint('Detected monitor bounds: ($screenX, $screenY, $screenWidth, $screenHeight)');
+            }
+          } finally {
+            calloc.free(ptr);
           }
-        } finally {
-          calloc.free(ptr);
         }
+      } catch (e) {
+        debugPrint('Failed to query monitor bounds dynamically: $e. Falling back to primary metrics.');
       }
-    } catch (e) {
-      debugPrint('Failed to query monitor bounds dynamically: $e. Falling back to primary metrics.');
     }
 
     // Position at monitor coordinates covering the screen area
@@ -341,8 +463,10 @@ Future<void> maximizeCurrentWindow({bool topmost = false}) async {
 
 /// Enters true borderless fullscreen on the current window.
 /// Strips the title bar and sizes the window to the full screen.
+/// If [targetBounds] is provided, the window is moved to that monitor first.
 /// Returns the original style handle for restoration, or 0 on failure.
-Future<int> enterBorderlessFullscreenCurrentWindow() async {
+Future<int> enterBorderlessFullscreenCurrentWindow(
+    {({int x, int y, int width, int height})? targetBounds}) async {
   if (!Platform.isWindows) return 0;
 
   for (var attempt = 0; attempt < 5; attempt++) {
@@ -352,7 +476,8 @@ Future<int> enterBorderlessFullscreenCurrentWindow() async {
         await Future.delayed(const Duration(milliseconds: 200));
         continue;
       }
-      return Win32WindowHelper.enterBorderlessFullscreen(hwnd);
+      return Win32WindowHelper.enterBorderlessFullscreen(hwnd,
+          targetBounds: targetBounds);
     } catch (e) {
       debugPrint('enterBorderlessFullscreen attempt $attempt failed: $e');
       await Future.delayed(const Duration(milliseconds: 150));

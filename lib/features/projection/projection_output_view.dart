@@ -95,19 +95,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
     if (isProjectionEngine) {
       _setupSecondaryWindowChannel();
 
-      // ── Windows: kick off decoration-strip as early as possible (before
-      // the first frame) so the title bar flash is minimised. The call is
-      // fire-and-forget here; _setupSecondaryWindowChannel will repeat it
-      // once the window handle is reliably available.
-      if (Platform.isWindows && isExtendedMode) {
-        enterBorderlessFullscreenCurrentWindow().then((style) {
-          if (style != 0 && mounted) {
-            _originalWindowStyle = style;
-            debugPrint('Early Win32 decoration strip succeeded (style=$style).');
-          }
-        }).catchError((_) {});
-      }
-
       // On Windows, re-assert borderless fullscreen whenever the projection
       // window regains focus. This handles accidental drags, ALT+TAB
       // sequences, and display-configuration changes that drop fullscreen.
@@ -126,7 +113,36 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
   }
 
   void _setupSecondaryWindowChannel() async {
-    final controller = await WindowController.fromCurrentEngine();
+    WindowController? controller;
+    try {
+      controller = await WindowController.fromCurrentEngine();
+    } catch (e) {
+      // desktop_multi_window plugin channel may not be ready yet in the
+      // secondary engine. Retry with increasing delays.
+      _log.warning('WindowController.fromCurrentEngine failed (attempting retry): $e');
+      for (var attempt = 0; attempt < 5; attempt++) {
+        await Future.delayed(Duration(milliseconds: 300 * (attempt + 1)));
+        try {
+          controller = await WindowController.fromCurrentEngine();
+          break;
+        } catch (e2) {
+          _log.warning('Retry $attempt failed: $e2');
+        }
+      }
+      if (controller == null) {
+        _log.severe('Failed to get WindowController after retries. IPC disabled.');
+        // Can't set up IPC, but we can still go fullscreen via Win32.
+        if (mounted && ref.read(projectionWindowModeProvider) != ProjectionMode.single) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            Timer.run(() {
+              if (!mounted) return;
+              _goFullscreenOnBestDisplay();
+            });
+          });
+        }
+        return;
+      }
+    }
     if (!mounted) return;
 
     setState(() {
@@ -202,8 +218,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
   }
 
   /// Enters borderless fullscreen automatically when window opens.
-  /// On re-assertion (after focus regain), we only re-apply the size/position
-  /// without overwriting [_originalWindowStyle] so the exit-restore stays valid.
+  /// On the first call, the window is moved to a second monitor (if available)
+  /// before going fullscreen. On re-assertion (after focus regain), we only
+  /// re-apply the size/position without overwriting [_originalWindowStyle].
   Future<void> _goFullscreenOnBestDisplay({bool isReAssertion = false}) async {
     if (_isGoingFullscreen) return; // Guard against concurrent calls
     _isGoingFullscreen = true;
@@ -211,8 +228,12 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
       if (Platform.isWindows) {
         try {
           if (!isReAssertion) {
-            // First call: strip decorations AND save original style.
-            _originalWindowStyle = await enterBorderlessFullscreenCurrentWindow();
+            // First call: find the second monitor and move the window there
+            // before stripping decorations and going fullscreen.
+            final otherMonitor = Win32WindowHelper.findOtherMonitorBounds(
+                Win32WindowHelper.findCurrentWindowHandle());
+            _originalWindowStyle = await enterBorderlessFullscreenCurrentWindow(
+                targetBounds: otherMonitor);
             if (_originalWindowStyle != 0) {
               debugPrint('Projection window entered borderless fullscreen via Win32 API.');
             } else {
