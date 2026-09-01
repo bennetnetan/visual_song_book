@@ -1175,14 +1175,58 @@ class LinkedSongbooksCard extends ConsumerWidget {
   }
 
   Future<void> _linkFile(BuildContext context, WidgetRef ref) async {
-    final result = await FilePicker.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['vsbook', 'vsb'],
-    );
-    if (result == null || result.files.single.path == null) return;
-    final path = result.files.single.path!;
-    final name = result.files.single.name;
-    await ref.read(linkedSongbooksProvider.notifier).add(path, name: name);
+    try {
+      // .vsb/.mdb files are auto-converted to .vsbook on import.
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['vsbook', 'vsb', 'mdb'],
+      );
+      if (result == null || result.files.single.path == null) return;
+      final path = result.files.single.path!;
+      final name = result.files.single.name;
+
+      // Check if already linked
+      final existing = ref.read(linkedSongbooksProvider).value ?? [];
+      if (existing.any((s) => s.path == path)) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('"$name" is already linked.')),
+          );
+        }
+        return;
+      }
+
+      // Check file exists
+      if (!File(path).existsSync()) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              content: Text('File not found: $name'),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Link it
+      await ref.read(linkedSongbooksProvider.notifier).add(path, name: name);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Linked "$name". Songs will sync on next startup.')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Theme.of(context).colorScheme.error,
+            content: Text('Failed to link file: $e'),
+          ),
+        );
+      }
+    }
   }
 
   void _unlink(BuildContext context, WidgetRef ref, LinkedSongbook book) {
@@ -1239,7 +1283,7 @@ class LinkedSongbooksCard extends ConsumerWidget {
       if (!file.existsSync()) continue;
 
       final ext = book.path.toLowerCase();
-      if (ext.endsWith('.vsbook')) {
+      if (ext.endsWith('.vsbook') || ext.endsWith('.vsb') || ext.endsWith('.mdb')) {
         final db = ref.read(databaseProvider);
         final importer = VsBookImporter(db);
         final result = await importer.reimportSource(book.path);

@@ -150,4 +150,68 @@ void main() {
     final song = songs.singleWhere((s) => s.songNum == 3);
     expect(song.modified, DateTime.parse('2024-01-01T00:00:00.000'));
   });
+
+  test('reimportSource syncs two linked books with overlapping titles', () async {
+    final book1Bytes = buildVsbookWithSqlite([
+      {
+        'song_num': 1,
+        'title': 'Amazing Grace',
+        'body': 'V1\nBody A',
+        'source_song_id': 1,
+        'is_active': 1,
+      },
+      {
+        'song_num': 2,
+        'title': 'Book1 Unique',
+        'body': 'V1\nOnly in book1',
+        'source_song_id': 2,
+        'is_active': 1,
+      },
+    ]);
+
+    final book2Bytes = buildVsbookWithSqlite([
+      {
+        'song_num': 1,
+        'title': 'Amazing Grace',
+        'body': 'V1\nBody B from book2',
+        'source_song_id': 1,
+        'is_active': 1,
+      },
+      {
+        'song_num': 5,
+        'title': 'Book2 Unique',
+        'body': 'V1\nOnly in book2',
+        'source_song_id': 2,
+        'is_active': 1,
+      },
+    ]);
+
+    final tempDir = Directory.systemTemp.createTempSync('vsbook_multi');
+    final book1Path = '${tempDir.path}/book1.vsbook';
+    final book2Path = '${tempDir.path}/book2.vsbook';
+    File(book1Path).writeAsBytesSync(book1Bytes);
+    File(book2Path).writeAsBytesSync(book2Bytes);
+
+    final r1 = await importer.reimportSource(book1Path);
+    expect(r1.success, isTrue, reason: r1.errorMessage);
+
+    final r2 = await importer.reimportSource(book2Path);
+    expect(r2.success, isTrue, reason: r2.errorMessage);
+
+    final songs = await (db.select(db.songs)
+          ..where((t) => t.isActive.equals(true)))
+        .get();
+
+    expect(songs.length, 3, reason: 'Should have 3 active songs total');
+
+    final amazing = songs.where((s) => s.title == 'Amazing Grace').toList();
+    expect(amazing.length, 1, reason: 'Only one Amazing Grace should exist');
+    expect(amazing.first.body, 'V1\nBody B from book2');
+    expect(amazing.first.sourcePath, book2Path);
+
+    expect(songs.any((s) => s.title == 'Book1 Unique' && s.sourcePath == book1Path), isTrue);
+    expect(songs.any((s) => s.title == 'Book2 Unique' && s.sourcePath == book2Path), isTrue);
+
+    tempDir.deleteSync(recursive: true);
+  });
 }

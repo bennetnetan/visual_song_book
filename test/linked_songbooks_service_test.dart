@@ -180,24 +180,28 @@ void main() {
       expect(await db.getAllLinkedSongbooks(), isEmpty);
     });
 
-    test('accepts a path inside the user home directory', () async {
-      final home = Platform.environment['HOME'];
-      if (home == null) {
-        // Cannot verify the allow-list branch without a home dir; skip.
-        return;
+    test('accepts a path that points to an existing file', () async {
+      // Create a temp file so _isPathAllowed (File.existsSync) passes.
+      final tempDir = Directory.systemTemp.createTempSync('vsb_link_test_');
+      final testFile = File('${tempDir.path}${Platform.pathSeparator}hymns.vsbook');
+      testFile.writeAsStringSync('dummy');
+      final allowedPath = testFile.path;
+
+      try {
+        final notifier = await service();
+        await notifier.add(allowedPath);
+
+        final linked = await container.read(linkedSongbooksProvider.future);
+        final linkedPaths = linked.map((b) => b.path).toList();
+        expect(linkedPaths, contains(allowedPath));
+        expect(await db.getAllLinkedSongbooks(), hasLength(1));
+
+        // Duplicate add is ignored.
+        await notifier.add(allowedPath);
+        expect(await db.getAllLinkedSongbooks(), hasLength(1));
+      } finally {
+        tempDir.deleteSync(recursive: true);
       }
-
-      final notifier = await service();
-      final allowedPath = '$home/.vsb_link_test/hymns.vsbook';
-      await notifier.add(allowedPath);
-
-      final linked = await container.read(linkedSongbooksProvider.future);
-      expect(linked.map((b) => b.path), contains(allowedPath));
-      expect(await db.getAllLinkedSongbooks(), hasLength(1));
-
-      // Duplicate add is ignored.
-      await notifier.add(allowedPath);
-      expect(await db.getAllLinkedSongbooks(), hasLength(1));
     });
   });
 

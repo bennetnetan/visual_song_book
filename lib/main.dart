@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import 'package:visual_song_book/core/utils/projection_window_args.dart';
 
 import 'package:visual_song_book/data/services/app_storage.dart';
 import 'package:visual_song_book/data/services/linked_songbooks_service.dart';
+import 'package:visual_song_book/data/services/linked_songbooks_watcher.dart';
 import 'package:visual_song_book/features/onboarding/onboarding_page.dart';
 import 'package:visual_song_book/routing/app_router.dart';
 import 'package:window_manager/window_manager.dart';
@@ -93,6 +95,7 @@ class MyApp extends ConsumerWidget {
     if (!isProjectionWindow) {
       ref.watch(appSeedProvider);
       ref.watch(linkedSongbooksSyncProvider);
+      ref.watch(linkedSongbooksWatcherInitProvider);
     }
 
     // Eagerly copy/open the bundled Bible DB at startup (first run copies
@@ -169,8 +172,63 @@ class MyApp extends ConsumerWidget {
       );
     }
 
-    return _LifecycleGuard(child: app);
+    return _SyncNotificationListener(child: _LifecycleGuard(child: app));
   }
+}
+
+/// Listens to [LinkedSongbooksWatcher] sync events and shows a snackbar
+/// when a linked songbook is auto-synced in the background.
+class _SyncNotificationListener extends ConsumerStatefulWidget {
+  final Widget child;
+  const _SyncNotificationListener({required this.child});
+
+  @override
+  ConsumerState<_SyncNotificationListener> createState() =>
+      _SyncNotificationListenerState();
+}
+
+class _SyncNotificationListenerState
+    extends ConsumerState<_SyncNotificationListener> {
+  StreamSubscription<LinkedSyncEvent>? _sub;
+
+  @override
+  void initState() {
+    super.initState();
+    _sub = ref
+        .read(linkedSongbooksWatcherProvider)
+        .syncEvents
+        .listen(_onSyncEvent);
+  }
+
+  void _onSyncEvent(LinkedSyncEvent event) {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    if (event.success) {
+      messenger.showSnackBar(SnackBar(
+        duration: const Duration(seconds: 3),
+        content: Text(
+          'Synced "${event.bookName}": '
+          '${event.songsImported} songs, ${event.songsUpdated} updated.',
+        ),
+      ));
+    } else {
+      messenger.showSnackBar(SnackBar(
+        duration: const Duration(seconds: 4),
+        backgroundColor: Theme.of(context).colorScheme.error,
+        content: Text('Sync failed for "${event.bookName}": ${event.error}'),
+      ));
+    }
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Wraps the app so the read-only Bible database handle is released when the

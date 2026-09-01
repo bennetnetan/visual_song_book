@@ -45,7 +45,8 @@ class VsBookImporter implements SongbookImporter {
   @override
   bool canImport(ImportSource source) {
     if (source.type == ImportSourceType.file && source.filePath != null) {
-      return source.filePath!.toLowerCase().endsWith('.vsbook');
+      final lower = source.filePath!.toLowerCase();
+      return lower.endsWith('.vsbook') || lower.endsWith('.vsb') || lower.endsWith('.mdb');
     }
     if (source.type == ImportSourceType.bytes && source.bytes != null) {
       return true;
@@ -65,7 +66,22 @@ class VsBookImporter implements SongbookImporter {
         if (!await file.exists()) {
           return ImportResult.failure('Backup file not found.');
         }
-        bytes = await file.readAsBytes();
+
+        // .vsb / .mdb are Microsoft Access databases — convert on the fly
+        // using the bundled Node.js mdb-reader script (no mdb-tools needed).
+        final lower = file.path.toLowerCase();
+        if (lower.endsWith('.vsb') || lower.endsWith('.mdb')) {
+          final converted = await _convertMdbToVsbook(file.path);
+          if (converted == null) {
+            return ImportResult.failure(
+              'Failed to convert .vsb/.mdb file. '
+              'Ensure Node.js is installed and the converter script is present.',
+            );
+          }
+          bytes = converted;
+        } else {
+          bytes = await file.readAsBytes();
+        }
       } else {
         if (source.bytes == null) {
           return ImportResult.failure('No bytes provided.');
@@ -265,7 +281,22 @@ class VsBookImporter implements SongbookImporter {
       if (!await file.exists()) {
         return ImportResult.failure('File not found: $filePath');
       }
-      final bytes = await file.readAsBytes();
+
+      // .vsb / .mdb are Microsoft Access databases — convert on the fly
+      Uint8List bytes;
+      final lower = filePath.toLowerCase();
+      if (lower.endsWith('.vsb') || lower.endsWith('.mdb')) {
+        final converted = await _convertMdbToVsbook(filePath);
+        if (converted == null) {
+          return ImportResult.failure(
+            'Failed to convert .vsb/.mdb file. '
+            'Ensure Node.js is installed.',
+          );
+        }
+        bytes = converted;
+      } else {
+        bytes = await file.readAsBytes();
+      }
       final archive = ZipDecoder().decodeBytes(bytes);
 
       ArchiveFile? dbFile;
@@ -452,13 +483,13 @@ class VsBookImporter implements SongbookImporter {
       );
     }
 
-      await db.transaction(() async {
-        for (final category in categoryCompanions) {
-          await db.into(db.categories).insertOnConflictUpdate(category);
-        }
+    await db.transaction(() async {
+      for (final category in categoryCompanions) {
+        await db.into(db.categories).insertOnConflictUpdate(category);
+      }
 
-        await _upsertSongs(sourceFilePath, dedupedSongs);
-      });
+      await _upsertSongs(sourceFilePath, dedupedSongs);
+    });
 
     return ImportResult.success(
       songs: dedupedSongs.length,
@@ -588,17 +619,23 @@ class VsBookImporter implements SongbookImporter {
     String sourceFilePath,
     List<SongsCompanion> companions,
   ) async {
-    final existing = await (db.select(db.songs)
+    final currentSourceExisting = await (db.select(db.songs)
           ..where((t) => t.sourcePath.equals(sourceFilePath))
           ..orderBy([(t) => OrderingTerm.asc(t.id)]))
         .get();
 
-    final bySourceSongId = <int, Song>{};
+    final allActive = await (db.select(db.songs)
+          ..where((t) => t.isActive.equals(true)))
+        .get();
+
+    final bySourceSongIdInFile = <int, Song>{};
     final byTitleNum = <String, Song>{};
-    for (final song in existing) {
+    for (final song in currentSourceExisting) {
       if (song.sourceSongId != null) {
-        bySourceSongId[song.sourceSongId!] = song;
+        bySourceSongIdInFile[song.sourceSongId!] = song;
       }
+    }
+    for (final song in allActive) {
       final key = '${song.title.toLowerCase().trim()}|${song.songNum}';
       byTitleNum[key] = song;
     }
@@ -618,8 +655,8 @@ class VsBookImporter implements SongbookImporter {
       incomingSourceIds.add(sourceId);
 
       Song? match;
-      if (sourceId != null && bySourceSongId.containsKey(sourceId)) {
-        match = bySourceSongId[sourceId];
+      if (sourceId != null && bySourceSongIdInFile.containsKey(sourceId)) {
+        match = bySourceSongIdInFile[sourceId];
       } else if (byTitleNum.containsKey(key)) {
         match = byTitleNum[key];
       }
@@ -631,7 +668,7 @@ class VsBookImporter implements SongbookImporter {
       }
     }
 
-    final toDelete = existing.where((s) {
+    final toDelete = currentSourceExisting.where((s) {
       final key = '${s.title.toLowerCase().trim()}|${s.songNum}';
       return !incomingTitleNums.contains(key);
     }).toList();
@@ -651,5 +688,84 @@ class VsBookImporter implements SongbookImporter {
         });
       }
     });
+  }
+
+  /// Converts a .vsb/.mdb (Microsoft Access) file to a .vsbook ZIP archive
+  /// in-memory by shelling out to the bundled Node.js mdb-reader script.
+  ///
+  /// Returns the converted ZIP bytes, or null on failure.
+  Future<Uint8List?> _convertMdbToVsbook(String mdbPath) async {
+    try {
+      // Find the converter script relative to the project root.
+      // In development: tools/convert_vsb_to_vsbook.mjs
+      // In packaged builds: tools/convert_vsb_to_vsbook.mjs
+      final scriptDir = _findProjectRoot();
+      if (scriptDir == null) {
+        _log.warning('Cannot find project root for MDB converter');
+        return null;
+      }
+
+      final scriptPath = '$scriptDir/tools/convert_vsb_to_vsbook.mjs';
+      final scriptFile = File(scriptPath);
+      if (!await scriptFile.exists()) {
+        _log.warning('MDB converter script not found at $scriptPath');
+        return null;
+      }
+
+      // Output to a temp .vsbook file
+      final tempDir = Directory.systemTemp.createTempSync('vsb_convert_');
+      final outputPath = '${tempDir.path}/converted.vsbook';
+
+      _log.info('Converting MDB to .vsbook: $mdbPath');
+      final result = await Process.run(
+        'node',
+        [scriptPath, mdbPath, outputPath],
+        runInShell: true,
+      );
+
+      if (result.exitCode != 0) {
+        _log.warning('MDB converter failed: ${result.stderr}');
+        _cleanupTempDir(tempDir);
+        return null;
+      }
+
+      final outputFile = File(outputPath);
+      if (!await outputFile.exists()) {
+        _log.warning('MDB converter produced no output file');
+        _cleanupTempDir(tempDir);
+        return null;
+      }
+
+      final bytes = await outputFile.readAsBytes();
+      _cleanupTempDir(tempDir);
+      _log.info('MDB conversion successful (${bytes.length} bytes)');
+      return bytes;
+    } catch (e, st) {
+      _log.severe('Error converting MDB file', e, st);
+      return null;
+    }
+  }
+
+  /// Tries to locate the project root by walking up from the current
+  /// directory looking for pubspec.yaml.
+  String? _findProjectRoot() {
+    var dir = Directory.current;
+    for (var i = 0; i < 10; i++) {
+      if (File('${dir.path}/pubspec.yaml').existsSync()) {
+        return dir.path;
+      }
+      final parent = dir.parent;
+      if (parent.path == dir.path) break;
+      dir = parent;
+    }
+    return null;
+  }
+
+  void _cleanupTempDir(Directory dir) {
+    try {
+      dir.deleteSync(recursive: true);
+    } catch (_) {
+      // Best effort cleanup
+    }
   }
 }

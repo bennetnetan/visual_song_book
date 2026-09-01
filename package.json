@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "archiver": "^8.0.0",
+    "mdb-reader": "^3.2.0"
+  }
+}

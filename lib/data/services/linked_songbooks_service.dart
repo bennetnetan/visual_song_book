@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
-import 'package:path/path.dart' as p;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:visual_song_book/core/models/source_mode.dart';
@@ -10,7 +9,6 @@ import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/importers/vsbook_importer.dart';
-import 'package:visual_song_book/data/services/app_storage.dart';
 
 final _log = AppLogger.get('LinkedSongbooks');
 
@@ -27,31 +25,20 @@ String _canonicalizePath(String path) {
 }
 
 Future<bool> _isPathAllowed(String path) async {
-  String canonical;
+  // Allow any path that points to an existing file.
+  // The old check restricted links to $USERPROFILE or app storage,
+  // which silently rejected files on other drives, network shares,
+  // or external media — a common use case for church worship teams.
   try {
-    canonical = File(path).resolveSymbolicLinksSync();
-  } on IOException catch (e, st) {
-    _log.fine('Failed to resolve symbolic links for $path; using original path: $e', e, st);
-    canonical = path;
-  }
-  canonical = p.normalize(canonical);
-
-  final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? '';
-  if (home.isNotEmpty) {
-    final homeDir = p.normalize(home);
-    if (canonical == homeDir || canonical.startsWith('$homeDir${p.separator}')) return true;
-  }
-
-  try {
-    final appStorage = await getAppStoragePath();
-    final appStorageDir = p.normalize(appStorage);
-    if (canonical == appStorageDir || canonical.startsWith('$appStorageDir${p.separator}')) return true;
+    if (!File(path).existsSync()) {
+      _log.warning('Path does not exist: $path');
+      return false;
+    }
+    return true;
   } catch (e, st) {
-    // ignore: app storage path not yet initialized
-    _log.fine('Failed to get app storage path; skipping storage-path check: $e', e, st);
+    _log.fine('Path check failed for $path: $e', e, st);
+    return false;
   }
-
-  return false;
 }
 
 class LinkedSongbook {
@@ -261,6 +248,7 @@ final linkedSongbooksSyncProvider = FutureProvider<int>((ref) async {
   _log.info('Syncing ${needingSync.length} linked songbook(s)...');
   final importer = VsBookImporter(db);
   int synced = 0;
+  final syncedPaths = <String>[];
 
   for (final book in needingSync) {
     if (!await _isPathAllowed(book.path)) {
@@ -268,11 +256,13 @@ final linkedSongbooksSyncProvider = FutureProvider<int>((ref) async {
       continue;
     }
     final lower = book.path.toLowerCase();
-    if (lower.endsWith('.vsbook')) {
+    if (lower.endsWith('.vsbook') || lower.endsWith('.vsb') || lower.endsWith('.mdb')) {
       try {
+        _log.info('Syncing "${book.name}" (${book.path})...');
         final result = await importer.reimportSource(book.path);
         if (result.success) {
           synced++;
+          syncedPaths.add(book.path);
           _log.info(
             '"${book.name}" synced: ${result.songsImported} songs, '
             '${result.songsAdded} updated.',
@@ -280,23 +270,22 @@ final linkedSongbooksSyncProvider = FutureProvider<int>((ref) async {
         } else {
           _log.warning('"${book.name}" sync failed: ${result.errorMessage}');
         }
-      } catch (e) {
-        _log.severe('Error syncing "${book.name}"', e);
+      } catch (e, st) {
+        _log.severe('Error syncing "${book.name}"', e, st);
       }
-    } else if (lower.endsWith('.vsb')) {
-      _log.warning(
-        '"${book.name}" is a .vsb (MDB) file — '
-        'direct import on Windows requires mdb-tools. '
-        'Please convert to .vsbook format.',
-      );
+    } else {
+      _log.warning('Unsupported format for "${book.name}": $lower');
     }
   }
 
-  if (synced > 0) {
+  // Only update lastImportedAt for files that actually synced —
+  // otherwise failed files will appear up-to-date on next startup
+  // and never be retried.
+  if (syncedPaths.isNotEmpty) {
     final now = DateTime.now();
-    for (final book in needingSync) {
+    for (final path in syncedPaths) {
       await db.updateLinkedSongbookByPath(
-        book.path,
+        path,
         const LinkedSongbookRegistryCompanion(
           lastImportedAt: Value.absent(),
         ).copyWith(lastImportedAt: Value(now)),

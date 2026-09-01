@@ -48,3 +48,21 @@ app.*.map.json
 # Linux release artefacts
 *.AppImage
 tools/appimagetool*.AppImage
+
+# Portable / installer bundles
+*.zip
+*.7z
+*.rar
+*.tar.gz
+*.exe
+
+# Node.js (mdb-reader converter toolchain)
+node_modules/
+
+# User songbook / data files at repo root (test artifacts, large binaries)
+*.mdb
+/*.vsbook
+/*.vsb
+/assets/songbooks/*.vsbook
+/assets/songbooks/*.vsb
+/assets/songbooks/*.mdb
