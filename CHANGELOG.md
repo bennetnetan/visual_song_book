@@ -2,6 +2,14 @@
 
 All notable changes to Visual Song Book are documented here. Newest first.
 
+## [2.2.2] - 2026-09-01
+
+### Bug Fixes
+- **Projection window** — added second-monitor detection via `EnumDisplayMonitors` FFI so the projection window automatically moves to an external display instead of fullscreening on the primary screen
+- **Projection window** — added retry logic for `desktop_multi_window` plugin channel initialization; falls back to Win32-only fullscreen if IPC fails
+- **Projection window** — fixed infinite re-assertion loop caused by `setWindowPos` triggering focus changes; added 500ms debounce cooldown on focus listener
+- **Projection window** — removed early `enterBorderlessFullscreenCurrentWindow()` call from `initState` that triggered Win32 `SetWindowPos` during widget build phase, causing focus assertion cascades
+
 ## [2.2.1] - 2026-09-01
 
 ### Bug Fixes
