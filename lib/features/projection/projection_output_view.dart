@@ -42,6 +42,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
   bool _isCloseHovered = false;
   int _originalWindowStyle = 0;
   bool _isGoingFullscreen = false;
+  DateTime _lastReAssertion = DateTime(0); // debounce for focus-triggered re-assertion
   VoidCallback? _focusListener; // re-asserts fullscreen on window focus gain
 
   double _baseFontSize = 40.0;
@@ -101,7 +102,13 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
       if (Platform.isWindows && isExtendedMode) {
         _focusListener = () {
           if (_focusNode.hasFocus && _originalWindowStyle != 0) {
-            // Re-apply borderless fullscreen style + position.
+            // Debounce: skip if we re-asserted less than 500ms ago.
+            // setWindowPos triggers FocusManager.applyFocusChangesIfNeeded,
+            // which fires this listener again — without a cooldown this creates
+            // an infinite loop of re-assertion.
+            final now = DateTime.now();
+            if (now.difference(_lastReAssertion).inMilliseconds < 500) return;
+            _lastReAssertion = now;
             // Use a microtask to avoid calling Win32 inside the focus
             // notification itself (can cause re-entrant Win32 calls).
             Future.microtask(() => _goFullscreenOnBestDisplay(isReAssertion: true));
