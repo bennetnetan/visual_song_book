@@ -574,52 +574,67 @@ class _BibleReadingViewState extends State<BibleReadingView> {
       items: [
         PopupMenuItem(
           value: 'project',
-          child: ListTile(
-            leading: const Icon(Icons.tv, size: 18),
-            title: Text(isLargeScreen ? 'Project' : 'Present',
-                style: const TextStyle(fontSize: 13)),
-            dense: true,
+          child: Material(
+            color: Colors.transparent,
+            child: ListTile(
+              leading: const Icon(Icons.tv, size: 18),
+              title: Text(isLargeScreen ? 'Project' : 'Present',
+                  style: const TextStyle(fontSize: 13)),
+              dense: true,
+            ),
           ),
         ),
         if (kIsWeb || !Platform.isAndroid)
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'navigate',
-            child: ListTile(
-              leading: Icon(Icons.open_in_new, size: 18),
-              title: Text('Navigate to Verse', style: TextStyle(fontSize: 13)),
-              dense: true,
+            child: Material(
+              color: Colors.transparent,
+              child: ListTile(
+                leading: Icon(Icons.open_in_new, size: 18),
+                title: Text('Navigate to Verse', style: TextStyle(fontSize: 13)),
+                dense: true,
+              ),
             ),
           ),
         PopupMenuItem(
           value: 'bookmark',
-          child: ListTile(
-            leading: Icon(
-                ProviderScope.containerOf(context).read(bibleControllerProvider).bookmarkedVerseIds.contains(verse.verse)
-                    ? Icons.bookmark
-                    : Icons.bookmark_border,
-                size: 18),
-            title: Text(
-                ProviderScope.containerOf(context).read(bibleControllerProvider).bookmarkedVerseIds.contains(verse.verse)
-                    ? 'Remove Bookmark'
-                    : 'Bookmark',
-                style: const TextStyle(fontSize: 13)),
-            dense: true,
+          child: Material(
+            color: Colors.transparent,
+            child: ListTile(
+              leading: Icon(
+                  ProviderScope.containerOf(context).read(bibleControllerProvider).bookmarkedVerseIds.contains(verse.verse)
+                      ? Icons.bookmark
+                      : Icons.bookmark_border,
+                  size: 18),
+              title: Text(
+                  ProviderScope.containerOf(context).read(bibleControllerProvider).bookmarkedVerseIds.contains(verse.verse)
+                      ? 'Remove Bookmark'
+                      : 'Bookmark',
+                  style: const TextStyle(fontSize: 13)),
+              dense: true,
+            ),
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'share',
-          child: ListTile(
-            leading: Icon(Icons.share_outlined, size: 18),
-            title: Text('Share Verse', style: TextStyle(fontSize: 13)),
-            dense: true,
+          child: Material(
+            color: Colors.transparent,
+            child: ListTile(
+              leading: Icon(Icons.share_outlined, size: 18),
+              title: Text('Share Verse', style: TextStyle(fontSize: 13)),
+              dense: true,
+            ),
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'select',
-          child: ListTile(
-            leading: Icon(Icons.checklist, size: 18),
-            title: Text('Select Verses', style: TextStyle(fontSize: 13)),
-            dense: true,
+          child: Material(
+            color: Colors.transparent,
+            child: ListTile(
+              leading: Icon(Icons.checklist, size: 18),
+              title: Text('Select Verses', style: TextStyle(fontSize: 13)),
+              dense: true,
+            ),
           ),
         ),
       ],

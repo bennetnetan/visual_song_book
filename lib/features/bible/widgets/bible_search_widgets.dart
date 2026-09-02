@@ -399,29 +399,38 @@ class BibleSearchResultsView extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (kIsWeb || !Platform.isAndroid)
-              ListTile(
-                leading: const Icon(Icons.open_in_new),
-                title: const Text('Navigate to Verse'),
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  leading: const Icon(Icons.open_in_new),
+                  title: const Text('Navigate to Verse'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onNavigate(verse);
+                  },
+                ),
+              ),
+            Material(
+              color: Colors.transparent,
+              child: ListTile(
+                leading: const Icon(Icons.tv),
+                title: const Text('Project'),
                 onTap: () {
                   Navigator.pop(context);
-                  onNavigate(verse);
+                  onProject(verse);
                 },
               ),
-            ListTile(
-              leading: const Icon(Icons.tv),
-              title: const Text('Project'),
-              onTap: () {
-                Navigator.pop(context);
-                onProject(verse);
-              },
             ),
-            ListTile(
-              leading: Icon(isVerseBookmarked ? Icons.bookmark : Icons.bookmark_border),
-              title: Text(isVerseBookmarked ? 'Remove Bookmark' : 'Bookmark'),
-              onTap: () {
-                Navigator.pop(context);
-                onBookmark(verse);
-              },
+            Material(
+              color: Colors.transparent,
+              child: ListTile(
+                leading: Icon(isVerseBookmarked ? Icons.bookmark : Icons.bookmark_border),
+                title: Text(isVerseBookmarked ? 'Remove Bookmark' : 'Bookmark'),
+                onTap: () {
+                  Navigator.pop(context);
+                  onBookmark(verse);
+                },
+              ),
             ),
           ],
         ),
