@@ -151,9 +151,6 @@ class SetList extends StatelessWidget {
                       ),
                       child: Card(
                         elevation: 0,
-                        color: isSelected
-                            ? theme.colorScheme.secondaryContainer.withValues(alpha: 0.5)
-                            : Colors.transparent,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                           side: BorderSide(
@@ -165,6 +162,9 @@ class SetList extends StatelessWidget {
                         ),
                         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                         child: ListTile(
+                          tileColor: isSelected
+                              ? theme.colorScheme.secondaryContainer.withValues(alpha: 0.5)
+                              : Colors.transparent,
                           selected: isSelected,
                           title: Row(
                             children: [

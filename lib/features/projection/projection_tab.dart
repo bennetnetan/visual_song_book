@@ -564,11 +564,11 @@ class _SlideListState extends State<_SlideList> {
                   width: isSelected ? 1.5 : 1,
                 ),
               ),
-              color: isSelected
-                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.35)
-                  : theme.colorScheme.surfaceContainer.withValues(alpha: 0.3),
               margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
               child: ListTile(
+                tileColor: isSelected
+                    ? theme.colorScheme.primaryContainer.withValues(alpha: 0.35)
+                    : theme.colorScheme.surfaceContainer.withValues(alpha: 0.3),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),
                 leading: _SlideLabelBadge(
@@ -1897,12 +1897,12 @@ class _FullScreenSearchPageState extends ConsumerState<_FullScreenSearchPage> {
               width: isSelected ? 2.0 : (isExact ? 1.5 : 1),
             ),
           ),
-          color: isSelected
-              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.30)
-              : isExact
-                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.15)
-                  : null,
           child: ListTile(
+            tileColor: isSelected
+                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.30)
+                : isExact
+                    ? theme.colorScheme.primaryContainer.withValues(alpha: 0.15)
+                    : null,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             leading: Container(
               padding: const EdgeInsets.all(8),
@@ -2031,10 +2031,10 @@ class _FullScreenSearchPageState extends ConsumerState<_FullScreenSearchPage> {
               width: isSelected ? 2.0 : 1.0,
             ),
           ),
-          color: isSelected
-              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.25)
-              : null,
           child: ListTile(
+            tileColor: isSelected
+                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.25)
+                : null,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             leading: Container(
               width: 36,
