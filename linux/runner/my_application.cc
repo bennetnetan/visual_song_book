@@ -15,6 +15,13 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
+static gboolean on_projection_delete_event(GtkWidget* widget,
+                                            GdkEvent* event,
+                                            gpointer user_data) {
+  gtk_widget_hide(widget);
+  return TRUE;
+}
+
 // Called for every secondary window created by desktop_multi_window.
 // Strips GTK window chrome and goes fullscreen so the projection output
 // window appears borderless on any connected display.
@@ -28,6 +35,8 @@ static void on_window_created(FlPluginRegistry* registry) {
     GtkWidget* toplevel = gtk_widget_get_toplevel(GTK_WIDGET(view));
     if (GTK_IS_WINDOW(toplevel)) {
       GtkWindow* window = GTK_WINDOW(toplevel);
+      g_signal_connect(window, "delete-event",
+                       G_CALLBACK(on_projection_delete_event), nullptr);
       // Strip title bar and resize borders from the projection window.
       gtk_window_set_decorated(window, FALSE);
       // Enter OS fullscreen — GTK will place the window on whichever
