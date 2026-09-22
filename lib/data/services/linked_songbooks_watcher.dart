@@ -215,9 +215,9 @@ class LinkedSongbooksWatcher {
         // Update lastImportedAt so polling doesn't re-trigger
         await _db.updateLinkedSongbookByPath(
           book.path,
-          const LinkedSongbookRegistryCompanion(
-            lastImportedAt: Value.absent(),
-          ).copyWith(lastImportedAt: Value(DateTime.now())),
+          LinkedSongbookRegistryCompanion(
+            lastImportedAt: Value(DateTime.now()),
+          ),
         );
         _log.info(
           'Auto-synced "${book.name}": '

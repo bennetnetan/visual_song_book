@@ -131,7 +131,10 @@ class VsBookImporter implements SongbookImporter {
         'Invalid .vsbook format: no SQLite database or JSON songs file found.',
       );
     } catch (e) {
-      return ImportResult.failure('Error importing .vsbook: $e');
+      return ImportResult.failure(
+        'Import failed. Please check the file and try again.',
+        technicalDetails: '$e',
+      );
     }
   }
 
@@ -327,7 +330,10 @@ class VsBookImporter implements SongbookImporter {
         'No SQLite database or JSON songs file found in $filePath',
       );
     } catch (e) {
-      return ImportResult.failure('Error reimporting $filePath: $e');
+      return ImportResult.failure(
+        'Reimport failed. Please check the file and try again.',
+        technicalDetails: '$e',
+      );
     }
   }
 
@@ -764,8 +770,8 @@ class VsBookImporter implements SongbookImporter {
   void _cleanupTempDir(Directory dir) {
     try {
       dir.deleteSync(recursive: true);
-    } catch (_) {
-      // Best effort cleanup
+    } catch (e, st) {
+      _log.fine('Best-effort temp dir cleanup failed', e, st);
     }
   }
 }

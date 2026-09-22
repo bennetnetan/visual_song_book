@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
+import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/importers/vsb_importer.dart';
@@ -858,6 +859,7 @@ class _DiagnosticsCardState extends ConsumerState<_DiagnosticsCard> {
   String _songsDbSize = 'Loading...';
   String _bibleDbSize = 'Loading...';
   bool _copied = false;
+  static final _log = AppLogger.get('DiagnosticsCard');
 
   @override
   void initState() {
@@ -881,7 +883,9 @@ class _DiagnosticsCardState extends ConsumerState<_DiagnosticsCard> {
           _bibleDbSize = bibleSize;
         });
       }
-    } catch (_) {}
+    } catch (e, st) {
+      _log.warning('Failed to load diagnostics', e, st);
+    }
   }
 
   Future<String> _getFileSize(String path) async {
@@ -897,8 +901,11 @@ class _DiagnosticsCardState extends ConsumerState<_DiagnosticsCard> {
           return '${(bytes / 1024).toStringAsFixed(1)} KB';
         }
       }
-    } catch (_) {}
-    return '0 KB';
+      return '0 KB';
+    } catch (e, st) {
+      _log.warning('Failed to get file size for $path', e, st);
+      return '0 KB';
+    }
   }
 
   @override

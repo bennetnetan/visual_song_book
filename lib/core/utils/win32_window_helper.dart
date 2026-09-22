@@ -6,7 +6,13 @@ import 'package:visual_song_book/core/utils/app_logger.dart';
 
 final _log = AppLogger.get('Win32WindowHelper');
 
+// Windows-specific FFI/Win32 code for multi-monitor fullscreen placement.
+// Tested on: Windows 10/11, single and multi-monitor setups with standard DPI.
+// Multi-DPI/mixed-DPI configurations are not explicitly tested and may behave
+// unexpectedly.
+//
 // Win32 function typedefs using standard FFI types (HWND = IntPtr)
+// Process / thread functions for HWND discovery
 typedef GetForegroundWindowNative = IntPtr Function();
 typedef GetForegroundWindowDart = int Function();
 

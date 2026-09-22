@@ -22,6 +22,7 @@ class ImportResult {
   final int songsImported;
   final int categoriesImported;
   final String? errorMessage;
+  final String? technicalDetails;
   final int songsAdded;
   final int songsAlreadyExisted;
   final List<String> newSongTitles;
@@ -31,6 +32,7 @@ class ImportResult {
     this.songsImported = 0,
     this.categoriesImported = 0,
     this.errorMessage,
+    this.technicalDetails,
     this.songsAdded = 0,
     this.songsAlreadyExisted = 0,
     this.newSongTitles = const [],
@@ -53,8 +55,12 @@ class ImportResult {
     );
   }
 
-  factory ImportResult.failure(String error) {
-    return ImportResult(success: false, errorMessage: error);
+  factory ImportResult.failure(String error, {String? technicalDetails}) {
+    return ImportResult(
+      success: false,
+      errorMessage: error,
+      technicalDetails: technicalDetails,
+    );
   }
 }
 

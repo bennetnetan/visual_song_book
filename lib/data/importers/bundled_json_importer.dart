@@ -132,7 +132,10 @@ class BundledJsonImporter implements SongbookImporter {
         newTitles: newSongTitles,
       );
     } catch (e) {
-      return ImportResult.failure('Error importing bundled JSON: $e');
+      return ImportResult.failure(
+        'Import failed. Please restart the app and try again.',
+        technicalDetails: '$e',
+      );
     }
   }
 }

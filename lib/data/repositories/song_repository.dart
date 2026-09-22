@@ -25,6 +25,19 @@ class SongRepository {
         .watch();
   }
 
+  Expression<bool> _sourceFilter(Songs t, {String? sourcePath, SourceMode? sourceMode}) {
+    Expression<bool> filter = t.isActive.equals(true);
+    if (sourceMode == SourceMode.bundled) {
+      filter = filter & t.sourcePath.isNotNull() & t.sourcePath.isNotIn(['']);
+    } else if (sourceMode == SourceMode.linked) {
+      filter = filter & t.sourceFormat.equals('vsbook_linked');
+    }
+    if (sourcePath != null) {
+      filter = filter & t.sourcePath.equals(sourcePath);
+    }
+    return filter;
+  }
+
   /// Searches active songs by title, body, author, or song number
   Future<List<Song>> searchSongs(String query, {String? sourcePath, SourceMode? sourceMode}) {
     final trimmed = query.trim();
@@ -37,17 +50,7 @@ class SongRepository {
 
     final statement = db.select(db.songs)
       ..where((t) {
-        Expression<bool> activeFilter = t.isActive.equals(true);
-
-        if (sourceMode == SourceMode.bundled) {
-          activeFilter = activeFilter & t.sourcePath.isNotNull() & t.sourcePath.isNotIn(['']);
-        } else if (sourceMode == SourceMode.linked) {
-          activeFilter = activeFilter & t.sourceFormat.equals('vsbook_linked');
-        }
-
-        if (sourcePath != null) {
-          activeFilter = activeFilter & t.sourcePath.equals(sourcePath);
-        }
+        Expression<bool> activeFilter = _sourceFilter(t, sourcePath: sourcePath, sourceMode: sourceMode);
 
         Expression<bool> searchExpr =
             t.title.lower().like(matchQuery) |
@@ -70,15 +73,7 @@ class SongRepository {
     if (categoryId == null) {
       return (db.select(db.songs)
             ..where((t) {
-              Expression<bool> expr = t.isActive.equals(true) & t.categoryId.isNull();
-              if (sourceMode == SourceMode.bundled) {
-                expr = expr & t.sourcePath.isNotNull() & t.sourcePath.isNotIn(['']);
-              } else if (sourceMode == SourceMode.linked) {
-                expr = expr & t.sourceFormat.equals('vsbook_linked');
-              }
-              if (sourcePath != null) {
-                expr = expr & t.sourcePath.equals(sourcePath);
-              }
+              Expression<bool> expr = _sourceFilter(t, sourcePath: sourcePath, sourceMode: sourceMode) & t.categoryId.isNull();
               return expr;
             })
             ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
@@ -86,15 +81,7 @@ class SongRepository {
     }
     return (db.select(db.songs)
           ..where((t) {
-            Expression<bool> expr = t.isActive.equals(true) & t.categoryId.equals(categoryId);
-            if (sourceMode == SourceMode.bundled) {
-              expr = expr & t.sourcePath.isNotNull() & t.sourcePath.isNotIn(['']);
-            } else if (sourceMode == SourceMode.linked) {
-              expr = expr & t.sourceFormat.equals('vsbook_linked');
-            }
-            if (sourcePath != null) {
-              expr = expr & t.sourcePath.equals(sourcePath);
-            }
+            Expression<bool> expr = _sourceFilter(t, sourcePath: sourcePath, sourceMode: sourceMode) & t.categoryId.equals(categoryId);
             return expr;
           })
           ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
@@ -105,15 +92,7 @@ class SongRepository {
   Stream<List<Song>> watchSongsFiltered({String? sourcePath, SourceMode? sourceMode}) {
     return (db.select(db.songs)
           ..where((t) {
-            Expression<bool> expr = t.isActive.equals(true);
-            if (sourceMode == SourceMode.bundled) {
-              expr = expr & t.sourcePath.isNotNull() & t.sourcePath.isNotIn(['']);
-            } else if (sourceMode == SourceMode.linked) {
-              expr = expr & t.sourceFormat.equals('vsbook_linked');
-            }
-            if (sourcePath != null) {
-              expr = expr & t.sourcePath.equals(sourcePath);
-            }
+            Expression<bool> expr = _sourceFilter(t, sourcePath: sourcePath, sourceMode: sourceMode);
             return expr;
           })
           ..orderBy([(t) => OrderingTerm.asc(t.songNum)]))
@@ -189,7 +168,7 @@ class SongRepository {
     ).get();
     return {
       for (var row in result)
-        row.read(db.songs.categoryId)!: row.read(db.songs.id)!,
+        row.read(db.songs.categoryId)!: row.read(db.songs.id.count())!,
     };
   }
 
@@ -261,17 +240,12 @@ class SongRepository {
         .into(db.history)
         .insert(HistoryCompanion.insert(songId: songId, accessedAt: now));
 
-    // Prune history to keep only the latest 50 entries
-    final oldEntries =
-        await (db.select(db.history)
-              ..orderBy([(t) => OrderingTerm.desc(t.accessedAt)])
-              ..limit(100, offset: 50))
-            .get();
-
-    if (oldEntries.isNotEmpty) {
-      final oldIds = oldEntries.map((e) => e.id).toList();
-      await (db.delete(db.history)..where((t) => t.id.isIn(oldIds))).go();
-    }
+    await db.customStatement('''
+      DELETE FROM history 
+      WHERE id NOT IN (
+        SELECT id FROM history ORDER BY accessed_at DESC LIMIT 50
+      )
+    ''');
   }
 
   /// Watches history and maps rows to the corresponding [Song] objects, returning latest first

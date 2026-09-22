@@ -326,7 +326,10 @@ class MdbToolsImporter implements SongbookImporter {
         newTitles: newSongTitles,
       );
     } catch (e) {
-      return ImportResult.failure('Error during import: $e');
+      return ImportResult.failure(
+        'Import failed. Please check the file and try again.',
+        technicalDetails: '$e',
+      );
     }
   }
 
@@ -343,7 +346,11 @@ class MdbToolsImporter implements SongbookImporter {
         .replaceAll('\r', '\n'); // any stray lone CR
   }
 
-  /// Parses date format "10/24/12 17:46:23" into DateTime
+  /// Parses date format "M/D/YY H:MM:SS" into DateTime.
+  ///
+  /// Assumes US-style month/day/year ordering from legacy MDB exports.
+  /// If source files come from a non-US locale Access install, dates will
+  /// be silently misparsed.
   DateTime? _parseMdbDateTime(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty || dateStr == 'null') return null;
     try {
