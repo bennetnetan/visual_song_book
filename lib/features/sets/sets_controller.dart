@@ -251,16 +251,26 @@ class SetsController extends StateNotifier<SetsState> {
     final items = await _repo.getSetItems(setId);
     final buffer = StringBuffer();
 
-    buffer.writeln('=== SET LIST: ${setObj.name} ===');
-    if (setObj.occasion != null && setObj.occasion!.isNotEmpty) {
-      buffer.writeln('Occasion: ${setObj.occasion}');
-    }
-    buffer.writeln('Date: ${setObj.createdAt.toLocal().toString().split('.')[0]}');
-    if (setObj.notes != null && setObj.notes!.isNotEmpty) {
-      buffer.writeln('Notes: ${setObj.notes}');
-    }
-    buffer.writeln('========================================\n');
+    // Header: name
+    buffer.writeln(setObj.name);
 
+    // Subtitle line: occasion · date
+    final datePart = '${setObj.createdAt.toLocal().day} '
+        '${_monthAbbr(setObj.createdAt.month)} '
+        '${setObj.createdAt.year}';
+    final subtitleParts = <String>[
+      if (setObj.occasion != null && setObj.occasion!.isNotEmpty) setObj.occasion!,
+      datePart,
+    ];
+    buffer.writeln(subtitleParts.join(' · '));
+
+    if (setObj.notes != null && setObj.notes!.isNotEmpty) {
+      buffer.writeln(setObj.notes);
+    }
+
+    buffer.writeln();
+
+    // Numbered song list
     for (var i = 0; i < items.length; i++) {
       final item = items[i];
       final song = state.availableSongs.where((s) => s.id == item.songId).firstOrNull;
@@ -271,7 +281,12 @@ class SetsController extends StateNotifier<SetsState> {
       }
     }
 
-    return buffer.toString();
+    return buffer.toString().trimRight();
+  }
+
+  static String _monthAbbr(int month) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return months[month - 1];
   }
 
   // === Import Logic ===

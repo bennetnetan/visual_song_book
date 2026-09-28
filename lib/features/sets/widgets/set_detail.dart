@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:visual_song_book/core/services/share_service.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
@@ -15,7 +14,6 @@ class SetDetail extends ConsumerStatefulWidget {
   final ValueChanged<int> onRemoveSong;
   final VoidCallback onProject;
   final VoidCallback onShareJson;
-  final VoidCallback onShareText;
   final ValueChanged<String> onRename;
 
   const SetDetail({
@@ -28,7 +26,6 @@ class SetDetail extends ConsumerStatefulWidget {
     required this.onRemoveSong,
     required this.onProject,
     required this.onShareJson,
-    required this.onShareText,
     required this.onRename,
   });
 
@@ -426,8 +423,7 @@ class _SetDetailState extends ConsumerState<SetDetail> {
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-             children: [
-              // DEFAULT: System-native share picker (WhatsApp, Messages, Email, etc.)
+            children: [
               ListTile(
                 leading: const Icon(Icons.share_outlined),
                 title: const Text('Share', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -465,69 +461,13 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                 },
               ),
               const Divider(height: 1),
-              // OTHER OPTIONS
               ListTile(
-                leading: const Icon(Icons.copy_outlined),
-                title: const Text('Copy Plain Text List'),
-                subtitle: const Text('Copy list of songs and keys to clipboard'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  try {
-                    final textString = await ref.read(setsControllerProvider.notifier).getSetPlainText(widget.setObj.id);
-                    await Clipboard.setData(ClipboardData(text: textString));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Set list copied to clipboard!')),
-                      );
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to copy: $e')),
-                      );
-                    }
-                  }
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.text_snippet_outlined),
-                title: const Text('Export as Printable List (.txt)'),
-                subtitle: const Text('Export a plain text list of songs and keys in this set'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  widget.onShareText();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.share_outlined),
-                title: const Text('Export for Another Device (.json)'),
-                subtitle: const Text('Includes lyrics, metadata — importable on other devices'),
+                leading: const Icon(Icons.upload_file_outlined),
+                title: const Text('Export for Another Device'),
+                subtitle: const Text('Save a file with full lyrics — importable on other devices'),
                 onTap: () {
                   Navigator.pop(ctx);
                   widget.onShareJson();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.content_copy_outlined),
-                title: const Text('Copy to Clipboard (Shareable JSON)'),
-                subtitle: const Text('Copy JSON data to clipboard for easy sharing'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  try {
-                    final jsonString = await ref.read(setsControllerProvider.notifier).getSetJsonString(widget.setObj.id);
-                    await Clipboard.setData(ClipboardData(text: jsonString));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('JSON data copied to clipboard!')),
-                      );
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to copy JSON: $e')),
-                      );
-                    }
-                  }
                 },
               ),
             ],

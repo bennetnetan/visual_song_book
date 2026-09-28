@@ -170,39 +170,6 @@ class SetsTab extends ConsumerWidget {
     }
   }
 
-  Future<void> _handleShareText(
-    BuildContext context,
-    WidgetRef ref,
-    int setId,
-    String setName,
-  ) async {
-    try {
-      final textString = await ref.read(setsControllerProvider.notifier).getSetPlainText(setId);
-      final sanitizedName = setName.replaceAll(RegExp(r'[^\w\s\-]'), '').replaceAll(' ', '_');
-
-      final path = await FilePicker.saveFile(
-        dialogTitle: 'Export Plain Text Lyrics (.txt)',
-        fileName: '${sanitizedName}_lyrics.txt',
-        type: FileType.any,
-      );
-
-      if (path != null) {
-        final file = File(path);
-        await file.writeAsString(textString);
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Lyrics exported successfully!')),
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e')),
-        );
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -392,7 +359,6 @@ class SetsTab extends ConsumerWidget {
       onRemoveSong: (songId) => notifier.removeSongFromSet(state.selectedSetId!, songId),
       onRename: (newName) => notifier.renameSet(state.selectedSetId!, newName),
       onShareJson: () => _handleShareJson(context, ref, state.selectedSetId!, currentSet.name),
-      onShareText: () => _handleShareText(context, ref, state.selectedSetId!, currentSet.name),
       onProject: () async {
         await ref.read(projectionControllerProvider.notifier).projectSongSet(
               state.selectedSetId!,
