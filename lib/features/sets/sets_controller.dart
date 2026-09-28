@@ -292,8 +292,13 @@ class SetsController extends StateNotifier<SetsState> {
   // === Import Logic ===
 
   Future<void> importSetFromJson(String content) async {
+    final trimmed = content.trim();
+    if (!trimmed.startsWith('{')) {
+      return importSetFromPlainText(trimmed);
+    }
+
     try {
-      final Map<String, dynamic> data = jsonDecode(content);
+      final Map<String, dynamic> data = jsonDecode(trimmed);
       
       final uuid = data['uuid'] as String? ?? UuidGenerator.generate();
       final originalName = data['name'] as String? ?? 'Imported Set';
@@ -358,6 +363,251 @@ class SetsController extends StateNotifier<SetsState> {
     }
   }
 
+  Future<void> importSetFromPlainText(String content) async {
+    try {
+      final rawLines = content.split('\n');
+      final lines = rawLines.map((l) => l.trim()).toList();
+
+      String setName = 'Imported Set';
+      String? occasion;
+      DateTime? createdAt;
+      final notesLines = <String>[];
+      final songItems = <_ParsedSongItem>[];
+
+      // Regex matching numbered lines, e.g. "1. Amazing Grace (#123) [Key: G]"
+      final songLineRegex = RegExp(r'^\s*\[?(\d+)[\.\)\]]\s*(.+)$');
+      final keyRegex = RegExp(r'\[Key:\s*([^\]]+)\]|\(Key:\s*([^\)]+)\)|\bKey:\s*([A-Ga-g][#b]?[m]?\b)', caseSensitive: false);
+      final songNumRegex = RegExp(r'\(#(\d+)\)|\[#(\d+)\]|#(\d+)');
+
+      int firstSongLineIndex = -1;
+      for (var i = 0; i < lines.length; i++) {
+        final line = lines[i];
+        if (line.isEmpty) continue;
+        if (songLineRegex.hasMatch(line)) {
+          firstSongLineIndex = i;
+          break;
+        }
+      }
+
+      if (firstSongLineIndex == -1) {
+        // No numbered prefix found; treat non-empty lines as potential song lines
+        for (var i = 0; i < lines.length; i++) {
+          final line = lines[i];
+          if (line.isNotEmpty && !line.startsWith('===') && !line.startsWith('---')) {
+            firstSongLineIndex = i;
+            break;
+          }
+        }
+      }
+
+      if (firstSongLineIndex == -1) {
+        throw Exception('No songs found in the pasted text.');
+      }
+
+      // 1. Parse metadata lines before the first song line
+      final metadataLines = <String>[];
+      for (var i = 0; i < firstSongLineIndex; i++) {
+        final line = lines[i];
+        if (line.isEmpty || line.startsWith('===') || line.startsWith('---')) continue;
+        metadataLines.add(line);
+      }
+
+      if (metadataLines.isNotEmpty) {
+        // First metadata line is usually the set name
+        var first = metadataLines[0];
+        first = first
+            .replaceFirst(RegExp(r'^===?\s*(SET LIST:\s*|SET:\s*)?', caseSensitive: false), '')
+            .replaceFirst(RegExp(r'\s*===?$'), '')
+            .trim();
+        if (first.isNotEmpty) {
+          setName = first;
+        }
+
+        // Subsequent lines: occasion · date, notes, etc.
+        for (var i = 1; i < metadataLines.length; i++) {
+          final mLine = metadataLines[i];
+          if (mLine.toLowerCase().startsWith('occasion:')) {
+            occasion = mLine.substring(9).trim();
+          } else if (mLine.toLowerCase().startsWith('date:')) {
+            createdAt = _parseDateString(mLine.substring(5).trim());
+          } else if (mLine.toLowerCase().startsWith('notes:')) {
+            notesLines.add(mLine.substring(6).trim());
+          } else if (mLine.contains('·')) {
+            final parts = mLine.split('·').map((p) => p.trim()).toList();
+            for (final part in parts) {
+              final parsedDate = _parseDateString(part);
+              if (parsedDate != null) {
+                createdAt = parsedDate;
+              } else if (part.isNotEmpty) {
+                occasion = part;
+              }
+            }
+          } else {
+            final parsedDate = _parseDateString(mLine);
+            if (parsedDate != null && createdAt == null) {
+              createdAt = parsedDate;
+            } else {
+              notesLines.add(mLine);
+            }
+          }
+        }
+      }
+
+      // 2. Parse song lines
+      for (var i = firstSongLineIndex; i < lines.length; i++) {
+        final line = lines[i];
+        if (line.isEmpty || line.startsWith('===') || line.startsWith('---')) continue;
+
+        String rawContent = line;
+        final match = songLineRegex.firstMatch(line);
+        if (match != null) {
+          rawContent = match.group(2)!.trim();
+        }
+
+        // Extract key
+        String? itemKey;
+        final keyMatch = keyRegex.firstMatch(rawContent);
+        if (keyMatch != null) {
+          itemKey = (keyMatch.group(1) ?? keyMatch.group(2) ?? keyMatch.group(3))?.trim();
+          rawContent = rawContent.replaceRange(keyMatch.start, keyMatch.end, '').trim();
+        }
+
+        // Extract song number
+        int songNum = 0;
+        final numMatch = songNumRegex.firstMatch(rawContent);
+        if (numMatch != null) {
+          songNum = int.tryParse(numMatch.group(1) ?? numMatch.group(2) ?? numMatch.group(3) ?? '0') ?? 0;
+          rawContent = rawContent.replaceRange(numMatch.start, numMatch.end, '').trim();
+        }
+
+        // Clean up remaining title
+        final cleanTitle = rawContent
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .replaceFirst(RegExp(r'^[-–—]\s*'), '')
+            .trim();
+
+        if (cleanTitle.isNotEmpty || songNum > 0) {
+          songItems.add(_ParsedSongItem(
+            title: cleanTitle.isNotEmpty ? cleanTitle : 'Song $songNum',
+            songNum: songNum,
+            key: itemKey,
+          ));
+        }
+      }
+
+      if (songItems.isEmpty) {
+        throw Exception('Could not find any songs in the provided text.');
+      }
+
+      // Create new set
+      final targetUuid = UuidGenerator.generate();
+      final newSet = await _repo.createSetWithUuid(
+        name: setName,
+        uuid: targetUuid,
+        notes: notesLines.isNotEmpty ? notesLines.join('\n') : null,
+        occasion: occasion,
+        createdAt: createdAt ?? DateTime.now(),
+      );
+
+      // Resolve and add songs
+      for (var pos = 0; pos < songItems.length; pos++) {
+        final item = songItems[pos];
+        final matchedSongId = await _resolveSongForPlainTextImport(
+          title: item.title,
+          songNum: item.songNum,
+          key: item.key,
+        );
+        await _repo.addSongToSet(newSet.id, matchedSongId, pos, key: item.key);
+      }
+
+      selectSet(newSet.id);
+    } catch (e) {
+      _log.severe('Error importing plain text set', e);
+      rethrow;
+    }
+  }
+
+  Future<int> _resolveSongForPlainTextImport({
+    required String title,
+    required int songNum,
+    String? key,
+  }) async {
+    final allSongs = state.availableSongs;
+
+    // 1. Try to find by song number first if available
+    if (songNum > 0) {
+      final matchByNum = allSongs.where((s) => s.songNum == songNum).firstOrNull;
+      if (matchByNum != null) {
+        return matchByNum.id;
+      }
+    }
+
+    // 2. Try exact title match (case insensitive)
+    final trimmedTitle = title.trim().toLowerCase();
+    final matchByTitle = allSongs.where((s) => s.title.trim().toLowerCase() == trimmedTitle).firstOrNull;
+    if (matchByTitle != null) {
+      return matchByTitle.id;
+    }
+
+    // 3. Try partial title match
+    final matchPartial = allSongs.where((s) {
+      final sTitle = s.title.trim().toLowerCase();
+      return sTitle.contains(trimmedTitle) || trimmedTitle.contains(sTitle);
+    }).firstOrNull;
+    if (matchPartial != null) {
+      return matchPartial.id;
+    }
+
+    // 4. Otherwise create a custom song placeholder
+    final finalNum = songNum > 0 ? songNum : (9000 + allSongs.length);
+    final id = await _songRepo.addSong(
+      SongsCompanion.insert(
+        title: title,
+        body: '',
+        songNum: finalNum,
+        key: Value(key),
+        isActive: const Value(true),
+      ),
+    );
+    return id;
+  }
+
+  static DateTime? _parseDateString(String input) {
+    final trimmed = input.trim();
+    final iso = DateTime.tryParse(trimmed);
+    if (iso != null) return iso;
+
+    // Matches e.g. "28 Sep 2026" or "28 September 2026"
+    final regex = RegExp(r'^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$');
+    final match = regex.firstMatch(trimmed);
+    if (match != null) {
+      final day = int.tryParse(match.group(1)!);
+      final monthStr = match.group(2)!.toLowerCase();
+      final year = int.tryParse(match.group(3)!);
+
+      const months = {
+        'jan': 1, 'january': 1,
+        'feb': 2, 'february': 2,
+        'mar': 3, 'march': 3,
+        'apr': 4, 'april': 4,
+        'may': 5,
+        'jun': 6, 'june': 6,
+        'jul': 7, 'july': 7,
+        'aug': 8, 'august': 8,
+        'sep': 9, 'september': 9,
+        'oct': 10, 'october': 10,
+        'nov': 11, 'november': 11,
+        'dec': 12, 'december': 12,
+      };
+
+      final month = months[monthStr];
+      if (day != null && month != null && year != null) {
+        return DateTime(year, month, day);
+      }
+    }
+    return null;
+  }
+
   Future<int> _resolveSongForImport({
     required String title,
     required String body,
@@ -399,4 +649,16 @@ class SetsController extends StateNotifier<SetsState> {
     _itemsSub?.cancel();
     super.dispose();
   }
+}
+
+class _ParsedSongItem {
+  final String title;
+  final int songNum;
+  final String? key;
+
+  _ParsedSongItem({
+    required this.title,
+    required this.songNum,
+    this.key,
+  });
 }

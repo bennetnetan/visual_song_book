@@ -93,8 +93,8 @@ class SetsTab extends ConsumerWidget {
                 controller: textCtrl,
                 maxLines: 8,
                 decoration: const InputDecoration(
-                  labelText: 'Paste Set Format (JSON)',
-                  hintText: '{\n  "name": "...",\n  "items": [...]\n}',
+                  labelText: 'Paste Set (Copied List or JSON)',
+                  hintText: 'Sunday Morning Service\nYouth · 28 Sep 2026\n\n1. Amazing Grace (#123) [Key: G]\n2. Holy Holy Holy (#45) [Key: Eb]\n...',
                   border: OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
