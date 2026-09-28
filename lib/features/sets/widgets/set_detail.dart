@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:visual_song_book/core/services/share_service.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
@@ -415,6 +416,24 @@ class _SetDetailState extends ConsumerState<SetDetail> {
     );
   }
 
+  Future<void> _copySetList(BuildContext context) async {
+    try {
+      final textString = await ref.read(setsControllerProvider.notifier).getSetPlainText(widget.setObj.id);
+      await Clipboard.setData(ClipboardData(text: textString));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Set list copied to clipboard!')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to copy: $e')),
+        );
+      }
+    }
+  }
+
   void _showShareMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -443,21 +462,12 @@ class _SetDetailState extends ConsumerState<SetDetail> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.chat, color: Colors.green),
-                title: const Text('Share via WhatsApp'),
-                subtitle: const Text('Open WhatsApp directly with this set list'),
-                onTap: () async {
+                leading: const Icon(Icons.copy_outlined),
+                title: const Text('Copy to Clipboard'),
+                subtitle: const Text('Copy formatted set list to paste in WhatsApp or messages'),
+                onTap: () {
                   Navigator.pop(ctx);
-                  try {
-                    final textString = await ref.read(setsControllerProvider.notifier).getSetPlainText(widget.setObj.id);
-                    await ShareService.shareViaWhatsApp(textString);
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to share: $e')),
-                      );
-                    }
-                  }
+                  _copySetList(context);
                 },
               ),
               const Divider(height: 1),
@@ -989,6 +999,15 @@ class _SetDetailState extends ConsumerState<SetDetail> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  Semantics(
+                    label: 'Copy Set List',
+                    button: true,
+                    child: IconButton(
+                      icon: const Icon(Icons.copy_outlined),
+                      tooltip: 'Copy Set List',
+                      onPressed: widget.items.isEmpty ? null : () => _copySetList(context),
+                    ),
+                  ),
                   Semantics(
                     label: 'Share Set',
                     button: true,
