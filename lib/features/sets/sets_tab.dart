@@ -291,9 +291,10 @@ class SetsTab extends ConsumerWidget {
     List<SongSet> sets,
   ) {
     final setObj = sets.where((s) => s.id == setId).firstOrNull;
-    final nameCtrl = TextEditingController(
-      text: setObj != null ? '${setObj.name} (Copy)' : 'Set (Copy)',
-    );
+    final defaultNewName = setObj != null
+        ? ref.read(setsControllerProvider.notifier).generateNextVersionName('${setObj.name} (Copy)')
+        : 'Set (Copy)';
+    final nameCtrl = TextEditingController(text: defaultNewName);
 
     showDialog(
       context: context,

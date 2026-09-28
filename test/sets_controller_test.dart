@@ -112,4 +112,60 @@ Praise Night
     expect(items.length, 1);
     expect(items[0].key, 'D');
   });
+
+  test('resolveNextVersionName generates v2, v3 or Copy 2, Copy 3 when names collide', () {
+    expect(
+      SetsController.resolveNextVersionName('Sunday Service', {'Sunday Service'}),
+      'Sunday Service (v2)',
+    );
+    expect(
+      SetsController.resolveNextVersionName('Sunday Service', {'Sunday Service', 'Sunday Service (v2)'}),
+      'Sunday Service (v3)',
+    );
+    expect(
+      SetsController.resolveNextVersionName('Sunday Service (v2)', {'Sunday Service', 'Sunday Service (v2)'}),
+      'Sunday Service (v3)',
+    );
+    expect(
+      SetsController.resolveNextVersionName('Sunday Service (Copy)', {'Sunday Service', 'Sunday Service (Copy)'}),
+      'Sunday Service (Copy 2)',
+    );
+    expect(
+      SetsController.resolveNextVersionName('Sunday Service (Copy 2)', {'Sunday Service (Copy 2)'}),
+      'Sunday Service (Copy 3)',
+    );
+    expect(
+      SetsController.resolveNextVersionName('Unique Name', {'Sunday Service'}),
+      'Unique Name',
+    );
+  });
+
+  test('pasting a copy of an existing set automatically creates a versioned set', () async {
+    await songRepo.addSong(
+      SongsCompanion.insert(
+        songNum: 5,
+        title: 'Song Five',
+        body: 'Lyrics five',
+      ),
+    );
+    await setRepo.createSet('Youth Praise');
+    await settle();
+
+    final pasted = '''
+Youth Praise
+28 Sep 2026
+
+1. Song Five (#5)
+''';
+
+    // First import should become "Youth Praise (v2)"
+    await controller.importSetFromJson(pasted);
+    await settle();
+    expect(controller.selectedSet?.name, 'Youth Praise (v2)');
+
+    // Second import of the same text should become "Youth Praise (v3)"
+    await controller.importSetFromJson(pasted);
+    await settle();
+    expect(controller.selectedSet?.name, 'Youth Praise (v3)');
+  });
 }

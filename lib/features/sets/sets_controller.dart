@@ -142,8 +142,71 @@ class SetsController extends StateNotifier<SetsState> {
   }
 
   Future<void> duplicateSet(int setId, {String? newName}) async {
-    final duplicated = await _repo.duplicateSet(setId, newName: newName);
+    final original = state.sets.where((s) => s.id == setId).firstOrNull;
+    final nameToUse = newName ?? (original != null
+        ? generateNextVersionName('${original.name} (Copy)')
+        : null);
+    final duplicated = await _repo.duplicateSet(setId, newName: nameToUse);
     selectSet(duplicated.id);
+  }
+
+  String generateNextVersionName(String name) {
+    final existingNames = state.sets.map((s) => s.name.trim()).toSet();
+    return resolveNextVersionName(name, existingNames);
+  }
+
+  static String resolveNextVersionName(String name, Set<String> existingNames) {
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) return 'Imported Set';
+
+    // If no existing set has this name (case-insensitive), return as-is
+    final hasCollision = existingNames.any(
+      (existing) => existing.trim().toLowerCase() == trimmedName.toLowerCase(),
+    );
+    if (!hasCollision) {
+      return trimmedName;
+    }
+
+    // Check if name ends with copy pattern like " (Copy)" or " (Copy 2)"
+    final copyRegex = RegExp(r'^(.*?)\s*\(Copy(?:\s*(\d+))?\)$', caseSensitive: false);
+    // Check if name ends with version pattern like " (v2)" or " (2)"
+    final versionRegex = RegExp(r'^(.*?)\s*\(v?(\d+)\)$', caseSensitive: false);
+
+    String baseName;
+    int startVersion;
+    bool isCopyStyle = false;
+
+    final copyMatch = copyRegex.firstMatch(trimmedName);
+    final versionMatch = versionRegex.firstMatch(trimmedName);
+
+    if (copyMatch != null) {
+      baseName = copyMatch.group(1)!.trim();
+      final numStr = copyMatch.group(2);
+      startVersion = numStr != null ? (int.tryParse(numStr) ?? 1) + 1 : 2;
+      isCopyStyle = true;
+    } else if (versionMatch != null) {
+      baseName = versionMatch.group(1)!.trim();
+      final numStr = versionMatch.group(2);
+      startVersion = numStr != null ? (int.tryParse(numStr) ?? 1) + 1 : 2;
+    } else {
+      baseName = trimmedName;
+      startVersion = 2;
+    }
+
+    int version = startVersion;
+    while (true) {
+      final candidate = isCopyStyle
+          ? '$baseName (Copy $version)'
+          : '$baseName (v$version)';
+
+      final collides = existingNames.any(
+        (existing) => existing.trim().toLowerCase() == candidate.toLowerCase(),
+      );
+      if (!collides) {
+        return candidate;
+      }
+      version++;
+    }
   }
 
   Future<void> deleteSet(int setId) async {
@@ -310,13 +373,12 @@ class SetsController extends StateNotifier<SetsState> {
           : DateTime.now();
 
       var targetUuid = uuid;
-      var targetName = originalName;
+      var targetName = generateNextVersionName(originalName);
 
       // Deduplicate UUID in the background to ensure uniqueness
       final existingSet = await _repo.getSetByUuid(targetUuid);
       if (existingSet != null) {
         targetUuid = UuidGenerator.generate();
-        targetName = '$originalName (Imported)';
       }
 
       // Create the set list
@@ -501,8 +563,9 @@ class SetsController extends StateNotifier<SetsState> {
 
       // Create new set
       final targetUuid = UuidGenerator.generate();
+      final targetName = generateNextVersionName(setName);
       final newSet = await _repo.createSetWithUuid(
-        name: setName,
+        name: targetName,
         uuid: targetUuid,
         notes: notesLines.isNotEmpty ? notesLines.join('\n') : null,
         occasion: occasion,
