@@ -12,13 +12,18 @@ class LowerThirdOverlay extends StatelessWidget {
   final LowerThirdState state;
 
   /// Optional: the projection background's representative colour. When supplied
-  /// the banner tints itself to match, creating visual continuity with the slide.
+  /// and the user hasn't selected a custom background color, the banner tints
+  /// itself to match, creating visual continuity with the slide.
   final Color? projectionBackground;
+
+  /// Scale factor for embedded previews (e.g. 0.45 for the 16:9 monitor on ProjectionTab).
+  final double previewScale;
 
   const LowerThirdOverlay({
     super.key,
     required this.state,
     this.projectionBackground,
+    this.previewScale = 1.0,
   });
 
   @override
@@ -32,19 +37,23 @@ class LowerThirdOverlay extends StatelessWidget {
     final isFloating = config.isFloating;
 
     final outerMargin = isFloating
-        ? const EdgeInsets.symmetric(horizontal: 40, vertical: 16)
+        ? EdgeInsets.symmetric(
+            horizontal: 40.0 * previewScale,
+            vertical: 16.0 * previewScale,
+          )
         : EdgeInsets.zero;
 
     final borderRadius = isFloating
-        ? BorderRadius.circular(16)
+        ? BorderRadius.circular(16.0 * previewScale)
         : BorderRadius.zero;
 
-    // Derive the banner colour. If the operator hasn't overridden it (full
-    // opacity black = default), blend the projection background with the
-    // configured opacity so the banner feels like a natural part of the scene.
+    // Derive the banner colour. If the user picked a specific background color,
+    // honor it directly. If it's the default background color, harmonize with
+    // the slide backdrop when available.
     final Color bannerColor;
-    if (projectionBackground != null) {
-      // Mix the projection background colour with the user's opacity setting.
+    if (config.backgroundColor != const Color(0xFF0A1A18)) {
+      bannerColor = config.effectiveBackgroundColor;
+    } else if (projectionBackground != null) {
       bannerColor = Color.alphaBlend(
         projectionBackground!.withValues(alpha: 0.72),
         Colors.black,
@@ -57,14 +66,16 @@ class LowerThirdOverlay extends StatelessWidget {
         ? [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.45),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
+              blurRadius: 20.0 * previewScale,
+              offset: Offset(0, 6.0 * previewScale),
             ),
           ]
         : <BoxShadow>[];
 
     final effectiveHeight =
-        config.height.clamp(config.fontSize + 24.0, 300.0);
+        (config.height * previewScale).clamp(20.0, 300.0);
+    final effectiveFontSize =
+        (config.fontSize * previewScale).clamp(9.0, 60.0);
 
     return Positioned(
       left: 0,
@@ -77,7 +88,7 @@ class LowerThirdOverlay extends StatelessWidget {
           child: Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxWidth: isFloating ? 1100 : double.infinity,
+                maxWidth: isFloating ? (1100.0 * previewScale) : double.infinity,
                 minHeight: effectiveHeight,
               ),
               child: Container(
@@ -87,9 +98,9 @@ class LowerThirdOverlay extends StatelessWidget {
                   // No border — the overlay integrates seamlessly with the slide.
                   boxShadow: shadows,
                 ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 10,
+                padding: EdgeInsets.symmetric(
+                  horizontal: 24.0 * previewScale,
+                  vertical: 8.0 * previewScale,
                 ),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 400),
@@ -117,13 +128,15 @@ class LowerThirdOverlay extends StatelessWidget {
                     );
                   },
                   child: KeyedSubtree(
-                    key: ValueKey(item.id),
+                    key: ValueKey(
+                      '${item.id}_${config.style}_${config.height.round()}_${effectiveFontSize.round()}_${config.textColor.toARGB32()}_${config.fontFamily}',
+                    ),
                     child: _MarqueeText(
                       text: item.text,
                       style: TextStyle(
                         color: config.textColor,
                         fontFamily: config.fontFamily,
-                        fontSize: config.fontSize,
+                        fontSize: effectiveFontSize,
                         fontWeight: config.fontWeight,
                         height: 1.25,
                         letterSpacing: 0.2,

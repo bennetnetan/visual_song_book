@@ -9,8 +9,10 @@ import 'package:go_router/go_router.dart';
 
 
 import 'package:visual_song_book/features/lower_third/lower_third_controller.dart';
+import 'package:visual_song_book/features/lower_third/widgets/lower_third_overlay.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/projection/projection_search_provider.dart';
+import 'package:visual_song_book/features/projection/projection_theme.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/services/share_service.dart';
 import 'package:visual_song_book/core/utils/layout_utils.dart';
@@ -720,7 +722,7 @@ class _SlideLabelBadge extends StatelessWidget {
 // Live preview panel — preview canvas + navigation + settings
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _LivePreviewPanel extends StatelessWidget {
+class _LivePreviewPanel extends ConsumerWidget {
   final ProjectionState state;
   final ProjectionController notifier;
   final FocusNode projectionFocus;
@@ -732,10 +734,22 @@ class _LivePreviewPanel extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final currentSlide = state.currentSlide;
     final isLargeScreen = getLayoutMode(context) == LayoutMode.desktop;
+    final ltState = ref.watch(lowerThirdControllerProvider);
+    final projTheme = ref.watch(projectionThemeProvider);
+
+    final double mobileClearance = (ltState.isEnabled && ltState.hasActiveItem)
+        ? ((ltState.config.height * 0.35).clamp(20.0, 70.0) +
+            (ltState.config.isFloating ? 10.0 : 4.0))
+        : 0.0;
+
+    final double desktopClearance = (ltState.isEnabled && ltState.hasActiveItem)
+        ? ((ltState.config.height * 0.45).clamp(24.0, 90.0) +
+            (ltState.config.isFloating ? 12.0 : 6.0))
+        : 0.0;
 
     if (!isLargeScreen) {
       return Column(
@@ -817,7 +831,12 @@ class _LivePreviewPanel extends StatelessWidget {
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.all(12.0),
+                      padding: EdgeInsets.only(
+                        left: 12.0,
+                        right: 12.0,
+                        top: 12.0,
+                        bottom: 12.0 + mobileClearance,
+                      ),
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 250),
                         child: Column(
@@ -863,6 +882,11 @@ class _LivePreviewPanel extends StatelessWidget {
                           ],
                         ),
                       ),
+                    ),
+                    LowerThirdOverlay(
+                      state: ltState,
+                      projectionBackground: projTheme.backgroundBaseColor,
+                      previewScale: 0.35,
                     ),
                   ],
                 ),
@@ -971,7 +995,12 @@ class _LivePreviewPanel extends StatelessWidget {
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.all(16.0),
+                        padding: EdgeInsets.only(
+                          left: 16.0,
+                          right: 16.0,
+                          top: 16.0,
+                          bottom: 16.0 + desktopClearance,
+                        ),
                         child: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 250),
                           child: Column(
@@ -1017,6 +1046,11 @@ class _LivePreviewPanel extends StatelessWidget {
                             ],
                           ),
                         ),
+                      ),
+                      LowerThirdOverlay(
+                        state: ltState,
+                        projectionBackground: projTheme.backgroundBaseColor,
+                        previewScale: 0.45,
                       ),
                     ],
                   ),
