@@ -89,7 +89,8 @@ void main() {
     expect(find.text('Special Service Tonight at 6 PM'), findsOneWidget);
   });
 
-  testWidgets('LowerThirdOverlay activates scrolling marquee for text longer than space', (tester) async {
+  testWidgets('LowerThirdOverlay activates scrolling marquee for text longer than space',
+      (tester) async {
     const longText =
         'This is an exceptionally long announcement message that clearly exceeds standard screen width so it scrolls right to left across the screen.';
     final state = LowerThirdState(
@@ -104,7 +105,7 @@ void main() {
       ),
     );
 
-    // Set a constrained screen size to guarantee overflow
+    // Constrained screen size to guarantee text overflow
     tester.view.physicalSize = const Size(500, 400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -125,7 +126,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.byType(SingleChildScrollView), findsOneWidget);
+    // Marquee uses ClipRect + AnimatedBuilder (Transform.translate driven by AnimationController)
+    expect(find.byType(ClipRect), findsOneWidget);
+    expect(find.byType(AnimatedBuilder), findsWidgets);
     expect(find.text(longText), findsOneWidget);
   });
 }

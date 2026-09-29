@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:visual_song_book/features/lower_third/lower_third_state.dart';
 import 'package:visual_song_book/features/lower_third/models/lower_third_config.dart';
@@ -126,8 +125,13 @@ class LowerThirdOverlay extends StatelessWidget {
   }
 }
 
-/// Renders single-line announcement text. When text is longer than the available
-/// space, it smoothly scrolls from right to left so the full message can be read.
+/// Renders announcement text on a single line.
+///
+/// - If the text fits within the available width it is displayed centered.
+/// - If the text is wider than the available space it scrolls continuously
+///   from right to left (ticker/marquee style). The text starts fully off
+///   the right edge, travels left at [_speed] px/s, and loops seamlessly
+///   once it has left the left edge.
 class _MarqueeText extends StatefulWidget {
   final String text;
   final TextStyle style;
@@ -141,24 +145,35 @@ class _MarqueeText extends StatefulWidget {
   State<_MarqueeText> createState() => _MarqueeTextState();
 }
 
-class _MarqueeTextState extends State<_MarqueeText> {
-  late final ScrollController _scrollController;
-  Timer? _stepTimer;
-  bool _isScrolling = false;
-  int _cycleId = 0;
+class _MarqueeTextState extends State<_MarqueeText>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  /// Scroll speed in logical pixels per second.
+  static const double _speed = 60.0;
+
+  /// Blank gap appended after the text before the loop restarts (px).
+  static const double _gap = 80.0;
+
+  // Cache the last layout parameters to avoid restarting unnecessarily.
+  double _lastTextWidth = 0;
+  double _lastContainerWidth = 0;
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
+    _controller = AnimationController(vsync: this)
+      ..addStatusListener((status) {
+        // Loop: when the animation completes, restart from 0.
+        if (status == AnimationStatus.completed && mounted) {
+          _controller.forward(from: 0.0);
+        }
+      });
   }
 
   @override
   void dispose() {
-    _cycleId++;
-    _stepTimer?.cancel();
-    _stepTimer = null;
-    _scrollController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -166,73 +181,40 @@ class _MarqueeTextState extends State<_MarqueeText> {
   void didUpdateWidget(covariant _MarqueeText oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.text != widget.text || oldWidget.style != widget.style) {
-      _cycleId++;
-      _stepTimer?.cancel();
-      _stepTimer = null;
-      _isScrolling = false;
-      if (_scrollController.hasClients) {
-        _scrollController.jumpTo(0.0);
-      }
+      // Reset cached sizes so the marquee restarts cleanly for new content.
+      _controller.stop();
+      _lastTextWidth = 0;
+      _lastContainerWidth = 0;
     }
   }
 
-  void _triggerScrollLoop(double overflowWidth) {
-    if (_isScrolling) return;
-    _isScrolling = true;
-    final int currentCycle = _cycleId;
+  /// Configures and starts the animation controller for the given layout.
+  void _startMarquee(double textWidth, double containerWidth) {
+    // Skip if nothing changed to avoid restarting on every rebuild.
+    if (_lastTextWidth == textWidth &&
+        _lastContainerWidth == containerWidth &&
+        _controller.isAnimating) {
+      return;
+    }
 
-    _stepTimer?.cancel();
-    _stepTimer = Timer(const Duration(milliseconds: 1800), () async {
-      if (!mounted || currentCycle != _cycleId) return;
+    _lastTextWidth = textWidth;
+    _lastContainerWidth = containerWidth;
 
-      if (_scrollController.hasClients) {
-        final scrollDistance = overflowWidth + 36.0;
-        final durationMs =
-            ((scrollDistance / 48.0) * 1000).round().clamp(1200, 50000);
+    // The text travels its full width plus a gap before the loop restarts.
+    final totalTravel = textWidth + _gap;
+    final durationMs = ((totalTravel / _speed) * 1000).round();
 
-        try {
-          await _scrollController.animateTo(
-            scrollDistance,
-            duration: Duration(milliseconds: durationMs),
-            curve: Curves.linear,
-          );
-        } catch (_) {
-          return;
-        }
-      }
-      if (!mounted || currentCycle != _cycleId) return;
-
-      _stepTimer = Timer(const Duration(milliseconds: 1800), () async {
-        if (!mounted || currentCycle != _cycleId) return;
-
-        if (_scrollController.hasClients) {
-          try {
-            await _scrollController.animateTo(
-              0.0,
-              duration: const Duration(milliseconds: 700),
-              curve: Curves.easeInOutCubic,
-            );
-          } catch (_) {
-            return;
-          }
-        }
-        if (!mounted || currentCycle != _cycleId) return;
-
-        _isScrolling = false;
-        if (mounted) {
-          _triggerScrollLoop(overflowWidth);
-        }
-      });
-    });
+    _controller.duration = Duration(milliseconds: durationMs);
+    _controller.forward(from: 0.0);
   }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final availableWidth = constraints.maxWidth;
+        final containerWidth = constraints.maxWidth;
 
-        // Measure single-line text width
+        // Measure the single-line text width using TextPainter.
         final textPainter = TextPainter(
           text: TextSpan(text: widget.text, style: widget.style),
           textDirection: TextDirection.ltr,
@@ -240,54 +222,52 @@ class _MarqueeTextState extends State<_MarqueeText> {
         )..layout();
 
         final textWidth = textPainter.width;
-        final isOverflowing = textWidth > availableWidth;
+        final isOverflowing = textWidth > containerWidth;
 
         if (!isOverflowing) {
+          // Text fits — stop any running animation and show it centered.
+          if (_controller.isAnimating) _controller.stop();
           return Center(
             child: Text(
               widget.text,
               textAlign: TextAlign.center,
               style: widget.style,
               maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.clip,
             ),
           );
         }
 
-        // Text exceeds space: start right-to-left scrolling
-        final overflowWidth = textWidth - availableWidth;
+        // Text overflows — kick off the marquee after the first frame.
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _triggerScrollLoop(overflowWidth);
-          }
+          if (mounted) _startMarquee(textWidth, containerWidth);
         });
 
-        // Subtle gradient mask at left & right edges for television-style ticker
-        return ShaderMask(
-          shaderCallback: (Rect bounds) {
-            return const LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [
-                Colors.transparent,
-                Colors.black,
-                Colors.black,
-                Colors.transparent,
-              ],
-              stops: [0.0, 0.02, 0.98, 1.0],
-            ).createShader(bounds);
-          },
-          blendMode: BlendMode.dstIn,
-          child: SingleChildScrollView(
-            controller: _scrollController,
-            scrollDirection: Axis.horizontal,
-            physics: const NeverScrollableScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                widget.text,
-                style: widget.style,
-                maxLines: 1,
-              ),
+        // Total scroll distance per loop: full text width + gap.
+        final totalTravel = textWidth + _gap;
+
+        return ClipRect(
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              // At _controller.value == 0 the text starts with its left edge
+              // at the container's right edge (fully off screen to the right).
+              // At _controller.value == 1 it has moved left by totalTravel,
+              // placing it fully off screen to the left → seamless loop.
+              final dx = containerWidth - _controller.value * totalTravel;
+
+              return Transform.translate(
+                offset: Offset(dx, 0),
+                child: child,
+              );
+            },
+            child: Text(
+              widget.text,
+              style: widget.style,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.clip,
             ),
           ),
         );
