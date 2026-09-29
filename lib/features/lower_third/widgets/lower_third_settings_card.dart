@@ -423,49 +423,52 @@ class LowerThirdSettingsCard extends ConsumerWidget {
               onReorderItem: notifier.reorderItems,
               itemBuilder: (context, index) {
                 final item = state.items[index];
-                return ListTile(
+                return Material(
                   key: ValueKey(item.id),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                  leading: Switch(
-                    value: item.isEnabled,
-                    onChanged: (_) => notifier.toggleItemEnabled(item.id),
-                  ),
-                  title: Text(
-                    item.text,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: item.isEnabled
-                          ? theme.colorScheme.onSurface
-                          : theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                      decoration:
-                          item.isEnabled ? null : TextDecoration.lineThrough,
+                  color: Colors.transparent,
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                    leading: Switch(
+                      value: item.isEnabled,
+                      onChanged: (_) => notifier.toggleItemEnabled(item.id),
                     ),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined, size: 18),
-                        tooltip: 'Edit',
-                        onPressed: () => _showAddEditDialog(
-                          context,
-                          notifier,
-                          itemToEdit: item,
+                    title: Text(
+                      item.text,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: item.isEnabled
+                            ? theme.colorScheme.onSurface
+                            : theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                        decoration:
+                            item.isEnabled ? null : TextDecoration.lineThrough,
+                      ),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          tooltip: 'Edit',
+                          onPressed: () => _showAddEditDialog(
+                            context,
+                            notifier,
+                            itemToEdit: item,
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, size: 18),
-                        tooltip: 'Delete',
-                        onPressed: () => notifier.deleteItem(item.id),
-                      ),
-                      const SizedBox(width: 4),
-                      ReorderableDragStartListener(
-                        index: index,
-                        child: const Icon(Icons.drag_handle, size: 18, color: Colors.grey),
-                      ),
-                    ],
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, size: 18),
+                          tooltip: 'Delete',
+                          onPressed: () => notifier.deleteItem(item.id),
+                        ),
+                        const SizedBox(width: 4),
+                        ReorderableDragStartListener(
+                          index: index,
+                          child: const Icon(Icons.drag_handle, size: 18, color: Colors.grey),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
