@@ -29,7 +29,7 @@ class LowerThirdConfig {
   final LowerThirdAnimation animation;
 
   const LowerThirdConfig({
-    this.style = LowerThirdStyle.floatingPill,
+    this.style = LowerThirdStyle.fullWidth,
     this.height = 64.0,
     this.backgroundColor = const Color(0xFF0A1A18),
     this.backgroundOpacity = 0.88,
@@ -97,7 +97,7 @@ class LowerThirdConfig {
         : FontWeight.w600;
 
     return LowerThirdConfig(
-      style: LowerThirdStyle.values[(json['style'] as int?) ?? 1],
+      style: LowerThirdStyle.values[(json['style'] as int?) ?? LowerThirdStyle.fullWidth.index],
       height: (json['height'] as num?)?.toDouble() ?? 64.0,
       backgroundColor: json['backgroundColor'] != null
           ? Color(json['backgroundColor'] as int)

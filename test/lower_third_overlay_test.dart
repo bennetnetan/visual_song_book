@@ -32,7 +32,7 @@ void main() {
     final state = LowerThirdState(
       isEnabled: true,
       items: [
-        LowerThirdItem(id: '1', text: 'Welcome to Church!'),
+        LowerThirdItem(id: '1', text: 'Welcome to Church!', isEnabled: true),
       ],
       activeIndex: 0,
       config: const LowerThirdConfig(
@@ -66,7 +66,7 @@ void main() {
     final state = LowerThirdState(
       isEnabled: true,
       items: [
-        LowerThirdItem(id: '1', text: 'Special Service Tonight at 6 PM'),
+        LowerThirdItem(id: '1', text: 'Special Service Tonight at 6 PM', isEnabled: true),
       ],
       activeIndex: 0,
       config: const LowerThirdConfig(
@@ -99,7 +99,7 @@ void main() {
     final state = LowerThirdState(
       isEnabled: true,
       items: [
-        LowerThirdItem(id: '1', text: longText),
+        LowerThirdItem(id: '1', text: longText, isEnabled: true),
       ],
       activeIndex: 0,
       config: const LowerThirdConfig(
@@ -179,7 +179,7 @@ void main() {
     final state = LowerThirdState(
       isEnabled: true,
       items: [
-        LowerThirdItem(id: '1', text: 'Welcome!'),
+        LowerThirdItem(id: '1', text: 'Welcome!', isEnabled: true),
       ],
       activeIndex: 0,
       config: const LowerThirdConfig(

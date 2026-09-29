@@ -17,8 +17,8 @@ void main() {
   group('LowerThirdConfig', () {
     test('default configuration values', () {
       const config = LowerThirdConfig();
-      expect(config.style, LowerThirdStyle.floatingPill);
-      expect(config.isFloating, isTrue);
+      expect(config.style, LowerThirdStyle.fullWidth);
+      expect(config.isFloating, isFalse);
       expect(config.height, 64.0);
       expect(config.fontSize, 20.0);
       expect(config.fontFamily, 'Outfit');
@@ -60,11 +60,11 @@ void main() {
   });
 
   group('LowerThirdItem', () {
-    test('creates with UUID and default enabled status', () {
+    test('creates with UUID and default disabled status', () {
       final item = LowerThirdItem.create('Special Announcement');
       expect(item.id.isNotEmpty, isTrue);
       expect(item.text, 'Special Announcement');
-      expect(item.isEnabled, isTrue);
+      expect(item.isEnabled, isFalse);
     });
 
     test('JSON serialization roundtrip', () {
@@ -89,14 +89,20 @@ void main() {
       expect(state.isEnabled, isFalse);
       expect(state.hasActiveItem, isFalse);
       expect(state.items.isNotEmpty, isTrue);
-      expect(state.enabledItems.length, state.items.length);
+      expect(state.enabledItems.isEmpty, isTrue);
     });
 
     test('hasActiveItem requires both isEnabled and a non-empty enabled item', () {
       var state = LowerThirdState.initial();
       expect(state.hasActiveItem, isFalse);
 
+      // Enabling master toggle without any active items still has no active item
       state = state.copyWith(isEnabled: true);
+      expect(state.hasActiveItem, isFalse);
+
+      // Activating an announcement makes hasActiveItem true
+      final enabledItems = state.items.map((i) => i.copyWith(isEnabled: true)).toList();
+      state = state.copyWith(items: enabledItems);
       expect(state.hasActiveItem, isTrue);
       expect(state.currentItem?.text, contains('Welcome'));
 
@@ -173,6 +179,11 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(lowerThirdControllerProvider.notifier);
+      // Enable items since default is disabled
+      final items = container.read(lowerThirdControllerProvider).items;
+      notifier.editItem(items[0].id, items[0].text, true);
+      notifier.editItem(items[1].id, items[1].text, true);
+
       expect(container.read(lowerThirdControllerProvider).activeIndex, 0);
 
       notifier.nextItem();
@@ -199,7 +210,7 @@ void main() {
               fontFamily: 'Lora',
               fontSize: 56.0,
               fontWeight: FontWeight.w400,
-              style: LowerThirdStyle.fullWidth, // theme property
+              style: LowerThirdStyle.floatingPill, // theme property
             ),
       );
 
@@ -212,7 +223,7 @@ void main() {
       expect(config.fontSize, 20.0);
       expect(config.fontWeight, FontWeight.w600);
       // Theme should be preserved
-      expect(config.style, LowerThirdStyle.fullWidth);
+      expect(config.style, LowerThirdStyle.floatingPill);
     });
 
     test('resetThemeSettings reverts theme and dimensions to standard defaults', () async {
@@ -223,7 +234,7 @@ void main() {
       // Customize theme & text
       notifier.updateConfig(
         container.read(lowerThirdControllerProvider).config.copyWith(
-              style: LowerThirdStyle.fullWidth,
+              style: LowerThirdStyle.floatingPill,
               height: 120.0,
               backgroundColor: Colors.blue,
               backgroundOpacity: 0.5,
@@ -236,8 +247,8 @@ void main() {
       notifier.resetThemeSettings();
       final config = container.read(lowerThirdControllerProvider).config;
 
-      // Theme should be back to standard
-      expect(config.style, LowerThirdStyle.floatingPill);
+      // Theme should be back to standard (fullWidth)
+      expect(config.style, LowerThirdStyle.fullWidth);
       expect(config.height, 64.0);
       expect(config.backgroundColor, const Color(0xFF0A1A18));
       expect(config.backgroundOpacity, 0.88);

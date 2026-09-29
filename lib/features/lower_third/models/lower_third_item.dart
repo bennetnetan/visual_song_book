@@ -9,7 +9,7 @@ class LowerThirdItem {
   const LowerThirdItem({
     required this.id,
     required this.text,
-    this.isEnabled = true,
+    this.isEnabled = false,
   });
 
   LowerThirdItem copyWith({
@@ -36,15 +36,15 @@ class LowerThirdItem {
     return LowerThirdItem(
       id: (json['id'] as String?) ?? UuidGenerator.generate(),
       text: (json['text'] as String?) ?? '',
-      isEnabled: (json['isEnabled'] as bool?) ?? true,
+      isEnabled: (json['isEnabled'] as bool?) ?? false,
     );
   }
 
-  factory LowerThirdItem.create(String text) {
+  factory LowerThirdItem.create(String text, {bool isEnabled = false}) {
     return LowerThirdItem(
       id: UuidGenerator.generate(),
       text: text,
-      isEnabled: true,
+      isEnabled: isEnabled,
     );
   }
 }
