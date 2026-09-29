@@ -85,27 +85,28 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
         appBar: AppBar(
             title: const Text('Projection Controls'),
             actions: [
-              Consumer(
-                builder: (context, ref, _) {
-                  final ltState = ref.watch(lowerThirdControllerProvider);
-                  final ltNotifier =
-                      ref.read(lowerThirdControllerProvider.notifier);
-                  return IconButton(
-                    icon: Icon(
-                      ltState.isEnabled
-                          ? Icons.view_headline
-                          : Icons.view_headline_outlined,
-                      color: ltState.isEnabled
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
-                    ),
-                    tooltip: ltState.isEnabled
-                        ? 'Lower Thirds Carousel: Active (tap to turn off)'
-                        : 'Lower Thirds Carousel: Off (tap to turn on)',
-                    onPressed: ltNotifier.toggleEnabled,
-                  );
-                },
-              ),
+              if (widget.isLargeScreen)
+                Consumer(
+                  builder: (context, ref, _) {
+                    final ltState = ref.watch(lowerThirdControllerProvider);
+                    final ltNotifier =
+                        ref.read(lowerThirdControllerProvider.notifier);
+                    return IconButton(
+                      icon: Icon(
+                        ltState.isEnabled
+                            ? Icons.view_headline
+                            : Icons.view_headline_outlined,
+                        color: ltState.isEnabled
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                      ),
+                      tooltip: ltState.isEnabled
+                          ? 'Lower Thirds Carousel: Active (tap to turn off)'
+                          : 'Lower Thirds Carousel: Off (tap to turn on)',
+                      onPressed: ltNotifier.toggleEnabled,
+                    );
+                  },
+                ),
               Semantics(
                 label: 'Open Projector Output Window',
                 button: true,
@@ -308,6 +309,7 @@ class _ProjectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isBible = state.isBibleMode;
+    final isLargeScreen = getLayoutMode(context) == LayoutMode.desktop;
 
     return Row(
       children: [
@@ -393,35 +395,36 @@ class _ProjectionHeader extends StatelessWidget {
               onPressed: notifier.shareCurrentSlide,
             ),
           ),
-        Consumer(
-          builder: (context, ref, _) {
-            final ltState = ref.watch(lowerThirdControllerProvider);
-            final ltNotifier =
-                ref.read(lowerThirdControllerProvider.notifier);
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: FilterChip(
-                showCheckmark: false,
-                avatar: Icon(
-                  Icons.view_headline,
-                  size: 16,
-                  color: ltState.isEnabled
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.onSurfaceVariant,
-                ),
-                label: Text(
-                  ltState.isEnabled ? 'Lower Third: ON' : 'Lower Third: OFF',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: ltState.isEnabled ? FontWeight.w600 : FontWeight.normal,
+        if (isLargeScreen)
+          Consumer(
+            builder: (context, ref, _) {
+              final ltState = ref.watch(lowerThirdControllerProvider);
+              final ltNotifier =
+                  ref.read(lowerThirdControllerProvider.notifier);
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  showCheckmark: false,
+                  avatar: Icon(
+                    Icons.view_headline,
+                    size: 16,
+                    color: ltState.isEnabled
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
                   ),
+                  label: Text(
+                    ltState.isEnabled ? 'Lower Third: ON' : 'Lower Third: OFF',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: ltState.isEnabled ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                  selected: ltState.isEnabled,
+                  onSelected: (_) => ltNotifier.toggleEnabled(),
                 ),
-                selected: ltState.isEnabled,
-                onSelected: (_) => ltNotifier.toggleEnabled(),
-              ),
-            );
-          },
-        ),
+              );
+            },
+          ),
         ElevatedButton.icon(
           onPressed: notifier.clearSong,
           icon: const Icon(Icons.close, size: 16),

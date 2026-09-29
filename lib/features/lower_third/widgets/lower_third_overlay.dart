@@ -3,10 +3,23 @@ import 'package:visual_song_book/features/lower_third/lower_third_state.dart';
 import 'package:visual_song_book/features/lower_third/models/lower_third_config.dart';
 
 /// Projection overlay displaying freeform announcements in a customizable lower third carousel.
+///
+/// [projectionBackground] — the representative base colour of the projection
+/// background (e.g. `projTheme.backgroundBaseColor`). When provided, the banner
+/// background is derived from this colour rather than a fixed black, so the
+/// overlay visually belongs to the same world as the slide content behind it.
 class LowerThirdOverlay extends StatelessWidget {
   final LowerThirdState state;
 
-  const LowerThirdOverlay({super.key, required this.state});
+  /// Optional: the projection background's representative colour. When supplied
+  /// the banner tints itself to match, creating visual continuity with the slide.
+  final Color? projectionBackground;
+
+  const LowerThirdOverlay({
+    super.key,
+    required this.state,
+    this.projectionBackground,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -26,17 +39,19 @@ class LowerThirdOverlay extends StatelessWidget {
         ? BorderRadius.circular(16)
         : BorderRadius.zero;
 
-    final border = isFloating
-        ? Border.all(
-            color: Colors.white.withValues(alpha: 0.16),
-            width: 1.0,
-          )
-        : Border(
-            top: BorderSide(
-              color: Colors.white.withValues(alpha: 0.16),
-              width: 1.0,
-            ),
-          );
+    // Derive the banner colour. If the operator hasn't overridden it (full
+    // opacity black = default), blend the projection background with the
+    // configured opacity so the banner feels like a natural part of the scene.
+    final Color bannerColor;
+    if (projectionBackground != null) {
+      // Mix the projection background colour with the user's opacity setting.
+      bannerColor = Color.alphaBlend(
+        projectionBackground!.withValues(alpha: 0.72),
+        Colors.black,
+      ).withValues(alpha: config.backgroundOpacity);
+    } else {
+      bannerColor = config.effectiveBackgroundColor;
+    }
 
     final shadows = isFloating
         ? [
@@ -67,9 +82,9 @@ class LowerThirdOverlay extends StatelessWidget {
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  color: config.effectiveBackgroundColor,
+                  color: bannerColor,
                   borderRadius: borderRadius,
-                  border: border,
+                  // No border — the overlay integrates seamlessly with the slide.
                   boxShadow: shadows,
                 ),
                 padding: const EdgeInsets.symmetric(

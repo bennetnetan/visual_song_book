@@ -147,15 +147,17 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 800),
-          child: const Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ProjectionAppearanceCard(),
-              SizedBox(height: 20),
-              ProjectionPreferencesCard(),
-              SizedBox(height: 20),
-              LowerThirdSettingsCard(),
-              SizedBox(height: 20),
+              const ProjectionAppearanceCard(),
+              const SizedBox(height: 20),
+              const ProjectionPreferencesCard(),
+              if (isLargeScreen) ...[
+                const SizedBox(height: 20),
+                const LowerThirdSettingsCard(),
+              ],
+              const SizedBox(height: 20),
             ],
           ),
         ),

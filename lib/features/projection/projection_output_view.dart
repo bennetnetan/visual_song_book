@@ -643,7 +643,10 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
               ),
 
               // Lower Thirds Carousel overlay
-              LowerThirdOverlay(state: lowerThirdState),
+              LowerThirdOverlay(
+                state: lowerThirdState,
+                projectionBackground: projTheme.backgroundBaseColor,
+              ),
 
               // Close button:
               //   • Desktop  — appears only while the cursor hovers the
@@ -746,31 +749,6 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                             tooltip: _isPortraitMode
                                 ? 'Switch to landscape'
                                 : 'Switch to portrait',
-                            splashRadius: 20,
-                            padding: const EdgeInsets.all(6),
-                            constraints: const BoxConstraints(
-                              minWidth: 36,
-                              minHeight: 36,
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              lowerThirdState.isEnabled
-                                  ? Icons.view_headline
-                                  : Icons.view_headline_outlined,
-                              color: lowerThirdState.isEnabled
-                                  ? Colors.cyanAccent
-                                  : Colors.white,
-                              size: 18,
-                            ),
-                            onPressed: () {
-                              ref
-                                  .read(lowerThirdControllerProvider.notifier)
-                                  .toggleEnabled();
-                            },
-                            tooltip: lowerThirdState.isEnabled
-                                ? 'Disable Lower Third'
-                                : 'Enable Lower Third',
                             splashRadius: 20,
                             padding: const EdgeInsets.all(6),
                             constraints: const BoxConstraints(
