@@ -16,6 +16,7 @@ import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/models/verse.dart';
 import 'package:visual_song_book/data/repositories/song_repository.dart';
 import 'package:visual_song_book/features/bible/bible_repository.dart';
+import 'package:visual_song_book/features/lower_third/lower_third_controller.dart';
 import 'package:visual_song_book/features/projection/projection_theme.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -142,6 +143,10 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     // colors in Settings wouldn't reach an already-open PC projector window.
     ref.listen(projectionThemeProvider, (_, _) {
       _syncSecondaryWindow();
+    });
+
+    ref.listen(lowerThirdControllerProvider, (_, _) {
+      _syncSecondaryLowerThird();
     });
   }
 
@@ -449,6 +454,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         // original window style on manual close).
         _placeOnSecondScreenAndFullscreen();
         _syncSecondaryWindow();
+        _syncSecondaryLowerThird();
         return true;
       } catch (e) {
         _log.warning('Tracked secondary window is dead: $e. Will create a new one.');
@@ -554,6 +560,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
           _log.fine('Secondary window reported ready. Placing and syncing current slide...');
           _placeOnSecondScreenAndFullscreen();
           _syncSecondaryWindow();
+          _syncSecondaryLowerThird();
         } else if (call.method == 'close_secondary_window') {
           // On Linux, the secondary window can't close itself via window_manager
           // (it would crash), so it asks us to do it via WindowController.hide().
@@ -632,6 +639,20 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       // Do not clear _secondaryWindow here; let the retry mechanism handle it.
       // Actual window closure is handled by onWindowsChanged and IPC.
       return false;
+    }
+  }
+
+  /// Sends the current lower third carousel state to the secondary projector window.
+  Future<void> _syncSecondaryLowerThird() async {
+    if (kIsWeb) return;
+    if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return;
+    if (!state.isSecondaryWindowOpen || _secondaryWindow == null) return;
+
+    try {
+      final ltState = ref.read(lowerThirdControllerProvider);
+      await _secondaryWindow!.invokeMethod('update_lower_third', ltState.toJson());
+    } catch (e, st) {
+      _log.fine('Failed to sync lower third over IPC: $e', e, st);
     }
   }
 

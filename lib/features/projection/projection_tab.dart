@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 
 
+import 'package:visual_song_book/features/lower_third/lower_third_controller.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/projection/projection_search_provider.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
@@ -84,6 +85,27 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
         appBar: AppBar(
             title: const Text('Projection Controls'),
             actions: [
+              Consumer(
+                builder: (context, ref, _) {
+                  final ltState = ref.watch(lowerThirdControllerProvider);
+                  final ltNotifier =
+                      ref.read(lowerThirdControllerProvider.notifier);
+                  return IconButton(
+                    icon: Icon(
+                      ltState.isEnabled
+                          ? Icons.view_headline
+                          : Icons.view_headline_outlined,
+                      color: ltState.isEnabled
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                    tooltip: ltState.isEnabled
+                        ? 'Lower Thirds Carousel: Active (tap to turn off)'
+                        : 'Lower Thirds Carousel: Off (tap to turn on)',
+                    onPressed: ltNotifier.toggleEnabled,
+                  );
+                },
+              ),
               Semantics(
                 label: 'Open Projector Output Window',
                 button: true,
@@ -371,6 +393,35 @@ class _ProjectionHeader extends StatelessWidget {
               onPressed: notifier.shareCurrentSlide,
             ),
           ),
+        Consumer(
+          builder: (context, ref, _) {
+            final ltState = ref.watch(lowerThirdControllerProvider);
+            final ltNotifier =
+                ref.read(lowerThirdControllerProvider.notifier);
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilterChip(
+                showCheckmark: false,
+                avatar: Icon(
+                  Icons.view_headline,
+                  size: 16,
+                  color: ltState.isEnabled
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+                label: Text(
+                  ltState.isEnabled ? 'Lower Third: ON' : 'Lower Third: OFF',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: ltState.isEnabled ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+                selected: ltState.isEnabled,
+                onSelected: (_) => ltNotifier.toggleEnabled(),
+              ),
+            );
+          },
+        ),
         ElevatedButton.icon(
           onPressed: notifier.clearSong,
           icon: const Icon(Icons.close, size: 16),

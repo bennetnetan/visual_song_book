@@ -13,6 +13,7 @@ import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/data/importers/vsb_importer.dart';
 import 'package:visual_song_book/data/importers/vsbook_importer.dart';
 import 'package:visual_song_book/data/services/app_storage.dart';
+import 'package:visual_song_book/features/lower_third/widgets/lower_third_settings_card.dart';
 import 'package:visual_song_book/features/settings/settings_cards.dart';
 import 'package:visual_song_book/features/song_list/song_list_controller.dart';
 
@@ -152,6 +153,8 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
               ProjectionAppearanceCard(),
               SizedBox(height: 20),
               ProjectionPreferencesCard(),
+              SizedBox(height: 20),
+              LowerThirdSettingsCard(),
               SizedBox(height: 20),
             ],
           ),

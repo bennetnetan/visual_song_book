@@ -12,6 +12,9 @@ import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_appearance_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
+import 'package:visual_song_book/features/lower_third/lower_third_controller.dart';
+import 'package:visual_song_book/features/lower_third/lower_third_state.dart';
+import 'package:visual_song_book/features/lower_third/widgets/lower_third_overlay.dart';
 import 'package:visual_song_book/features/projection/projection_theme.dart';
 import 'package:visual_song_book/features/sets/sets_tab.dart';
 
@@ -33,6 +36,7 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
   List<String> _ipcSlideLabels = const [];
   int _ipcCurrentIndex = 0;
   ProjectionTheme _ipcTheme = const ProjectionTheme();
+  LowerThirdState _ipcLowerThirdState = LowerThirdState.initial();
   bool _isSecondaryWindow = false;
   late final FocusNode _focusNode;
   bool _isClosing = false;
@@ -139,6 +143,12 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
               Map<String, dynamic>.from(args['slideTheme'] as Map),
             );
           }
+        });
+      } else if (call.method == 'update_lower_third') {
+        if (!mounted) return null;
+        final args = Map<String, dynamic>.from(call.arguments as Map);
+        setState(() {
+          _ipcLowerThirdState = LowerThirdState.fromJson(args);
         });
       }
       return 'OK';
@@ -453,6 +463,15 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
         ? _ipcTheme
         : ref.watch(projectionThemeProvider);
 
+    final LowerThirdState lowerThirdState = _isSecondaryWindow
+        ? _ipcLowerThirdState
+        : ref.watch(lowerThirdControllerProvider);
+
+    final double lowerThirdClearance = (lowerThirdState.isEnabled && lowerThirdState.hasActiveItem)
+        ? (lowerThirdState.config.height.clamp(lowerThirdState.config.fontSize + 24.0, 300.0) +
+            (lowerThirdState.config.isFloating ? 24.0 : 12.0))
+        : 0.0;
+
     final String activeText = _isSecondaryWindow
         ? _ipcText
         : (state.currentSlide?.text ?? '');
@@ -603,11 +622,11 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                     // Reserve room for the mobile bottom control bar so the
                     // auto-fit never tucks text behind it. Portrait mode's
                     // bar is taller (buttons + slide counter).
-                    bottom: _isMobile &&
+                    bottom: (_isMobile &&
                             !_isSecondaryWindow &&
                             state.slides.isNotEmpty
                         ? (_isPortraitMode ? 100.0 : 40.0)
-                        : 24.0,
+                        : 24.0) + lowerThirdClearance,
                   ),
                   child: Center(
                     child: activeText.isNotEmpty
@@ -622,6 +641,9 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                   ),
                 ),
               ),
+
+              // Lower Thirds Carousel overlay
+              LowerThirdOverlay(state: lowerThirdState),
 
               // Close button:
               //   • Desktop  — appears only while the cursor hovers the
@@ -724,6 +746,31 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
                             tooltip: _isPortraitMode
                                 ? 'Switch to landscape'
                                 : 'Switch to portrait',
+                            splashRadius: 20,
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(
+                              minWidth: 36,
+                              minHeight: 36,
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              lowerThirdState.isEnabled
+                                  ? Icons.view_headline
+                                  : Icons.view_headline_outlined,
+                              color: lowerThirdState.isEnabled
+                                  ? Colors.cyanAccent
+                                  : Colors.white,
+                              size: 18,
+                            ),
+                            onPressed: () {
+                              ref
+                                  .read(lowerThirdControllerProvider.notifier)
+                                  .toggleEnabled();
+                            },
+                            tooltip: lowerThirdState.isEnabled
+                                ? 'Disable Lower Third'
+                                : 'Enable Lower Third',
                             splashRadius: 20,
                             padding: const EdgeInsets.all(6),
                             constraints: const BoxConstraints(
