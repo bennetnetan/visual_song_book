@@ -161,6 +161,8 @@ class LowerThirdSettingsCard extends ConsumerWidget {
           const SizedBox(height: 12),
 
           // ── Height & Carousel Interval ──
+          // The interval slider is only shown when 2+ items are enabled,
+          // because a single item never triggers the carousel timer.
           Row(
             children: [
               Expanded(
@@ -196,41 +198,43 @@ class LowerThirdSettingsCard extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Slide Interval',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 13),
-                        ),
-                        Text(
-                          '${config.intervalSeconds}s',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: theme.colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.bold,
+              if (state.enabledItems.length > 1) ...[
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Slide Interval',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 13),
                           ),
-                        ),
-                      ],
-                    ),
-                    Slider(
-                      value: config.intervalSeconds.toDouble().clamp(3.0, 60.0),
-                      min: 3.0,
-                      max: 60.0,
-                      divisions: 57,
-                      onChanged: (val) => notifier.updateConfig(
-                        config.copyWith(intervalSeconds: val.round()),
+                          Text(
+                            '${config.intervalSeconds}s',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                      Slider(
+                        value: config.intervalSeconds.toDouble().clamp(3.0, 60.0),
+                        min: 3.0,
+                        max: 60.0,
+                        divisions: 57,
+                        onChanged: (val) => notifier.updateConfig(
+                          config.copyWith(intervalSeconds: val.round()),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
 
