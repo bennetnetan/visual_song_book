@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
@@ -84,6 +85,15 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
   bool _isImporting = false;
   String? _importStatus;
   bool _isExporting = false;
+  String _appVersion = '';
+
+  @override
+  void initState() {
+    super.initState();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) setState(() => _appVersion = 'v${info.version}');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -423,7 +433,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
               ),
               const SizedBox(width: 12),
               Text(
-                'Visual Song Book v2.3.0',
+                'Visual Song Book${_appVersion.isNotEmpty ? ' $_appVersion' : ''}',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
