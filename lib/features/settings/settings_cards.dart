@@ -654,6 +654,44 @@ class _ChangelogCardState extends State<ChangelogCard> {
     final theme = Theme.of(context);
     final recentEntries = [
       const _ChangelogEntryWidget(
+        version: 'v2.3.0',
+        date: '2026-09-29',
+        changes: [
+          'Lower thirds: new live announcement carousel overlay for projection',
+          'Lower thirds: full-width banner & floating pill styles, custom background colour/opacity, scrolling ticker',
+          'Lower thirds: hidden on mobile; matches projection background; no border',
+          'Lower thirds: master toggle and all announcements default OFF; Full-Width Banner is default style',
+          'Sets: import plain-text set lists copied from clipboard',
+          'Sets: auto-version duplicates and re-imported sets with the same name',
+          'Sets: simplified sharing format; copy button replaces direct WhatsApp option',
+          'Projection: keep window alive on close instead of destroying it',
+          'Projection: second-monitor detection; skip fullscreen on single-monitor setups',
+          'Appearance: user-adjustable app font size slider',
+          'Linked songbooks: fixed unique-constraint failure when syncing multiple books',
+        ],
+      ),
+      const _ChangelogEntryWidget(
+        version: 'v2.2.2',
+        date: '2026-09-01',
+        changes: [
+          'Projection window: second-monitor detection via EnumDisplayMonitors FFI',
+          'Projection window: retry logic for desktop_multi_window channel init',
+          'Projection window: fixed infinite re-assertion loop from SetWindowPos focus cascades',
+          'Projection window: skip fullscreen on single-monitor setups',
+        ],
+      ),
+      const _ChangelogEntryWidget(
+        version: 'v2.2.0',
+        date: '2026-08-18',
+        changes: [
+          'Projection search: dedicated full-screen search page replaces SearchAnchor',
+          'Sharing: system-native share sheet with WhatsApp-first flow and Bible multi-verse sharing',
+          'Presentation: song separation banners in slide list; mobile set song list sheet',
+          'Sets: Duplicate Set, performance notes, service date scheduling, quick-project actions',
+          'Sets: song count badge, relative dates, swipe-to-delete, larger drag touch targets',
+        ],
+      ),
+      const _ChangelogEntryWidget(
         version: 'v2.1.0',
         date: '2026-08-06',
         changes: [
@@ -664,34 +702,6 @@ class _ChangelogCardState extends State<ChangelogCard> {
           'Projection search focus restored after overlay closes — arrow key navigation always works',
           'Set Navigator list now expands and scrolls correctly',
           'Footer moved into the System tab scroll area',
-        ],
-      ),
-      const _ChangelogEntryWidget(
-        version: 'v2.0.0',
-        date: '2026-08-05',
-        changes: [
-          'Settings restructured into tabbed sections: Appearance, Projection, Data Sources, System',
-          'System tab: live diagnostics card with database status, storage path, and SQLite file sizes',
-          'Maintenance card: clear logs/history, re-verify Bible databases, reset settings',
-          'Bible reader UI refinements: active verse options, selection colours, increased spacing',
-          'Cross-references displayed at top of sidebar with auto-scroll',
-          'Default Bible font: Lora 19 pt with adjustable slider in Appearance settings',
-          'First-run JSON parsing offloaded to background isolate — no more UI freeze on splash',
-          'Bible scroll fixed: replaced lazy ListView.builder to resolve erratic cross-reference navigation',
-          'Removed google_fonts dependency; restored bundled fonts',
-        ],
-      ),
-      const _ChangelogEntryWidget(
-        version: 'v1.9.0',
-        date: '2026-08-04',
-        changes: [
-          'Projection mode — extended (secondary window) or single (in-window)',
-          'Reopening projection reuses the hidden window — no duplicate engines',
-          'Bible projection: load more verses for long passages',
-          'Search: Enter/click projects the keyboard-highlighted result',
-          'History: set and Bible entries refresh live and can be cleared',
-          '.vsbook import no longer crashes on modified timestamps; deleted songs stay deleted',
-          'Hygiene: dead code removed, explicit lint rules, macOS target 11.0, CI with hermetic tests',
         ],
       ),
     ];
@@ -867,7 +877,7 @@ class AboutCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(5),
                       ),
                       child: Text(
-                        'v2.1.0',
+                        'v2.3.0',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,

@@ -423,7 +423,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
               ),
               const SizedBox(width: 12),
               Text(
-                'Visual Song Book v2.1.0',
+                'Visual Song Book v2.3.0',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,

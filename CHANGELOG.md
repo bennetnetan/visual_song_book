@@ -2,6 +2,28 @@
 
 All notable changes to Visual Song Book are documented here. Newest first.
 
+## [2.3.0] - 2026-09-29
+
+### Features
+- **Lower thirds** — new live announcement carousel overlay rendered directly on the projection screen
+- **Lower thirds** — full-width banner and floating pill display styles, custom background colour & opacity, right-to-left scrolling marquee ticker for long text
+- **Lower thirds** — hidden on mobile; banner background matches the projection background; border removed
+- **Lower thirds** — master toggle defaults OFF; all sample announcements default to OFF; Full-Width Banner is the default display style
+- **Sets** — import plain-text set lists pasted from the clipboard (supports the app's own copy format)
+- **Sets** — auto-version duplicate and re-imported sets that share an existing name (e.g. "Sunday Service (v2)")
+- **Sets** — simplified sharing format; copy-to-clipboard button replaces the direct WhatsApp option in the share menu
+- **Projection** — projection window stays alive on close instead of being destroyed and re-created
+- **Appearance** — user-adjustable app font size slider in Appearance settings
+
+### Bug Fixes
+- **Projection** — debounced focus listener to prevent infinite fullscreen re-assertion loop
+- **Projection** — second-monitor detection via `EnumDisplayMonitors` FFI; skips fullscreen on single-monitor setups
+- **Projection** — search changed from full-screen page to a centred dialog
+- **Lower thirds** — background colour picker now correctly applies the selected colour to the banner (no alpha-blend corruption)
+- **Lower thirds** — wrap `ReorderableListView` item `ListTile` in `Material` to silence ink-splash assertion
+- **Bible** — wrap `ListTile` in `Material` to silence ink-splash assertion
+- **Linked songbooks** — fixed unique-constraint failure when syncing multiple linked books simultaneously
+
 ## [2.2.2] - 2026-09-01
 
 ### Bug Fixes

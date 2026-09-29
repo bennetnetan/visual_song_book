@@ -124,14 +124,15 @@ See [docs/SUPPORTED_PLATFORMS.md](docs/SUPPORTED_PLATFORMS.md) for details.
 
 ## Version
 
-Current: **v2.2.0** — see About → Changelog in the app for full history.
+Current: **v2.3.0** — see About → Changelog in the app for full history.
 
-### v2.2.0 Changes
-- Full-screen projection search page replaces SearchAnchor
-- System-native share sheet with WhatsApp-first flow and Bible multi-verse sharing
-- Song separation banners in slide list and mobile set song list sheet
-- Duplicate Set, performance notes, service date scheduling, and quick-project actions
-- Song count badge, relative dates, swipe-to-delete, and larger drag touch targets in sets
+### v2.3.0 Changes
+- Lower thirds live announcement carousel overlay for projection (full-width banner + floating pill styles)
+- Lower thirds defaults: master toggle OFF, all announcements OFF, Full-Width Banner default style
+- Sets: clipboard import of plain-text set lists; auto-versioning of duplicate/re-imported sets
+- Sets: simplified sharing format; copy button in share menu
+- Projection window stays alive on close; second-monitor detection and single-monitor safety
+- Appearance: user-adjustable app font size slider
 
 ---
 
