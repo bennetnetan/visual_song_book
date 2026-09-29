@@ -47,20 +47,7 @@ class LowerThirdOverlay extends StatelessWidget {
         ? BorderRadius.circular(16.0 * previewScale)
         : BorderRadius.zero;
 
-    // Derive the banner colour. If the user picked a specific background color,
-    // honor it directly. If it's the default background color, harmonize with
-    // the slide backdrop when available.
-    final Color bannerColor;
-    if (config.backgroundColor != const Color(0xFF0A1A18)) {
-      bannerColor = config.effectiveBackgroundColor;
-    } else if (projectionBackground != null) {
-      bannerColor = Color.alphaBlend(
-        projectionBackground!.withValues(alpha: 0.72),
-        Colors.black,
-      ).withValues(alpha: config.backgroundOpacity);
-    } else {
-      bannerColor = config.effectiveBackgroundColor;
-    }
+    final Color bannerColor = config.effectiveBackgroundColor;
 
     final shadows = isFloating
         ? [
@@ -129,7 +116,7 @@ class LowerThirdOverlay extends StatelessWidget {
                   },
                   child: KeyedSubtree(
                     key: ValueKey(
-                      '${item.id}_${config.style}_${config.height.round()}_${effectiveFontSize.round()}_${config.textColor.toARGB32()}_${config.fontFamily}',
+                      '${item.id}_${config.style}_${config.height.round()}_${effectiveFontSize.round()}_${config.textColor.toARGB32()}_${config.backgroundColor.toARGB32()}_${config.backgroundOpacity}_${config.fontFamily}',
                     ),
                     child: _MarqueeText(
                       text: item.text,

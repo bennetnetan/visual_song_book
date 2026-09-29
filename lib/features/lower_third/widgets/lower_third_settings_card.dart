@@ -124,7 +124,8 @@ class LowerThirdSettingsCard extends ConsumerWidget {
               for (final color in ProjectionAppearanceControls.palette)
                 _ColorDot(
                   color: color,
-                  isSelected: config.backgroundColor == color,
+                  isSelected:
+                      config.backgroundColor.toARGB32() == color.toARGB32(),
                   onTap: () => notifier.updateConfig(
                     config.copyWith(backgroundColor: color),
                   ),
@@ -283,7 +284,8 @@ class LowerThirdSettingsCard extends ConsumerWidget {
               for (final color in ProjectionAppearanceControls.palette)
                 _ColorDot(
                   color: color,
-                  isSelected: config.textColor == color,
+                  isSelected:
+                      config.textColor.toARGB32() == color.toARGB32(),
                   onTap: () =>
                       notifier.updateConfig(config.copyWith(textColor: color)),
                 ),
@@ -536,20 +538,39 @@ class _ColorDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    final theme = Theme.of(context);
+    final checkColor = ThemeData.estimateBrightnessForColor(color) ==
+            Brightness.dark
+        ? Colors.white
+        : Colors.black;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 28,
-        height: 28,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 36,
+        height: 36,
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,
           border: Border.all(
-            color: isSelected ? Colors.cyanAccent : Colors.white24,
-            width: isSelected ? 2.5 : 1.0,
+            color: isSelected ? theme.colorScheme.primary : Colors.white24,
+            width: isSelected ? 3.0 : 1.0,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.35),
+                    blurRadius: 6,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
         ),
+        child: isSelected
+            ? Icon(Icons.check, color: checkColor, size: 18)
+            : null,
       ),
     );
   }
