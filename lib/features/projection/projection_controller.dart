@@ -7,6 +7,7 @@ import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:screen_retriever/screen_retriever.dart';
 import 'package:visual_song_book/core/models/projection_mode.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/services/share_service.dart';
@@ -37,6 +38,12 @@ class ProjectionState {
   final String? bibleBookName;
   final ProjectionMode projectionMode;
 
+  /// When true, selecting any content to project (a history item, a search
+  /// pick, or a song/set from the song book) automatically opens the projector
+  /// window — the same result as pressing "Open Projector Output Window".
+  /// Defaults to true so operators never open it by hand.
+  final bool autoOpenProjector;
+
   ProjectionState({
     this.currentSong,
     required this.slides,
@@ -51,6 +58,7 @@ class ProjectionState {
     this.bibleChapter,
     this.bibleBookName,
     required this.projectionMode,
+    this.autoOpenProjector = true,
   });
 
   ProjectionState copyWith({
@@ -67,6 +75,7 @@ class ProjectionState {
     int? Function()? bibleChapter,
     String? Function()? bibleBookName,
     ProjectionMode? projectionMode,
+    bool? autoOpenProjector,
   }) {
     return ProjectionState(
       currentSong: currentSong != null ? currentSong() : this.currentSong,
@@ -83,6 +92,7 @@ class ProjectionState {
       bibleChapter: bibleChapter != null ? bibleChapter() : this.bibleChapter,
       bibleBookName: bibleBookName != null ? bibleBookName() : this.bibleBookName,
       projectionMode: projectionMode ?? this.projectionMode,
+      autoOpenProjector: autoOpenProjector ?? this.autoOpenProjector,
     );
   }
 
@@ -101,6 +111,7 @@ class ProjectionState {
       bibleChapter: null,
       bibleBookName: null,
       projectionMode: ProjectionMode.extended,
+      autoOpenProjector: true,
     );
   }
 
@@ -163,6 +174,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       final savedFontSize = _prefs?.getDouble('projection_font_size') ?? 40.0;
       final savedKeepAwake = _prefs?.getBool('projection_keep_awake') ?? true;
       final savedAutoChorus = _prefs?.getBool('projection_auto_chorus') ?? true;
+      // Auto-opening the projector window is on by default: operators expect
+      // projection to start the moment they pick content.
+      final savedAutoOpen = _prefs?.getBool('projection_auto_open') ?? true;
       final savedMode = _prefs?.getString('projection_mode') ?? 'extended';
       // 'duplicate' is not implemented yet — fall back to 'extended'.
       final effectiveMode =
@@ -175,6 +189,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         fontSize: savedFontSize,
         keepAwake: savedKeepAwake,
         autoInsertChorus: savedAutoChorus,
+        autoOpenProjector: savedAutoOpen,
         projectionMode: effectiveMode,
       );
 
@@ -210,6 +225,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       _songRepository.addToHistory(song.id);
     }
     _syncSecondaryWindow();
+    _triggerAutoProjection();
   }
 
   void clearSong() {
@@ -290,6 +306,19 @@ class ProjectionController extends StateNotifier<ProjectionState> {
   Future<void> setProjectionMode(ProjectionMode mode) async {
     state = state.copyWith(projectionMode: mode);
     await _prefs?.setString('projection_mode', mode.name);
+    // Switching to a multi-screen mode with auto-open enabled should start
+    // projecting immediately, mirroring "Show On" in PowerPoint.
+    _triggerAutoProjection();
+  }
+
+  /// Toggles whether picking content to project opens the projector window
+  /// automatically. On by default so the operator never opens it by hand.
+  Future<void> setAutoOpenProjector(bool enabled) async {
+    state = state.copyWith(autoOpenProjector: enabled);
+    await _prefs?.setBool('projection_auto_open', enabled);
+    if (enabled && state.slides.isNotEmpty) {
+      _triggerAutoProjection();
+    }
   }
 
   /// Project a list of Bible verses. [title] is the passage heading shown in
@@ -309,6 +338,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       bibleBookName: () => bookName,
     );
     _syncSecondaryWindow();
+    _triggerAutoProjection();
   }
 
   Future<void> _loadChapter(int bookId, int chapter, {int? targetVerse}) async {
@@ -336,6 +366,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
           bibleBookName: () => bookName,
         );
         _syncSecondaryWindow();
+        _triggerAutoProjection();
       }
     } finally {
       _isLoadingChapter = false;
@@ -426,6 +457,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     );
     ref.read(setRepositoryProvider).recordSetProjection(setId, setName);
     _syncSecondaryWindow();
+    _triggerAutoProjection();
   }
 
   bool _isCreatingWindow = false;
@@ -478,10 +510,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
 
       state = state.copyWith(isSecondaryWindowOpen: true);
 
-      // Auto-place on second screen and go fullscreen.
-      // We send an IPC message to the new window and handle it in
-      // _ProjectionOutputViewState._setupSecondaryWindowChannel().
-      // This is now triggered on the 'secondary_window_ready' handshake.
+      // Immediately position on secondary screen and go fullscreen.
+      // We also send IPC as a backup when secondary window signals ready.
+      await _placeOnSecondScreenAndFullscreen();
 
       // Do NOT start syncing immediately — the secondary window's IPC handler
       // is not registered yet. Instead, wait for the 'secondary_window_ready'
@@ -505,6 +536,45 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     // In 'single' mode the window stays a normal decorated window on the
     // primary display — no auto-move and no fullscreen.
     if (state.projectionMode == ProjectionMode.single) return;
+
+    // Use screen_retriever to find secondary display and send bounds via IPC
+    if (!(kIsWeb || Platform.isAndroid || Platform.isIOS)) {
+      try {
+        final displays = await screenRetriever.getAllDisplays();
+        _log.fine('Found ${displays.length} display(s)');
+        for (final d in displays) {
+          _log.fine('Display: ${d.name}, id: ${d.id}, size: ${d.size}, pos: ${d.visiblePosition}');
+        }
+
+        // Find a non-primary display (position != 0,0), or use the first if only one exists
+        Display? targetDisplay;
+        if (displays.length > 1) {
+          targetDisplay = displays.firstWhere(
+            (d) => d.visiblePosition != null && (d.visiblePosition!.dx != 0 || d.visiblePosition!.dy != 0),
+            orElse: () => displays.first,
+          );
+        } else if (displays.isNotEmpty) {
+          targetDisplay = displays.first;
+        }
+
+        if (targetDisplay != null) {
+          final pos = targetDisplay.visiblePosition ?? Offset.zero;
+          final size = targetDisplay.size;
+          _log.fine('Targeting display: ${targetDisplay.name} (id: ${targetDisplay.id}), pos: $pos, size: $size');
+          // Send display bounds to secondary window via IPC so it can position itself
+          await _secondaryWindow!.invokeMethod('set_window_bounds', {
+            'left': pos.dx,
+            'top': pos.dy,
+            'width': size.width,
+            'height': size.height,
+          });
+          _log.fine('Sent set_window_bounds IPC to secondary window: ${pos.dx}, ${pos.dy}, ${size.width}x${size.height}');
+        }
+      } catch (e, st) {
+        _log.warning('Failed to detect displays via screen_retriever: $e', e, st);
+      }
+    }
+
     try {
       await _secondaryWindow!.invokeMethod('go_fullscreen', {});
       _log.fine('Sent go_fullscreen IPC to secondary window.');
@@ -530,6 +600,54 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     if (context.mounted) {
       context.push('/projection');
     }
+  }
+
+  /// Opens the projector window automatically whenever projection content is
+  /// set — the "PowerPoint behaviour" the app needs so operators never drag
+  /// the output to the projector by hand, and never press the manual button.
+  ///
+  /// Fires from every content entry point (`setSong`, `setBiblePassage`,
+  /// `_loadChapter`/`projectVerse`, `projectSongSet`), which covers history
+  /// items, search picks, the song book and the Bible tab. The window is
+  /// placed and fullscreened natively by the platform runner (see
+  /// `_placeOnSecondScreenAndFullscreen` and the runner code), which prefers a
+  /// non-primary display when one is connected.
+  ///
+  /// Deliberately mode-agnostic: both `extended` and `single` open a window;
+  /// the mode only decides placement/fullscreen. Operators who prefer to open
+  /// it themselves can turn it off via `projection_auto_open`.
+  void _triggerAutoProjection() {
+    if (kIsWeb) return;
+    if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) return;
+    if (!state.autoOpenProjector) return;
+
+    // Already projecting — don't spawn a duplicate window.
+    if (state.isSecondaryWindowOpen) return;
+
+    // An explicit projection is already creating the window (e.g. SongsTab
+    // calling setSong then triggerProjection). Let that one win.
+    if (_isCreatingWindow) return;
+
+    // Never run this inside the secondary projection engine itself.
+    if (ref.read(isProjectionWindowProvider)) return;
+
+    // Defer so the caller's state update settles first and so a concurrent
+    // explicit `triggerProjection` can claim the creation guard.
+    Future.microtask(() async {
+      if (!state.autoOpenProjector) return;
+      if (state.isSecondaryWindowOpen || _isCreatingWindow) return;
+
+      try {
+        final opened = await openProjectorWindow();
+        if (opened) {
+          _log.fine('Auto-projection opened the projector output window.');
+          // Surface the projection controls so the operator sees the new state.
+          ref.read(activeDashboardTabProvider.notifier).state = 4;
+        }
+      } catch (e) {
+        _log.warning('Auto-projection failed: $e');
+      }
+    });
   }
 
   void setSecondaryWindowOpen(bool isOpen) {

@@ -26,19 +26,32 @@ class SettingsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    const radius = BorderRadius.all(Radius.circular(12));
     return Container(
       margin: EdgeInsets.zero,
-      decoration: BoxDecoration(
+      // The background lives on a Material, not on a DecoratedBox: ListTile
+      // and SwitchListTile rows inside this card paint their ink splashes on
+      // the nearest Material ancestor, so a coloured Container would hide
+      // them (Flutter's "ListTile background color or ink splashes may be
+      // invisible" assertion). The border stays on the transparent Container
+      // so the card looks exactly the same.
+      child: Material(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-          width: 1,
+        borderRadius: radius,
+        clipBehavior: Clip.antiAlias,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: child,
+          ),
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-        child: child,
       ),
     );
   }
@@ -147,6 +160,41 @@ class ProjectionPreferencesCard extends ConsumerWidget {
             ],
           ),
           if (isLargeScreen) ...[
+            const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Auto-Open Projector Window',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Start projecting as soon as you pick a song, '
+                        'history item or Bible passage',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: state.autoOpenProjector,
+                  onChanged: notifier.setAutoOpenProjector,
+                ),
+              ],
+            ),
             const SizedBox(height: 20),
             const Divider(),
             const SizedBox(height: 16),

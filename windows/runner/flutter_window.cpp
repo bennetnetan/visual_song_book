@@ -6,13 +6,48 @@
 #include "flutter/generated_plugin_registrant.h"
 #include <desktop_multi_window/desktop_multi_window_plugin.h>
 
+namespace {
+
+// Which monitor the projection output window should fill.
+struct MonitorChoice {
+  RECT primary_rect = {0, 0, 0, 0};
+  RECT secondary_rect = {0, 0, 0, 0};
+  bool has_primary = false;
+  bool has_secondary = false;
+};
+
+// Collects the primary monitor's rect and the first non-primary monitor's
+// rect. Needed because desktop_multi_window always creates its child window
+// near (10, 10) on the primary display, so we must move it ourselves.
+BOOL CALLBACK FindProjectionMonitorProc(HMONITOR monitor, HDC hdc,
+                                        LPRECT rect, LPARAM data) {
+  auto* choice = reinterpret_cast<MonitorChoice*>(data);
+  MONITORINFO info = {};
+  info.cbSize = sizeof(info);
+  if (!GetMonitorInfoW(monitor, &info)) {
+    return TRUE;
+  }
+  if (info.dwFlags & MONITORINFOF_PRIMARY) {
+    choice->primary_rect = info.rcMonitor;
+    choice->has_primary = true;
+  } else if (!choice->has_secondary) {
+    // First non-primary display wins.
+    choice->secondary_rect = info.rcMonitor;
+    choice->has_secondary = true;
+  }
+  return TRUE;
+}
+
+}  // namespace
+
 // ---------------------------------------------------------------------------
-// Secondary-window decoration removal
+// Secondary-window decoration removal and second-screen placement.
 // Called by desktop_multi_window whenever it creates a new child window.
-// We receive the FlutterViewController*; from its native view HWND we walk
-// up to the top-level Win32 window and strip the title bar / chrome before
-// Flutter renders a single frame — eliminating the title-bar flash seen when
-// the Dart-side Win32 calls arrive later.
+// desktop_multi_window positions its child window near (10, 10) with a
+// hardcoded 800x600 size, which always lands on the primary display. Before
+// stripping chrome we move the window onto the projector display (a
+// non-primary monitor when one is connected) and resize it to fill that
+// display exactly, so operators never have to drag it there by hand.
 // ---------------------------------------------------------------------------
 static void OnSecondaryWindowCreated(void* flutter_view_controller) {
   auto* vc =
@@ -30,21 +65,24 @@ static void OnSecondaryWindowCreated(void* flutter_view_controller) {
              WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
   SetWindowLongPtrW(toplevel, GWL_STYLE, style);
 
-  // Enter OS fullscreen on the monitor containing this window — mirrors
-  // Linux's gtk_window_fullscreen() in my_application.cc. The window
-  // manager places the window on whichever display desktop_multi_window
-  // assigned it to; we just fill that display.
-  HMONITOR hMon = MonitorFromWindow(toplevel, MONITOR_DEFAULTTONEAREST);
-  MONITORINFO mi = {};
-  mi.cbSize = sizeof(mi);
-  if (hMon && GetMonitorInfoW(hMon, &mi)) {
-    const RECT& rc = mi.rcMonitor;
-    SetWindowPos(toplevel, HWND_TOP,
-                 rc.left, rc.top,
-                 rc.right - rc.left, rc.bottom - rc.top,
+  // Prefer a non-primary display (the projector). Falls back to the primary
+  // display when only one monitor is connected.
+  MonitorChoice choice;
+  EnumDisplayMonitors(nullptr, nullptr, FindProjectionMonitorProc,
+                      reinterpret_cast<LPARAM>(&choice));
+
+  bool has_target = choice.has_secondary || choice.has_primary;
+  RECT target = choice.has_secondary ? choice.secondary_rect : choice.primary_rect;
+
+  // Cover the whole display (mirrors gtk_window_fullscreen on Linux and keeps
+  // the OS taskbar hidden behind the projection).
+  if (has_target && target.right > target.left &&
+      target.bottom > target.top) {
+    SetWindowPos(toplevel, HWND_TOP, target.left, target.top,
+                 target.right - target.left, target.bottom - target.top,
                  SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
   } else {
-    // Fallback: strip chrome only (no fullscreen).
+    // Fallback: strip chrome only (no geometry is known).
     SetWindowPos(toplevel, nullptr, 0, 0, 0, 0,
                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
                  SWP_NOOWNERZORDER | SWP_FRAMECHANGED);

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'package:go_router/go_router.dart';
 import 'package:visual_song_book/core/providers/app_providers.dart';
@@ -87,8 +88,30 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
         ref.read(isProjectionWindowProvider);
 
     if (isProjectionEngine) {
-      _setupSecondaryWindowChannel();
+      _initializeProjectionEngine();
     }
+  }
+
+  Future<void> _initializeProjectionEngine() async {
+    // Initialize window_manager for the projection engine so we can control
+    // fullscreen state when Dart-side IPC asks for it.
+    //
+    // NOTE: window_manager is only registered in secondary engines on Linux
+    // (the runner registers plugins there). On Windows and macOS the native
+    // runner already places + fullscreens the projection window, so this
+    // init is best-effort: it typically throws/fails there, which is expected.
+    // The timeout guarantees we never block the IPC channel setup on platforms
+    // where window_manager is unavailable.
+    try {
+      await windowManager.ensureInitialized().timeout(
+            const Duration(seconds: 2),
+          );
+      await windowManager.setTitle('Visual Song Book - Projection');
+    } catch (e) {
+      _log.fine('window_manager unavailable in projection engine (expected on '
+          'Windows/macOS): $e');
+    }
+    _setupSecondaryWindowChannel();
   }
 
   void _setupSecondaryWindowChannel() async {
@@ -150,6 +173,39 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
         setState(() {
           _ipcLowerThirdState = LowerThirdState.fromJson(args);
         });
+      } else if (call.method == 'go_fullscreen') {
+        if (!mounted) return null;
+        _log.fine('Received go_fullscreen IPC, entering fullscreen...');
+        try {
+          await windowManager.setFullScreen(true).timeout(
+                const Duration(seconds: 2),
+              );
+          _log.fine('Successfully entered fullscreen mode');
+        } catch (e, st) {
+          _log.fine('Fullscreen IPC skipped (window_manager unavailable?): $e',
+              e, st);
+        }
+      } else if (call.method == 'set_window_bounds') {
+        if (!mounted) return null;
+        final args = Map<String, dynamic>.from(call.arguments as Map);
+        _log.fine('Received set_window_bounds IPC: $args');
+        try {
+          final left = (args['left'] as num?)?.toDouble() ?? 0;
+          final top = (args['top'] as num?)?.toDouble() ?? 0;
+          final width = (args['width'] as num?)?.toDouble() ?? 800;
+          final height = (args['height'] as num?)?.toDouble() ?? 600;
+          await windowManager.setPosition(Offset(left, top)).timeout(
+                const Duration(seconds: 2),
+              );
+          await windowManager.setSize(Size(width, height)).timeout(
+                const Duration(seconds: 2),
+              );
+          _log.fine(
+              'Positioned window at ($left, $top) with size ${width}x$height');
+        } catch (e, st) {
+          _log.fine('set_window_bounds IPC skipped (window_manager '
+              'unavailable?): $e', e, st);
+        }
       }
       return 'OK';
     });

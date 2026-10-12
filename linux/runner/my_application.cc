@@ -1,6 +1,7 @@
 #include "my_application.h"
 
 #include <flutter_linux/flutter_linux.h>
+#include <gdk/gdk.h>
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
 #endif
@@ -25,6 +26,12 @@ static gboolean on_projection_delete_event(GtkWidget* widget,
 // Called for every secondary window created by desktop_multi_window.
 // Strips GTK window chrome and goes fullscreen so the projection output
 // window appears borderless on any connected display.
+//
+// desktop_multi_window never positions its child windows, so GTK places them
+// wherever it likes (typically the primary display). When a projector is
+// connected we move the window onto the non-primary monitor first and only
+// then fullscreen, so operators never drag the output to the second screen by
+// hand. Without a second display the original behaviour is preserved.
 static void on_window_created(FlPluginRegistry* registry) {
   fl_register_plugins(registry);
 
@@ -39,8 +46,30 @@ static void on_window_created(FlPluginRegistry* registry) {
                        G_CALLBACK(on_projection_delete_event), nullptr);
       // Strip title bar and resize borders from the projection window.
       gtk_window_set_decorated(window, FALSE);
-      // Enter OS fullscreen — GTK will place the window on whichever
-      // display it was assigned to by desktop_multi_window.
+
+      // Prefer a non-primary display (the projector). Falls back to the
+      // primary display when only one monitor is connected.
+      GdkDisplay* display = gtk_widget_get_display(toplevel);
+      GdkMonitor* projection_monitor = nullptr;
+      if (display != nullptr) {
+        int monitor_count = gdk_display_get_n_monitors(display);
+        if (monitor_count > 1) {
+          for (int i = 0; i < monitor_count; i++) {
+            GdkMonitor* monitor = gdk_display_get_monitor(display, i);
+            if (monitor == nullptr || gdk_monitor_is_primary(monitor)) continue;
+            projection_monitor = monitor;
+            break;
+          }
+        }
+      }
+
+      if (projection_monitor != nullptr) {
+        GdkRectangle geometry;
+        gdk_monitor_get_geometry(projection_monitor, &geometry);
+        gtk_window_move(window, geometry.x, geometry.y);
+      }
+
+      // Enter OS fullscreen — fills whichever display the window is on.
       gtk_window_fullscreen(window);
     }
   }

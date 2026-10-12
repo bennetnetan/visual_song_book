@@ -36,10 +36,12 @@ void main(List<String> args) async {
   // Classify the process args: desktop_multi_window spawns each secondary
   // window as a fresh engine with its own args. The projection engine is
   // launched with 'Projection Output:<mode>' (see ProjectionController).
-  // NOTE: window_manager and screen_retriever plugins are NOT registered in
-  // desktop_multi_window secondary engines. Any calls to them will fail
-  // silently. The secondary window handles its own fullscreen via
-  // ProjectionOutputView._goFullscreenOnBestDisplay() using Win32 APIs.
+  // NOTE: Only the Linux runner registers Dart plugins in desktop_multi_window
+  // secondary engines (fl_register_plugins in my_application.cc). On Windows
+  // and macOS the secondary engine has NO plugins registered, so window_manager
+  // / screen_retriever calls there fail silently (and are caught with timeouts).
+  // Second-screen placement + fullscreen is therefore done natively in each
+  // runner — see agents.md "Multi-Window Projection".
   final windowArgs = parseProjectionWindowArgs(args.isNotEmpty ? args.first : null);
   if (windowArgs.isProjectionWindow) {
     runApp(

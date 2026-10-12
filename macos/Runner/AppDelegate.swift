@@ -10,4 +10,10 @@ class AppDelegate: FlutterAppDelegate {
   override func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
     return true
   }
+
+  override func applicationDidFinishLaunching(_ notification: Notification) {
+    // Route every secondary (projection) window onto the projector display
+    // before desktop_multi_window shows it on the primary one.
+    MainFlutterWindow.registerProjectionWindowCallback()
+  }
 }

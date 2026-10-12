@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 
 
+import 'package:visual_song_book/features/bible/bible_controller.dart';
+import 'package:visual_song_book/features/history/history_controller.dart';
 import 'package:visual_song_book/features/lower_third/lower_third_controller.dart';
 import 'package:visual_song_book/features/lower_third/widgets/lower_third_overlay.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
@@ -19,13 +21,20 @@ import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 import 'package:visual_song_book/features/bible/bible_repository.dart';
-import 'package:visual_song_book/features/sets/sets_tab.dart';
+import 'package:visual_song_book/features/sets/sets_controller.dart';
+import 'package:visual_song_book/features/sets/sets_tab.dart' show setsControllerProvider;
 import 'package:visual_song_book/features/song_list/song_list_controller.dart';
 
 /// Persists the set-navigator collapsed/expanded state across widget-tree rebuilds
 /// (the panel moves between large-screen Row and small-screen Column, which would
 /// otherwise reset local widget state and reopen the panel on every rebuild).
 final _setNavigatorExpandedProvider = StateProvider<bool>((ref) => false);
+
+// Provider for the active history tab in projection view
+final _projectionHistoryTabProvider = StateProvider<HistoryTabType>((ref) => HistoryTabType.songs);
+
+// Provider for the sets drawer visibility
+final _setsDrawerOpenProvider = StateProvider<bool>((ref) => false);
 
 
 class ProjectionTab extends ConsumerStatefulWidget {
@@ -78,7 +87,7 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
     }
   }
 
-  @override
+@override
   Widget build(BuildContext context) {
     final state = ref.watch(projectionControllerProvider);
     final notifier = ref.read(projectionControllerProvider.notifier);
@@ -139,69 +148,77 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
               onTap: () => _projectionFocus.requestFocus(),
               child: !state.hasContent
               ? _EmptyProjectionState(
-                  onGoSongs: () {
-                    ref.read(activeDashboardTabProvider.notifier).state = 0;
-                  },
-                  onGoBible: () {
-                    ref.read(activeDashboardTabProvider.notifier).state = 2;
-                  },
                   notifier: notifier,
                   returnFocusTo: _projectionFocus,
+                  isLargeScreen: widget.isLargeScreen,
                 )
-              : Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header row
-                      _ProjectionHeader(state: state, notifier: notifier),
-                      const Divider(height: 32),
-                      // Main body: slide list + live preview
-                      Expanded(
-                        child: widget.isLargeScreen
-                            ? Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Left column: slide list + set navigator
-                                  Expanded(
-                                    flex: 2,
-                                    child: Column(
+              : Column(
+                  children: [
+                    // Top search bar - always visible
+                    _ProjectionSearchAnchor(
+                      notifier: notifier,
+                      returnFocusTo: _projectionFocus,
+                    ),
+                    const Divider(height: 1),
+                    // Main content
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Header row
+                            _ProjectionHeader(state: state, notifier: notifier),
+                            const Divider(height: 32),
+                            // Main body: slide list + live preview
+                            Expanded(
+                              child: widget.isLargeScreen
+                                  ? Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
+                                        // Left column: slide list + set navigator
                                         Expanded(
-                                          child: _SlideList(state: state, notifier: notifier),
+                                          flex: 2,
+                                          child: Column(
+                                            children: [
+                                              Expanded(
+                                                child: _SlideList(state: state, notifier: notifier),
+                                              ),
+                                              _SetNavigatorPanel(
+                                                state: state,
+                                                notifier: notifier,
+                                              ),
+                                            ],
+                                          ),
                                         ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          flex: 3,
+                                          child: _LivePreviewPanel(state: state, notifier: notifier, projectionFocus: _projectionFocus),
+                                        ),
+                                      ],
+                                    )
+                                  : Column(
+                                      children: [
+                                        _LivePreviewPanel(state: state, notifier: notifier, projectionFocus: _projectionFocus),
+                                        const SizedBox(height: 12),
                                         _SetNavigatorPanel(
                                           state: state,
                                           notifier: notifier,
                                         ),
+                                        const SizedBox(height: 8),
+                                        Expanded(
+                                          child: _SlideList(state: state, notifier: notifier),
+                                        ),
                                       ],
                                     ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    flex: 3,
-                                    child: _LivePreviewPanel(state: state, notifier: notifier, projectionFocus: _projectionFocus),
-                                  ),
-                                ],
-                              )
-                            : Column(
-                                children: [
-                                  _LivePreviewPanel(state: state, notifier: notifier, projectionFocus: _projectionFocus),
-                                  const SizedBox(height: 12),
-                                  _SetNavigatorPanel(
-                                    state: state,
-                                    notifier: notifier,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Expanded(
-                                    child: _SlideList(state: state, notifier: notifier),
-                                  ),
-                                ],
-                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
-              ),
+                    ),
+                  ],
+                ),
             ),
           ),
     );
@@ -212,25 +229,305 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
 // Empty state — guides user to Songs or Bible
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _EmptyProjectionState extends StatelessWidget {
-  final VoidCallback onGoSongs;
-  final VoidCallback onGoBible;
+class _EmptyProjectionState extends ConsumerWidget {
   final ProjectionController notifier;
   final FocusNode returnFocusTo;
+  final bool isLargeScreen;
 
   const _EmptyProjectionState({
-    required this.onGoSongs,
-    required this.onGoBible,
     required this.notifier,
     required this.returnFocusTo,
+    this.isLargeScreen = false,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final historyState = ref.watch(historyControllerProvider);
+    final selectedHistoryTab = ref.watch(_projectionHistoryTabProvider);
+    final setsState = ref.watch(setsControllerProvider);
+
+    // NOTE: `returnFocusTo` is owned by the parent ProjectionTab's Focus
+    // widget, so it must NOT be attached another Focus here (that throws
+    // "Tried to make a child into a parent of itself"). We only borrow it to
+    // hand focus back after the search dialog closes and on background taps.
+    return Scaffold(
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: returnFocusTo.requestFocus,
+        child: Column(
+          children: [
+            // Top search bar - always visible
+            _ProjectionSearchAnchor(
+              notifier: notifier,
+              returnFocusTo: returnFocusTo,
+            ),
+            const Divider(height: 1),
+            // Main content area
+            Expanded(
+              child: isLargeScreen
+                  ? Row(
+                      children: [
+                        // Left sidebar: History tabs
+                        _buildHistorySidebar(context, ref, historyState, selectedHistoryTab),
+                        const VerticalDivider(width: 1, thickness: 1),
+                        // Center: Empty state message + Sets button
+                        Expanded(
+                          child: _buildEmptyCenterContent(context, ref, setsState),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        // History tabs as horizontal tab bar
+                        _buildHistoryTabsBar(context, ref, selectedHistoryTab),
+                        const Divider(height: 1),
+                        // History content
+                        Expanded(
+                          child: _buildHistoryContent(context, ref, historyState, selectedHistoryTab),
+                        ),
+                        // Sets button at bottom
+                        if (setsState.selectedSetId != null && setsState.setItems.isNotEmpty)
+                          _buildSetsButton(context, ref, setsState),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistorySidebar(BuildContext context, WidgetRef ref, HistoryState historyState, HistoryTabType selectedTab) {
+    final setsState = ref.watch(setsControllerProvider);
+    return SizedBox(
+      width: 280,
+      child: Column(
+        children: [
+          // History tabs
+          _buildHistoryTabsBar(context, ref, selectedTab),
+          const Divider(height: 1),
+          // History content
+          Expanded(
+            child: _buildHistoryContent(context, ref, historyState, selectedTab),
+          ),
+          // Sets button at bottom of sidebar
+          if (setsState.selectedSetId != null && setsState.setItems.isNotEmpty)
+            _buildSetsButton(context, ref, setsState),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryTabsBar(BuildContext context, WidgetRef ref, HistoryTabType selectedTab) {
+    final theme = Theme.of(context);
+    // One accent hue per tab: Songs = primary, Bible = tertiary, Sets =
+    // secondary. The existing search toggle already uses primary/tertiary for
+    // songs/bible, so the colour language stays consistent across the page.
+    final songAccent = theme.colorScheme.primary;
+    final bibleAccent = theme.colorScheme.tertiary;
+    final setAccent = theme.colorScheme.secondary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Row(
+        children: [
+          _HistoryTabButton(
+            label: 'Songs',
+            icon: Icons.music_note,
+            isSelected: selectedTab == HistoryTabType.songs,
+            onTap: () => ref.read(_projectionHistoryTabProvider.notifier).state = HistoryTabType.songs,
+            count: ref.watch(historyControllerProvider.select((s) => s.songs.length)),
+            accentColor: songAccent,
+          ),
+          _HistoryTabButton(
+            label: 'Bible',
+            icon: Icons.menu_book,
+            isSelected: selectedTab == HistoryTabType.bible,
+            onTap: () => ref.read(_projectionHistoryTabProvider.notifier).state = HistoryTabType.bible,
+            count: ref.watch(historyControllerProvider.select((s) => s.bible.length)),
+            accentColor: bibleAccent,
+          ),
+          if (isLargeScreen)
+            _HistoryTabButton(
+              label: 'Sets',
+              icon: Icons.playlist_play,
+              isSelected: selectedTab == HistoryTabType.sets,
+              onTap: () => ref.read(_projectionHistoryTabProvider.notifier).state = HistoryTabType.sets,
+              count: ref.watch(historyControllerProvider.select((s) => s.sets.length)),
+              accentColor: setAccent,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryContent(BuildContext context, WidgetRef ref, HistoryState historyState, HistoryTabType tab) {
+    final theme = Theme.of(context);
+    // Cached set state so the Sets history tab can project without a pop —
+    // this list is inline in the dashboard, not a modal route.
+    final setsState = ref.watch(setsControllerProvider);
+
+    switch (tab) {
+      case HistoryTabType.songs:
+        return historyState.songs.isEmpty
+            ? _emptyState(context, 'song', Icons.library_music_outlined)
+            : ListView.builder(
+                padding: const EdgeInsets.only(top: 8, bottom: 24),
+                itemCount: historyState.songs.length,
+                itemBuilder: (context, index) {
+                  final song = historyState.songs[index];
+                  return ListTile(
+                    dense: true,
+                    leading: Icon(Icons.music_note, size: 18, color: theme.colorScheme.primary),
+                    title: Text(
+                      song.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    subtitle: song.songNum > 0
+                        ? Text('#${song.songNum}', style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant))
+                        : null,
+                    onTap: () {
+                      // setSong triggers auto-projection, which swaps this
+                      // empty view for the active projection controls.
+                      ref.read(projectionControllerProvider.notifier).setSong(song);
+                    },
+                  );
+                },
+              );
+      case HistoryTabType.bible:
+        return historyState.bible.isEmpty
+            ? _emptyState(context, 'bible', Icons.menu_book_outlined)
+            : ListView.builder(
+                padding: const EdgeInsets.only(top: 8, bottom: 24),
+                itemCount: historyState.bible.length,
+                itemBuilder: (context, index) {
+                  final item = historyState.bible[index];
+                  return ListTile(
+                    dense: true,
+                    leading: Icon(Icons.menu_book, size: 18, color: theme.colorScheme.tertiary),
+                    title: Text(
+                      item.reference,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    subtitle: Text(
+                      item.passage,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
+                    ),
+                    onTap: () async {
+                      final repo = ref.read(bibleRepositoryProvider);
+                      final notifier = ref.read(bibleControllerProvider.notifier);
+                      final colonIdx = item.reference.lastIndexOf(':');
+                      String bookChapter;
+                      int? verseNum;
+                      if (colonIdx > 0) {
+                        bookChapter = item.reference.substring(0, colonIdx);
+                        verseNum = int.tryParse(item.reference.substring(colonIdx + 1));
+                      } else {
+                        bookChapter = item.reference;
+                      }
+                      final spaceIdx = bookChapter.lastIndexOf(' ');
+                      if (spaceIdx > 0) {
+                        final bookName = bookChapter.substring(0, spaceIdx);
+                        final chapterNum = int.tryParse(bookChapter.substring(spaceIdx + 1));
+                        if (chapterNum != null) {
+                          final book = await repo.getBookByName(bookName);
+                          if (book != null) {
+                            if (verseNum != null) {
+                              await notifier.navigateToVerse(book.id, chapterNum, verseNum);
+                            } else {
+                              await notifier.selectBook(book.id);
+                              await notifier.selectChapter(chapterNum);
+                            }
+                            // Project the verse (auto-projection triggered inside projectVerse)
+                            ref.read(projectionControllerProvider.notifier).projectVerse(
+                              book.id, chapterNum, verseNum ?? 1, bookName,
+                            );
+                          }
+                        }
+                      }
+                    },
+                  );
+                },
+              );
+      case HistoryTabType.sets:
+        return historyState.sets.isEmpty
+            ? _emptyState(context, 'set', Icons.queue_music_outlined)
+            : ListView.builder(
+                padding: const EdgeInsets.only(top: 8, bottom: 24),
+                itemCount: historyState.sets.length,
+                itemBuilder: (context, index) {
+                  final item = historyState.sets[index];
+                  return ListTile(
+                    dense: true,
+                    leading: Icon(Icons.playlist_play, size: 18, color: theme.colorScheme.primary),
+                    title: Text(
+                      item.setName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    subtitle: Text(_formatDate(item.accessedAt), style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+                    onTap: () {
+                      // Selecting keeps the set navigator in sync, and
+                      // projectSongSet triggers auto-projection.
+                      ref.read(setsControllerProvider.notifier).selectSet(item.setId);
+                      final setObj = historyState.sets.isEmpty
+                          ? null
+                          : setsState.sets
+                              .where((s) => s.id == item.setId)
+                              .firstOrNull;
+                      final items = setsState.setItems;
+                      if (setObj == null || items.isEmpty) return;
+                      ref.read(projectionControllerProvider.notifier).projectSongSet(
+                        setObj.id,
+                        setObj.name,
+                        items,
+                      );
+                    },
+                  );
+                },
+              );
+      case HistoryTabType.bookmarks:
+        return historyState.bookmarks.isEmpty
+            ? _emptyState(context, 'bookmark', Icons.bookmark_outline)
+            : ListView.builder(
+                padding: const EdgeInsets.only(top: 8, bottom: 24),
+                itemCount: historyState.bookmarks.length,
+                itemBuilder: (context, index) {
+                  final item = historyState.bookmarks[index];
+                  return ListTile(
+                    dense: true,
+                    leading: Icon(Icons.bookmark, size: 18, color: theme.colorScheme.primary),
+                    title: Text(item.reference, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
+                    subtitle: Text(item.verseText, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant)),
+                    onTap: () async {
+                      final repo = ref.read(bibleRepositoryProvider);
+                      final notifier = ref.read(bibleControllerProvider.notifier);
+                      final book = await repo.getBookByName(item.bookName);
+                      if (book != null) {
+                        await notifier.navigateToVerse(book.id, item.chapter, item.verseNum);
+                        ref.read(projectionControllerProvider.notifier).projectVerse(
+                          book.id, item.chapter, item.verseNum, item.bookName,
+                        );
+                      }
+                    },
+                  );
+                },
+              );
+    }
+  }
+
+  Widget _buildEmptyCenterContent(BuildContext context, WidgetRef ref, SetsState setsState) {
     final theme = Theme.of(context);
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
+        constraints: const BoxConstraints(maxWidth: 400),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -246,43 +543,22 @@ class _EmptyProjectionState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Project a song or Bible passage to get started.',
+              'Select a song, Bible passage, or set from the history to start projecting.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 16),
-            _ProjectionSearchAnchor(
-              notifier: notifier,
-              returnFocusTo: returnFocusTo,
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton.icon(
-                    icon: const Icon(Icons.music_note, size: 18),
-                    label: const Text('Browse Songs'),
-                    onPressed: onGoSongs,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
+            if (setsState.selectedSetId != null && setsState.setItems.isNotEmpty)
+              OutlinedButton.icon(
+                icon: const Icon(Icons.playlist_play, size: 18),
+                label: const Text('Open Set'),
+                onPressed: () => _showSetsDrawer(context, ref, setsState),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton.tonalIcon(
-                    icon: const Icon(Icons.menu_book, size: 18),
-                    label: const Text('Open Bible'),
-                    onPressed: onGoBible,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
             const SizedBox(height: 12),
             Text(
               'Tip: Use ↑ ↓ ← → or Space to navigate slides.',
@@ -291,6 +567,317 @@ class _EmptyProjectionState extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSetsButton(BuildContext context, WidgetRef ref, SetsState setsState) {
+    final theme = Theme.of(context);
+    final setObj = setsState.sets
+        .where((s) => s.id == setsState.selectedSetId)
+        .firstOrNull;
+    if (setObj == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          icon: const Icon(Icons.playlist_play, size: 18),
+          label: Text('SET: ${setObj.name} (${setsState.setItems.length} songs)'),
+          onPressed: () => _showSetsDrawer(context, ref, setsState),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            side: BorderSide(color: theme.colorScheme.primary),
+            foregroundColor: theme.colorScheme.primary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showSetsDrawer(BuildContext context, WidgetRef ref, SetsState setsState) {
+    ref.read(_setsDrawerOpenProvider.notifier).state = true;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  Icon(Icons.playlist_play, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      setsState.sets
+                          .where((s) => s.id == setsState.selectedSetId)
+                          .firstOrNull
+                          ?.name ?? 'Set',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Text(
+                    '${setsState.setItems.length} songs',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.5,
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: setsState.setItems.length,
+                  itemBuilder: (context, i) {
+                    final item = setsState.setItems[i];
+                    final song = setsState.availableSongs
+                        .where((s) => s.id == item.songId)
+                        .firstOrNull;
+                    if (song == null) return const SizedBox.shrink();
+
+                    final projectionState = ref.read(projectionControllerProvider);
+                    final isCurrentSong = projectionState.currentSong?.id == song.id;
+                    final keyText = item.key ?? song.key;
+
+                    return ListTile(
+                      dense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      leading: CircleAvatar(
+                        radius: 12,
+                        backgroundColor: isCurrentSong
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.surfaceContainerHighest,
+                        child: Text(
+                          '${i + 1}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isCurrentSong
+                                ? Theme.of(context).colorScheme.onPrimary
+                                : Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      title: Text(
+                        song.title,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: isCurrentSong ? FontWeight.bold : FontWeight.w500,
+                          color: isCurrentSong ? Theme.of(context).colorScheme.primary : null,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: item.notes != null && item.notes!.isNotEmpty
+                          ? Text(
+                              '📝 ${item.notes!}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontStyle: FontStyle.italic,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            )
+                          : null,
+                      trailing: keyText != null && keyText.isNotEmpty
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.6),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                keyText,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                ),
+                              ),
+                            )
+                          : null,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        ref.read(projectionControllerProvider.notifier).setSong(song);
+                        // Auto-projection triggered inside setSong
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).whenComplete(() => ref.read(_setsDrawerOpenProvider.notifier).state = false);
+  }
+
+  Widget _emptyState(BuildContext context, String type, IconData icon) {
+    final theme = Theme.of(context);
+    final label = type == 'set'
+        ? 'Sets'
+        : type == 'bible'
+        ? 'Bible passages'
+        : type == 'bookmark'
+        ? 'Bookmarks'
+        : 'Songs';
+    final message = type == 'bookmark'
+        ? 'No bookmarks saved yet.'
+        : 'No $label projected yet.';
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            size: 48,
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 14,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} '
+        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+class _HistoryTabButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final int count;
+
+  /// Accent colour for this tab. The three history tabs (Songs / Bible / Sets)
+  /// each get their own hue so they read apart at a glance on the projection
+  /// controls — a soft tint when idle and a saturated one when selected.
+  final Color accentColor;
+
+  const _HistoryTabButton({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+    required this.count,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        decoration: BoxDecoration(
+          color: accentColor.withValues(alpha: isSelected ? 0.20 : 0.07),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: accentColor.withValues(alpha: isSelected ? 0.55 : 0.14),
+            width: isSelected ? 1.4 : 1,
+          ),
+        ),
+        child: TextButton(
+          onPressed: onTap,
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            // Transparent so the container's accent tint shows through.
+            backgroundColor: Colors.transparent,
+            foregroundColor: accentColor,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          // mainAxisSize.min keeps the row from demanding its full constraint,
+          // and the Flexible label ellipsizes instead of overflowing when the
+          // three history tabs are squeezed into a narrow viewport.
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: isSelected
+                    ? accentColor
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected
+                        ? accentColor
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: isSelected ? 0.22 : 0.10),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  count.toString(),
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected
+                        ? accentColor
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1538,7 +2125,10 @@ class _ProjectionSearchAnchor extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            isBible ? 'Search Bible' : 'Search Songs',
+            // Neutral wording — the avatar icon and colour still show which
+            // source is active, and the search page has its own Bible/Songs
+            // toggle, so "Search Songs"/"Search Bible" was redundant here.
+            'Search',
             style: TextStyle(
               color: color,
               fontWeight: FontWeight.bold,
@@ -1553,7 +2143,7 @@ class _ProjectionSearchAnchor extends ConsumerWidget {
       side: BorderSide(color: color.withValues(alpha: 0.4)),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       padding: EdgeInsets.zero,
-      tooltip: isBible ? 'Search Bible' : 'Search Songs',
+      tooltip: 'Search songs and Bible',
     );
   }
 }

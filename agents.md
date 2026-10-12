@@ -50,7 +50,15 @@ lib/features/
 - Desktop: `desktop_multi_window` spawns a secondary engine with args `'Projection Output:<mode>'`.
 - IPC between main ↔ secondary via `WindowController.invokeMethod` / `setWindowMethodHandler`.
 - `main.dart` detects projection window args and runs a stripped-down `MaterialApp.router` with `projectionRouter`.
-- Secondary window goes fullscreen via Win32 FFI on Windows, GTK on Linux.
+
+**Auto-projection to the second screen (PowerPoint-style):**
+- Setting any content (`setSong`, `setBiblePassage`, `projectVerse`/`_loadChapter`, `projectSongSet`) calls `_triggerAutoProjection()`, which opens the projector window automatically. Only fires on desktop, in `ProjectionMode.extended`, and **only when a non-primary display is connected** (checked via `screen_retriever`), so single-display users keep control of their screen.
+- **Native placement is the primary mechanism** because `desktop_multi_window` hardcodes its child window origin/size (Win32: `origin(10,10)`/`800x600`; macOS: `NSRect(0,0,800,600)`), which always lands on the primary display:
+  - **Windows** — `windows/runner/flutter_window.cpp` `OnSecondaryWindowCreated()` enumerates monitors with `EnumDisplayMonitors`, prefers a non-primary one, and fills it via `SetWindowPos`.
+  - **Linux** — `linux/runner/my_application.cc` `on_window_created()` uses `gdk_display_get_monitor`/`gdk_monitor_get_geometry` to move the window before `gtk_window_fullscreen`.
+  - **macOS** — `macos/Runner/MainFlutterWindow.swift` registers `FlutterMultiWindowPlugin.setOnWindowCreatedCallback` (from `AppDelegate.applicationDidFinishLaunching`) to pick a non-primary `NSScreen` and fill it borderless. `window_manager` is **not** registered in secondary engines here, so the native path is the only reliable one.
+- **Dart-side IPC is a secondary mechanism**: `set_window_bounds` + `go_fullscreen` are forwarded to the secondary engine. It only succeeds on Linux (the only runner that calls `fl_register_plugins` in secondary engines); calls are wrapped in try/catch **with a 2s timeout** so they fail safely on Windows/macOS.
+- If no second display is detected, auto-projection is skipped and the operator can still use the manual "Open Projector Output Window" button in the Projection controls app bar.
 
 ### Routing
 - **GoRouter** with 3 routes: `/` (dashboard), `/projection`, `/song-editor`.
@@ -123,6 +131,7 @@ lib/features/
 
 ### Runtime Issues
 - **Projection window not opening**: On Linux, the secondary window can't close itself (would crash). It asks the main window to close it via IPC.
+- **Projection opens on the wrong screen**: Placement is native per-runner. Check `OnSecondaryWindowCreated` (Windows), `on_window_created` (Linux), or `MainFlutterWindow.placeProjectionWindowOnSecondScreen` (macOS). Auto-projection also requires ≥2 displays in `Settings → Projection → Extended` mode; with one display it is intentionally skipped.
 - **Stale set selection**: If a set is deleted externally, `SetsController` auto-clears stale `selectedSetId` to prevent crashes.
 - **Bible DB validation**: On startup, the app checks if `cross_references` table exists. If missing, it re-copies the bundled DB.
 - **Seed marker drift**: If DB file is recreated while SharedPreferences still says 'seeded', the app detects empty DB and re-seeds.
@@ -148,6 +157,8 @@ lib/features/
 - **Media rotation**: Per-slide, timed, manual modes
 - **IPC**: Main window ↔ secondary via `desktop_multi_window`
 - **Theme sync**: `ProjectionThemeNotifier` persists appearance settings
+- **Auto-project**: Content setters (`setSong`, `setBiblePassage`, `projectVerse`, `projectSongSet`) auto-open the projector window on the second screen. Gated on `ProjectionMode.extended` + an existing non-primary display — see "Multi-Window Projection" above.
+- **Empty projection page**: Search anchor is pinned at the top; below it are history tabs (Songs / Bible / Sets on desktop) fed by `HistoryController` (projected items only). The old "Browse Songs" / "Open Bible" buttons were removed. The active history tab persists in `_projectionHistoryTabProvider`; the Sets bottom-sheet visibility is tracked in `_setsDrawerOpenProvider`.
 - **Search**: Opens as centered dialog (`showDialog`), not fullscreen page. Uses `SearchBar` with keyboard navigation (arrow keys + Enter)
 - **Focus management**: Search dialog returns focus to `returnFocusTo` widget on close
 
