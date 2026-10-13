@@ -57,9 +57,10 @@ jobs:
           - os: macos-latest
             name: macos
             command: flutter build macos --release
-            # The Xcode target is `Runner`, so the bundle is Runner.app —
-            # not the pub package name.
-            path: build/macos/Build/Products/Release/Runner.app
+            # Flutter writes ephemeral/.app_filename with the real bundle name,
+            # which is the pub project name — not the Xcode target name, so it
+            # is visual_song_book.app and not Runner.app.
+            path: build/macos/Build/Products/Release/visual_song_book.app
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
