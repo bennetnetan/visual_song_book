@@ -2,6 +2,29 @@
 
 All notable changes to Visual Song Book are documented here. Newest first.
 
+## [2.4.0] - 2026-10-13
+
+### Features
+- **Projection** — the projector window now opens by itself when content is projected. Picking a history item, searching, or projecting from the song book, Bible or Sets opens it with no manual step; toggleable in Settings → Projection
+- **Projection** — output is placed on the second screen and fullscreened natively on Windows, Linux and macOS. `desktop_multi_window` hardcodes its child window on the primary display, so each runner now prefers a non-primary monitor
+- **Projection** — redesigned empty page: search is embedded in the window as a focused field instead of a chip that opens a dialog, with results rendered in place
+- **Projection** — Songs / Bible / Sets history tabs of already-projected items, each with its own accent colour, plus a Sets bottom sheet showing track, key and notes
+- **Projection** — explicit Search / History tabs on narrow screens, where there is no room for a rail beside the field
+- **Search** — `*` matches any run of characters and `?` exactly one. A literal `%`, `_` or `\` is escaped so it matches as itself
+- **Search** — song and verse results are paged 10 at a time with a "Load more" button, so a common word in a large songbook no longer loads every match at once
+
+### Bug Fixes
+- **Projection** — the space bar and Enter now work while typing in the search field. The slide-advance shortcuts were consuming keys meant for the text field
+- **Projection** — replacing the search popup fixes a crash where selecting a history item popped the dashboard's only route
+- **Projection** — fixed an `Expanded` placed directly under a `GestureDetector` in the active controls
+- **Sets** — duplicating, JSON-importing or plain-text-importing a set lost the selection, because `selectSet` validated against a stream list that had not emitted the new set yet
+- **Settings** — `SettingsCard` painted its background on a `Container`, hiding ListTile ink splashes; the background moved to a `Material`
+
+### Internal
+- Split `projection_tab.dart` (3368 lines), `settings_cards.dart`, `settings_tab.dart`, `projection_appearance_widgets.dart`, the bible search widgets and `projection_controller.dart` into focused modules
+- Windows installer (`installer/windows/setup.iss`) with a welcome/licence/location/finish wizard and a VC++ runtime check
+- Fixed CI artifact paths, which pointed at directories Flutter does not write to, so Windows, macOS and the installer were never published
+
 ## [2.3.0] - 2026-09-29
 
 ### Features

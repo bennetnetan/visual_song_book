@@ -17,6 +17,21 @@ class _ChangelogCardState extends State<ChangelogCard> {
     final theme = Theme.of(context);
     final recentEntries = [
       const _ChangelogEntryWidget(
+        version: 'v2.4.0',
+        date: '2026-10-13',
+        changes: [
+          'Projection: projector window opens by itself when content is projected — no manual button',
+          'Projection: output is placed and fullscreened on the second screen by the platform (Windows, Linux, macOS)',
+          'Projection: redesigned empty page with search in the window instead of a popup, plus Songs/Bible/Sets history',
+          'Projection: history tabs colour-coded; Search/History tabs on narrow screens',
+          'Search: * matches any run of characters, ? exactly one; literal % and _ are escaped',
+          'Search: results paged 10 at a time with "Load more" so broad queries stay manageable',
+          'Search: space bar and Enter now work while typing in the search field',
+          'Sets: fixed duplicating and importing a set losing the selection',
+          'Windows: installer with a proper wizard, VC++ runtime check, and release builds for all platforms',
+        ],
+      ),
+      const _ChangelogEntryWidget(
         version: 'v2.3.0',
         date: '2026-09-29',
         changes: [

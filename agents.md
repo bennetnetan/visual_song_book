@@ -187,6 +187,7 @@ their own file here rather than growing any single file past ~500 lines:
 - **Result rendering is shared** by the inline search and the dialog: `ProjectionSearchResultsList` plus `composeSearchResults` / `countSearchResults` / `shareSearchItem`. Add new result behaviour there, not in either widget.
 - **Chunked results**: both modes page their results `ProjectionSearchState.pageSize` (10) at a time via `LIMIT/OFFSET`, then append on `loadMoreBible()` / `loadMoreSongs()`. Without this a common word in a large songbook matched every song and loaded every body at once. `HighlightedText.maxLines` caps preview text (3 lines for verse text, 2 for titles) so long passages stay readable.
 - **Search**: results are debounced 250 ms and cached per query string per mode; pressing Enter projects the highlighted row (via `SearchBar.onSubmitted` — an ancestor `Focus` never sees Enter because a single-line field consumes it), ↑/↓ move the selection. When querying songs directly use `SongRepository.searchSongs(limit:, offset:)` together with `countSearchSongs`; both share `_searchPredicate` so a count can never drift from the results it pages.
+- **Wildcard search**: `*` matches any run of characters and `?` exactly one. `core/utils/search_pattern.dart` translates them into a LIKE pattern and escapes any `%`, `_` or `\` the user typed so those match as themselves. Wildcards always compose with substring search rather than replacing it, because both repositories wrap the pattern in `%...%` — so `Grac?` matches anything containing "Grac" plus one character, not only whole words. Never build a LIKE pattern from user input by hand.
 - **Keyboard ownership**: `ProjectionTab._handleProjectionKeys` owns space / arrows / page up-down / escape for slide navigation, but bails out whenever a text field has focus (`_isTextEditing`). Without that guard an ancestor consuming the key stops the focused field from ever receiving it, so the inline search could not accept a space bar and the arrows advanced slides instead of moving the caret. If you add another keyboard shortcut to the projection controls, add the same guard first.
 
 ---
@@ -230,7 +231,7 @@ Windows hosts". Desktop release artifacts are therefore built by CI.
 
 ### Releases & the Windows installer
 Releases are produced by `.github/workflows/ci.yml` when a `v*.*.*` tag is
-pushed (`git tag v2.3.0 && git push --tags`):
+pushed (`git tag v2.4.0 && git push --tags`):
 
 | Job | Runner | Produces |
 |---|---|---|

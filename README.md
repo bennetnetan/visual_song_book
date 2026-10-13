@@ -124,7 +124,17 @@ See [docs/SUPPORTED_PLATFORMS.md](docs/SUPPORTED_PLATFORMS.md) for details.
 
 ## Version
 
-Current: **v2.3.0** — see About → Changelog in the app for full history.
+Current: **v2.4.0** — see About → Changelog in the app for full history.
+
+### v2.4.0 Changes
+- Projection opens automatically: picking a song, Bible passage or set opens the projector window without any manual button
+- Projection output is placed and fullscreened on the second screen by each platform (Windows, Linux, macOS)
+- Redesigned empty projection page: search embedded in the window (no popup) with Songs/Bible/Sets history tabs and a Sets sheet
+- Wildcard search: `*` matches any run of characters, `?` exactly one; literal `%` and `_` are escaped
+- Search results paged 10 at a time with "Load more", keeping broad queries manageable
+- Fixed the space bar and Enter while typing in the search field
+- Fixed duplicating or importing a set losing the selection
+- Windows installer with a real wizard, VC++ runtime check, and release builds for all platforms
 
 ### v2.3.0 Changes
 - Lower thirds live announcement carousel overlay for projection (full-width banner + floating pill styles)
