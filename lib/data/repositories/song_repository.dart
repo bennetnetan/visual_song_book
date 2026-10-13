@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:visual_song_book/core/models/source_mode.dart';
+import 'package:visual_song_book/core/utils/search_pattern.dart';
 import 'package:visual_song_book/data/db/songbook_db.dart';
 
 class SongRepository {
@@ -40,14 +41,21 @@ class SongRepository {
 
   /// The search predicate, shared by `searchSongs` and `countSearchSongs`
   /// so the count can never drift from the results it pages.
+  ///
+  /// Supports `*` (any run of characters) and `?` (exactly one character)
+  /// via [buildWildcardLikePattern]; typing `%` or `_` matches those
+  /// characters literally.
   Expression<bool> _searchPredicate(Songs t, String query, String? sourcePath, SourceMode? sourceMode) {
-    final matchQuery = '%${query.trim().toLowerCase()}%';
-    final songNumInt = int.tryParse(query.trim());
+    final trimmed = query.trim();
+    // Wrapped in %...% so a plain word still matches a substring, which is what
+    // operators expect before they learn about the wildcards.
+    final matchPattern = '%${buildWildcardLikePattern(trimmed)}%';
+    final songNumInt = int.tryParse(trimmed);
 
-    Expression<bool> searchExpr = t.title.lower().like(matchQuery) |
-        t.body.lower().like(matchQuery) |
-        t.author.lower().like(matchQuery) |
-        t.search.lower().like(matchQuery);
+    Expression<bool> searchExpr = t.title.lower().like(matchPattern, escapeChar: likeEscapeChar) |
+        t.body.lower().like(matchPattern, escapeChar: likeEscapeChar) |
+        t.author.lower().like(matchPattern, escapeChar: likeEscapeChar) |
+        t.search.lower().like(matchPattern, escapeChar: likeEscapeChar);
 
     if (songNumInt != null) {
       searchExpr = searchExpr | t.songNum.equals(songNumInt);

@@ -102,9 +102,9 @@ class ProjectionSearchResultsList extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                searchState.isBibleMode
-                    ? 'Type a verse or reference, e.g. "John 3:16"'
-                    : 'Type a song title or lyric to project',
+                    searchState.isBibleMode
+                    ? 'Type a verse, reference, or words — "amaz*", "gr?ce"'
+                    : 'Type a song title or lyric — "*" matches anything, "?" one character',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,

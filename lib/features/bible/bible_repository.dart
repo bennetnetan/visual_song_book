@@ -1,3 +1,5 @@
+import 'package:visual_song_book/core/utils/search_pattern.dart';
+
 import 'package:visual_song_book/data/db/bible_db.dart';
 
 class BibleBook {
@@ -148,9 +150,9 @@ class BibleRepository {
 
   Future<int> countSearchResults(String query) async {
     if (query.trim().isEmpty) return 0;
-    final like = '%${query.trim()}%';
+    final like = '%${buildWildcardLikePattern(query.trim())}%';
     final rows = await _db.queryAsync(
-      'SELECT COUNT(*) as cnt FROM verses v WHERE v.text LIKE ?',
+      'SELECT COUNT(*) as cnt FROM verses v WHERE v.text LIKE ? ESCAPE \'$likeEscapeChar\'',
       [like],
     );
     return (rows.first['cnt'] as int?) ?? 0;
@@ -158,13 +160,13 @@ class BibleRepository {
 
   Future<List<BibleVerse>> searchVersesPaginated(String query, int limit, int offset) async {
     if (query.trim().isEmpty) return [];
-    final like = '%${query.trim()}%';
+    final like = '%${buildWildcardLikePattern(query.trim())}%';
     final rows = await _db.queryAsync(
       '''
       SELECT v.id, v.book_id, v.chapter, v.verse, v.text, b.name as book_name
       FROM verses v
       JOIN books b ON b.id = v.book_id
-      WHERE v.text LIKE ?
+      WHERE v.text LIKE ? ESCAPE '$likeEscapeChar'
       ORDER BY v.book_id, v.chapter, v.verse
       LIMIT ? OFFSET ?
     ''',
