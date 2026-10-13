@@ -12,6 +12,8 @@ import 'package:visual_song_book/core/providers/app_providers.dart';
 import 'package:visual_song_book/core/utils/app_logger.dart';
 import 'package:visual_song_book/core/widgets/shared_bible_widgets.dart';
 import 'package:visual_song_book/features/projection/projection_appearance_widgets.dart';
+import 'package:visual_song_book/features/projection/projection_media_backgrounds.dart';
+import 'package:visual_song_book/features/projection/projection_preview.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
 import 'package:visual_song_book/features/lower_third/lower_third_controller.dart';
 import 'package:visual_song_book/features/lower_third/lower_third_state.dart';
