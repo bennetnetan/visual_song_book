@@ -36,7 +36,9 @@
 #define MyAppURL "https://github.com/bennetnetan/visual_song_book"
 #define MyAppExeName "visual_song_book.exe"
 ; Stable AppId — changing it breaks upgrade-in-place for existing installs.
-#define MyAppId "{693D5F43-A69E-4A6F-BC2E-FB39D4BB0358}"
+; The braces are doubled because Inno Setup reads an unescaped { in a
+; directive as the start of a constant reference, not a literal brace.
+#define MyAppId "{{693D5F43-A69E-4A6F-BC2E-FB39D4BB0358}}"
 
 ; Show the MIT license as a wizard page when the file is present, so a compile
 ; outside a full checkout still succeeds.
@@ -142,7 +144,7 @@ Filename: "{app}\{#MyAppExeName}"; \
 
 function IsVCRuntimeInstalled(): Boolean;
 var
-  Installed: LongWord;
+  Installed: Integer;
 begin
   Result := False;
 
