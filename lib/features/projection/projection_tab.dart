@@ -36,6 +36,14 @@ final _projectionHistoryTabProvider = StateProvider<HistoryTabType>((ref) => His
 // Provider for the sets drawer visibility
 final _setsDrawerOpenProvider = StateProvider<bool>((ref) => false);
 
+/// Which panel the narrow (mobile) layout of the empty projection window shows.
+/// Wide layouts show both at once, so this only applies below the desktop
+/// breakpoint where there is not enough width for a rail beside the search.
+enum EmptyProjectionSection { search, history }
+
+final _emptySectionProvider =
+    StateProvider<EmptyProjectionSection>((ref) => EmptyProjectionSection.search);
+
 
 class ProjectionTab extends ConsumerStatefulWidget {
   final bool isLargeScreen;
@@ -297,12 +305,86 @@ class _EmptyProjectionState extends ConsumerWidget {
                   ),
                 ],
               )
-            // Narrow screens: results replace the history the moment there is
-            // a query, and the history returns once the search is cleared.
-            : _InlineProjectionSearch(
-                notifier: notifier,
-                idleContent: _buildNarrowHistory(context, ref),
+            // Narrow screens: an explicit Search / History tab pair, because
+            // there is no width to show a rail beside the search field.
+            : Column(
+                children: [
+                  _buildSectionTabs(context, ref),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: ref.watch(_emptySectionProvider) ==
+                            EmptyProjectionSection.search
+                        ? _InlineProjectionSearch(notifier: notifier)
+                        : _buildNarrowHistory(context, ref),
+                  ),
+                ],
               ),
+      ),
+    );
+  }
+
+  /// Narrow-screen tabs switching between the inline search and the recently
+  /// projected history.
+  Widget _buildSectionTabs(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final section = ref.watch(_emptySectionProvider);
+
+    Widget tab(EmptyProjectionSection value, String label, IconData icon) {
+      final isActive = section == value;
+      return Expanded(
+        child: GestureDetector(
+          onTap: () => ref.read(_emptySectionProvider.notifier).state = value,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.4)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isActive
+                    ? theme.colorScheme.primary.withValues(alpha: 0.5)
+                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                width: isActive ? 1.4 : 1,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 16,
+                  color: isActive
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                    color: isActive
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: [
+          tab(EmptyProjectionSection.search, 'Search', Icons.search),
+          tab(EmptyProjectionSection.history, 'History', Icons.history),
+        ],
       ),
     );
   }
@@ -2301,6 +2383,10 @@ class ProjectionSearchResultsList extends ConsumerWidget {
               child: HighlightedText(
                 text: v.text,
                 query: searchState.query,
+                // Verses vary from a few words to several lines; three lines is
+                // enough to recognise the passage without a card so tall it
+                // hides the rest of the results.
+                maxLines: 3,
                 style: TextStyle(
                   fontSize: 12,
                   color: theme.colorScheme.onSurfaceVariant,
@@ -2386,11 +2472,42 @@ class ProjectionSearchResultsList extends ConsumerWidget {
       return const Center(child: Text('No results found'));
     }
 
+    // Songs are paged exactly like Bible verses so a broad query in a big
+    // songbook stays manageable and readable instead of dumping hundreds of
+    // matches at once.
+    final hasMore = songs.length < searchState.totalSongCount;
+    final itemCount = hasMore ? songs.length + 1 : songs.length;
+
     return ListView.builder(
       controller: scrollController,
       padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: songs.length,
+      itemCount: itemCount,
       itemBuilder: (context, index) {
+        if (index == songs.length) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Center(
+              child: TextButton.icon(
+                onPressed: searchState.isLoading
+                    ? null
+                    : () => ref
+                        .read(projectionSearchProvider.notifier)
+                        .loadMoreSongs(),
+                icon: searchState.isLoading
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.expand_more),
+                label: Text(
+                  'Load more songs (${searchState.totalSongCount - songs.length} more)',
+                ),
+              ),
+            ),
+          );
+        }
+
         final s = songs[index];
         final isSelected = index == selectedIndex;
 
@@ -2560,12 +2677,7 @@ class ProjectionSearchResultsList extends ConsumerWidget {
 class _InlineProjectionSearch extends ConsumerStatefulWidget {
   final ProjectionController notifier;
 
-  /// Shown in place of the search results while there is no query. Used by the
-  /// narrow layout to keep the history tabs reachable; left null on wide
-  /// screens, where the history lives in its own rail.
-  final Widget? idleContent;
-
-  const _InlineProjectionSearch({required this.notifier, this.idleContent});
+  const _InlineProjectionSearch({required this.notifier});
 
   @override
   ConsumerState<_InlineProjectionSearch> createState() =>
@@ -2844,16 +2956,12 @@ class _InlineProjectionSearchState
               Expanded(
                 child: Focus(
                   onKeyEvent: (node, event) => _handleKey(event, searchState),
-                  child: (widget.idleContent != null &&
-                          searchState.query.trim().isEmpty &&
-                          !searchState.isLoading)
-                      ? widget.idleContent!
-                      : ProjectionSearchResultsList(
-                          searchState: searchState,
-                          selectedIndex: _selectedIndex.value,
-                          scrollController: _scrollController,
-                          onPick: (index, state) => _pickItem(index, state),
-                        ),
+                  child: ProjectionSearchResultsList(
+                    searchState: searchState,
+                    selectedIndex: _selectedIndex.value,
+                    scrollController: _scrollController,
+                    onPick: (index, state) => _pickItem(index, state),
+                  ),
                 ),
               ),
             ],

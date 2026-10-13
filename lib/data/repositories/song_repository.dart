@@ -38,34 +38,84 @@ class SongRepository {
     return filter;
   }
 
-  /// Searches active songs by title, body, author, or song number
-  Future<List<Song>> searchSongs(String query, {String? sourcePath, SourceMode? sourceMode}) {
+  /// The search predicate, shared by `searchSongs` and `countSearchSongs`
+  /// so the count can never drift from the results it pages.
+  Expression<bool> _searchPredicate(Songs t, String query, String? sourcePath, SourceMode? sourceMode) {
+    final matchQuery = '%${query.trim().toLowerCase()}%';
+    final songNumInt = int.tryParse(query.trim());
+
+    Expression<bool> searchExpr = t.title.lower().like(matchQuery) |
+        t.body.lower().like(matchQuery) |
+        t.author.lower().like(matchQuery) |
+        t.search.lower().like(matchQuery);
+
+    if (songNumInt != null) {
+      searchExpr = searchExpr | t.songNum.equals(songNumInt);
+    }
+
+    return _sourceFilter(t, sourcePath: sourcePath, sourceMode: sourceMode) & searchExpr;
+  }
+
+  /// Counts rows matching [query] without loading them.
+  Future<int> _searchSongsForCount(
+    String query, {
+    String? sourcePath,
+    SourceMode? sourceMode,
+  }) async {
+    if (query.trim().isEmpty) {
+      final countQuery = db.selectOnly(db.songs)
+        ..addColumns([db.songs.id.count()])
+        ..where(_sourceFilter(db.songs, sourcePath: sourcePath, sourceMode: sourceMode));
+      final row = await countQuery.getSingle();
+      return row.read(db.songs.id.count()) ?? 0;
+    }
+
+    final countQuery = db.selectOnly(db.songs)
+      ..addColumns([db.songs.id.count()])
+      ..where(_searchPredicate(db.songs, query, sourcePath, sourceMode));
+    final row = await countQuery.getSingle();
+    return row.read(db.songs.id.count()) ?? 0;
+  }
+
+  /// Searches active songs by title, body, author, or song number.
+  ///
+  /// [limit] / [offset] page the results. They default to `null` (return
+  /// everything) so existing callers keep working unchanged, but the search UI
+  /// passes them: a broad term in a large songbook can otherwise match every
+  /// song and pull every body into memory at once.
+  Future<List<Song>> searchSongs(
+    String query, {
+    String? sourcePath,
+    SourceMode? sourceMode,
+    int? limit,
+    int? offset,
+  }) {
     final trimmed = query.trim();
     if (trimmed.isEmpty) {
       return getSongs();
     }
 
-    final matchQuery = '%${trimmed.toLowerCase()}%';
-    final songNumInt = int.tryParse(trimmed);
-
     final statement = db.select(db.songs)
-      ..where((t) {
-        Expression<bool> activeFilter = _sourceFilter(t, sourcePath: sourcePath, sourceMode: sourceMode);
-
-        Expression<bool> searchExpr =
-            t.title.lower().like(matchQuery) |
-            t.body.lower().like(matchQuery) |
-            t.author.lower().like(matchQuery) |
-            t.search.lower().like(matchQuery);
-
-        if (songNumInt != null) {
-          searchExpr = searchExpr | t.songNum.equals(songNumInt);
-        }
-        return activeFilter & searchExpr;
-      })
+      ..where((t) => _searchPredicate(t, query, sourcePath, sourceMode))
       ..orderBy([(t) => OrderingTerm.asc(t.songNum)]);
 
+    if (limit != null) {
+      statement.limit(limit, offset: offset);
+    }
+
     return statement.get();
+  }
+
+  /// Total number of songs matching [query], for paging search results.
+  Future<int> countSearchSongs(String query, {String? sourcePath, SourceMode? sourceMode}) async {
+    // Reuse the search predicate so the count can never drift from the
+    // results it pages.
+    final results = await _searchSongsForCount(
+      query,
+      sourcePath: sourcePath,
+      sourceMode: sourceMode,
+    );
+    return results;
   }
 
   /// Watches active songs in a specific category

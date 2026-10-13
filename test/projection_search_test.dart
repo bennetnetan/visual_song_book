@@ -48,8 +48,18 @@ class FakeSongRepository extends SongRepository {
     String query, {
     String? sourcePath,
     SourceMode? sourceMode,
+    int? limit,
+    int? offset,
   }) async =>
       const [];
+
+  @override
+  Future<int> countSearchSongs(
+    String query, {
+    String? sourcePath,
+    SourceMode? sourceMode,
+  }) async =>
+      0;
 }
 
 Future<bool> waitFor(bool Function() predicate,

@@ -28,8 +28,9 @@ class _BibleCacheEntry {
 /// Cached result set for a single Song query.
 class _SongCacheEntry {
   final List<Song> results;
+  final int total;
 
-  const _SongCacheEntry({required this.results});
+  const _SongCacheEntry({required this.results, required this.total});
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -52,6 +53,13 @@ class ProjectionSearchState {
 
   // Song-specific
   final List<Song> songResults;
+  final int totalSongCount;
+  final int songOffset;
+
+  /// How many results each page holds. Matches the Bible page size so both
+  /// modes feel equally chunked, and keeps very broad queries (a common word
+  /// in a large songbook) from pulling thousands of bodies into memory.
+  static const int pageSize = 10;
 
   const ProjectionSearchState({
     this.query = '',
@@ -64,6 +72,8 @@ class ProjectionSearchState {
     this.bibleOffset = 0,
     this.exactMatch,
     this.songResults = const [],
+    this.totalSongCount = 0,
+    this.songOffset = 0,
   });
 
   ProjectionSearchState copyWith({
@@ -78,6 +88,8 @@ class ProjectionSearchState {
     int? bibleOffset,
     BibleVerse? Function()? exactMatch,
     List<Song>? songResults,
+    int? totalSongCount,
+    int? songOffset,
   }) {
     return ProjectionSearchState(
       query: query ?? this.query,
@@ -92,6 +104,8 @@ class ProjectionSearchState {
       bibleOffset: bibleOffset ?? this.bibleOffset,
       exactMatch: exactMatch != null ? exactMatch() : this.exactMatch,
       songResults: songResults ?? this.songResults,
+      totalSongCount: totalSongCount ?? this.totalSongCount,
+      songOffset: songOffset ?? this.songOffset,
     );
   }
 }
@@ -162,6 +176,8 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
         bibleOffset: 0,
         exactMatch: () => null,
         songResults: [],
+        totalSongCount: 0,
+        songOffset: 0,
         isLoading: false,
       );
       return;
@@ -178,6 +194,8 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
           bibleOffset: hit.results.length,
           exactMatch: () => hit.exactMatch,
           songResults: [],
+          totalSongCount: 0,
+          songOffset: 0,
           isLoading: false,
         );
         return; // ← instant, no async work needed
@@ -187,8 +205,11 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
       if (hit != null) {
         state = state.copyWith(
           songResults: hit.results,
+          totalSongCount: hit.total,
+          songOffset: hit.results.length,
           bibleResults: [],
           totalBibleCount: 0,
+          bibleOffset: 0,
           exactMatch: () => null,
           isLoading: false,
         );
@@ -228,6 +249,8 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
         bibleOffset: 0,
         exactMatch: () => null,
         songResults: [],
+        totalSongCount: 0,
+        songOffset: 0,
         isLoading: false,
       );
       return;
@@ -247,7 +270,6 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
     // Keep the cache — clearing the view doesn't mean the results are stale.
     state = ProjectionSearchState(isBibleMode: state.isBibleMode);
   }
-
   /// Sets the selected source path filter for song searches (null = all sources).
   /// Clears the song cache since results are now filtered differently.
   void setSourceFilter(String? sourcePath) {
@@ -375,24 +397,78 @@ class ProjectionSearchController extends StateNotifier<ProjectionSearchState> {
   }
 
   Future<void> _performSongSearch(String query, int requestId) async {
-    final results = await _songRepo.searchSongs(
+    // Fetch the first page plus the total match count in parallel. The page cap
+    // is what keeps a broad term from loading every song body at once.
+    final resultsFuture = _songRepo.searchSongs(
+      query,
+      sourcePath: state.selectedSourcePath,
+      limit: ProjectionSearchState.pageSize,
+      offset: 0,
+    );
+    final totalFuture = _songRepo.countSearchSongs(
       query,
       sourcePath: state.selectedSourcePath,
     );
+
+    final results = await resultsFuture;
+    final total = await totalFuture;
     if (!mounted || requestId != _activeRequestId) return;
 
     // ── Write to cache ───────────────────────────────────────────────────────
     final key = _cacheKey(query.trim(), false);
-    _songCache[key] = _SongCacheEntry(results: results);
+    _songCache[key] = _SongCacheEntry(results: results, total: total);
     _trimCache(_songCache);
 
     state = state.copyWith(
       songResults: results,
+      totalSongCount: total,
+      songOffset: results.length,
       bibleResults: [],
       totalBibleCount: 0,
+      bibleOffset: 0,
       exactMatch: () => null,
       isLoading: false,
     );
+  }
+
+  /// Loads the next page of song results.
+  /// Also updates the cached entry so mode switches keep every page.
+  Future<void> loadMoreSongs() async {
+    if (state.isLoading) return;
+    if (state.query.trim().isEmpty) return;
+    if (state.songResults.length >= state.totalSongCount) return;
+
+    state = state.copyWith(isLoading: true);
+    try {
+      final nextPage = await _songRepo.searchSongs(
+        state.query,
+        sourcePath: state.selectedSourcePath,
+        limit: ProjectionSearchState.pageSize,
+        offset: state.songOffset,
+      );
+      if (!mounted) return;
+
+      final combined = [...state.songResults, ...nextPage];
+
+      final key = _cacheKey(state.query.trim(), false);
+      _songCache[key] = _SongCacheEntry(
+        results: combined,
+        total: state.totalSongCount,
+      );
+
+      state = state.copyWith(
+        songResults: combined,
+        songOffset: combined.length,
+        isLoading: false,
+      );
+    } catch (e) {
+      if (mounted) {
+        state = state.copyWith(
+          isLoading: false,
+          error: () => e.toString(),
+        );
+      }
+    }
   }
 
   /// Load the next page of Bible results (10 more).

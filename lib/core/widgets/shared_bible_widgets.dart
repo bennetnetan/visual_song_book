@@ -7,17 +7,31 @@ class HighlightedText extends StatelessWidget {
   final TextStyle style;
   final TextStyle highlightStyle;
 
+  /// Line cap applied to the rendered text, so long verses or song bodies stay
+  /// readable in a results list. Defaults to the previous hardcoded value.
+  final int maxLines;
+  final TextOverflow overflow;
+
   const HighlightedText({
     super.key,
     required this.text,
     required this.query,
     required this.style,
     required this.highlightStyle,
+    this.maxLines = 2,
+    this.overflow = TextOverflow.ellipsis,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (query.isEmpty) return Text(text, style: style);
+    if (query.isEmpty) {
+      return Text(
+        text,
+        style: style,
+        maxLines: maxLines,
+        overflow: overflow,
+      );
+    }
 
     final List<TextSpan> spans = [];
     final String lowerText = text.toLowerCase();
@@ -40,8 +54,8 @@ class HighlightedText extends StatelessWidget {
 
     return RichText(
       text: TextSpan(children: spans),
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
+      maxLines: maxLines,
+      overflow: overflow,
     );
   }
 }

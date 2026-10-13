@@ -113,9 +113,19 @@ void main() {
 
     expect(find.byType(ProjectionTab), findsOneWidget);
     expect(find.byType(SearchBar), findsOneWidget);
-    // Narrow layout keeps the history tabs below the search field while the
-    // query is empty.
+
+    // Narrow screens get an explicit Search / History tab pair rather than a
+    // rail, so history is only visible after switching to that tab.
+    expect(find.text('Search'), findsOneWidget);
+    expect(find.text('History'), findsOneWidget);
+    // The history panel is behind the tab, not shown alongside search.
+    expect(find.text('Songs'), findsNothing);
+
+    await tester.tap(find.text('History'));
+    await tester.pumpAndSettle();
     expect(find.text('Songs'), findsWidgets);
+    // And the search field is hidden while history is selected.
+    expect(find.byType(SearchBar), findsNothing);
 
     await testDb.close();
   });
