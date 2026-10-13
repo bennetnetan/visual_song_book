@@ -149,7 +149,9 @@ Filename: "{app}\{#MyAppExeName}"; \
 
 function IsVCRuntimeInstalled(): Boolean;
 var
-  Installed: Integer;
+  // LongWord, not Integer: RegQueryDWORDValue declares its out parameter as an
+  // unsigned DWord, and passing a signed Integer fails with "Type mismatch".
+  Installed: LongWord;
 begin
   Result := False;
 
