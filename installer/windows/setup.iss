@@ -111,10 +111,12 @@ Source: "*"; DestDir: "{app}"; Excludes: "*.pdb,*.lib,*.exp"; \
     Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Stage the redistributable to a temp folder; the [Code] section runs it only
-; when the runtime is actually missing, and Setup deletes it afterwards.
+; when the runtime is actually missing, and Setup removes the temp copy itself.
+; uninsneveruninstall cannot be combined with {tmp} or deleteafterinstall,
+; and is meaningless here: Setup always reaps temp files.
 #ifdef BundleVCRedist
 Source: "redist\vc_redist.x64.exe"; DestDir: "{tmp}"; \
-    Flags: deleteafterinstall uninsneveruninstall
+    Flags: deleteafterinstall
 #endif
 
 [Icons]
