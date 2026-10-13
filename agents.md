@@ -158,9 +158,10 @@ lib/features/
 - **IPC**: Main window ↔ secondary via `desktop_multi_window`
 - **Theme sync**: `ProjectionThemeNotifier` persists appearance settings
 - **Auto-project**: Content setters (`setSong`, `setBiblePassage`, `projectVerse`, `projectSongSet`) auto-open the projector window on the second screen. Gated on `ProjectionMode.extended` + an existing non-primary display — see "Multi-Window Projection" above.
-- **Empty projection page**: Search anchor is pinned at the top; below it are history tabs (Songs / Bible / Sets on desktop) fed by `HistoryController` (projected items only). The old "Browse Songs" / "Open Bible" buttons were removed. The active history tab persists in `_projectionHistoryTabProvider`; the Sets bottom-sheet visibility is tracked in `_setsDrawerOpenProvider`.
-- **Search**: Opens as centered dialog (`showDialog`), not fullscreen page. Uses `SearchBar` with keyboard navigation (arrow keys + Enter)
-- **Focus management**: Search dialog returns focus to `returnFocusTo` widget on close
+- **Empty projection page**: search is embedded in the body of the window as a focused `SearchBar` (`_InlineProjectionSearch`) rather than a chip in a top bar that opens a dialog. Results render in place, with the Bible/Songs mode chips and the songbook filter beside the field. Recently projected history stays in a rail on wide screens (`_buildHistorySidebar`) or below the field on narrow ones (`_buildNarrowHistory`), where results take over as soon as a query is entered. Sets are also reachable through a bottom sheet with track number, key and notes.
+- **Search while projecting**: once content is on screen the controls app bar carries a search action that opens the full-screen dialog; a compact search shortcut also sits in the live-preview header.
+- **Result rendering is shared** by the inline search and the dialog: `ProjectionSearchResultsList` plus `composeSearchResults` / `countSearchResults` / `shareSearchItem`. Add new result behaviour there, not in either widget.
+- **Search**: results are debounced 250 ms and cached per query string per mode; pressing Enter projects the highlighted row, ↑/↓ move the selection.
 
 ---
 

@@ -63,19 +63,24 @@ void main() {
     // The tab itself mounted — no framework assertion was thrown.
     expect(find.byType(ProjectionTab), findsOneWidget);
 
-    // Search anchor is pinned at the top of the empty state.
-    expect(find.text('Search'), findsOneWidget);
+    // Search is embedded in the window as a ready-to-type field rather than a
+    // chip that opens a popup, so the SearchBar is on screen with its hint.
+    expect(find.byType(SearchBar), findsOneWidget);
+    expect(find.text('Search Bible…'), findsOneWidget);
 
-    // History tabs replace the removed Browse/Open buttons.
-    expect(find.text('Songs'), findsOneWidget);
-    expect(find.text('Bible'), findsOneWidget);
+    // History tabs still sit alongside it. "Songs"/"Bible" also name the search
+    // mode chips in the field row, so both matches are expected.
+    expect(find.text('Songs'), findsWidgets);
+    expect(find.text('Bible'), findsWidgets);
+    expect(find.text('Sets'), findsOneWidget);
 
     // The old navigation buttons are gone.
     expect(find.text('Browse Songs'), findsNothing);
     expect(find.text('Open Bible'), findsNothing);
 
-    // Empty-state guidance is still shown.
-    expect(find.text('Nothing on screen'), findsOneWidget);
+    // The inline field already has focus so typing can start immediately.
+    expect(tester.widget<SearchBar>(find.byType(SearchBar)).focusNode?.hasFocus,
+        isTrue);
 
     await testDb.close();
   });
@@ -107,8 +112,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.byType(ProjectionTab), findsOneWidget);
-    expect(find.text('Search'), findsOneWidget);
-    expect(find.text('Songs'), findsOneWidget);
+    expect(find.byType(SearchBar), findsOneWidget);
+    // Narrow layout keeps the history tabs below the search field while the
+    // query is empty.
+    expect(find.text('Songs'), findsWidgets);
 
     await testDb.close();
   });
@@ -342,6 +349,59 @@ void main() {
     expect(createdWindows, isEmpty);
     // Content is still projected, just without a window opening itself.
     expect(find.text('Nothing on screen'), findsNothing);
+
+    await testDb.close();
+  });
+
+  testWidgets('typing in the inline field runs a search without opening a popup',
+      (tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    SharedPreferences.setMockInitialValues({'onboarding_complete': true});
+    final testDb = await seedDatabase();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(testDb),
+          appSeedProvider.overrideWith((ref) async {}),
+          bibleDatabaseInitProvider.overrideWith((ref) async {}),
+        ],
+        child: const MyApp(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    await tester.tap(find.text('Projection'));
+    await tester.pumpAndSettle();
+
+    // Starting in Bible mode: no dialog, the field is already on screen.
+    expect(find.byType(SearchBar), findsOneWidget);
+    final searchBar = tester.widget<SearchBar>(find.byType(SearchBar));
+    expect(searchBar.focusNode?.hasFocus, isTrue);
+
+    // Switch to song mode through the inline mode chips.
+    await tester.tap(find.text('Song'));
+    await tester.pumpAndSettle();
+
+    // Type directly into the field. The debounce runs, then results render
+    // inside the window itself rather than in a dialog.
+    await tester.enterText(find.byType(SearchBar), 'Recorded');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(tester.takeException(), isNull);
+    // The empty window is still mounted, so nothing was dismissed.
+    expect(find.byType(ProjectionTab), findsOneWidget);
+    // Song matches are rendered as cards inline.
+    expect(find.byType(Card), findsWidgets);
+    // No dialog/popup appeared on top of it.
+    expect(find.byType(Dialog), findsNothing);
 
     await testDb.close();
   });
