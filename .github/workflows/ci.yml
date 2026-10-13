@@ -226,6 +226,10 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [build, windows-installer, android]
     runs-on: ubuntu-latest
+    # The default GITHUB_TOKEN is read-only, so creating a release fails with
+    # "Resource not accessible by integration". Only this job needs the write.
+    permissions:
+      contents: write
     # No toolchain needed: every asset arrives as an artifact.
     steps:
       - uses: actions/checkout@v4
