@@ -69,8 +69,38 @@ class _ProjectionTabState extends ConsumerState<ProjectionTab> {
     super.dispose();
   }
 
+  /// Whether the keyboard is currently captured by a text field.
+  ///
+  /// Without this check the projection slide shortcuts (space, arrows, page
+  /// up/down, escape) fire while the operator is typing in the projection
+  /// search. An ancestor that consumes the key prevents the focused field from
+  /// receiving it, so the space bar appeared dead and the arrows advanced the
+  /// slide instead of moving the caret.
+  ///
+  /// Walks up from the focused node rather than testing one widget, because
+  /// focus can land on the editable's internal node or on a text field.
+  bool get _isTextEditing {
+    final focusContext = FocusManager.instance.primaryFocus?.context;
+    if (focusContext == null) return false;
+
+    var found = false;
+    focusContext.visitAncestorElements((element) {
+      final widget = element.widget;
+      if (widget is EditableText || widget is TextField) {
+        found = true;
+        return false;
+      }
+      return true;
+    });
+    return found;
+  }
+
   KeyEventResult _handleProjectionKeys(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    // Let the focused text field own the keyboard.
+    if (_isTextEditing) {
       return KeyEventResult.ignored;
     }
 
@@ -2828,22 +2858,35 @@ class _InlineProjectionSearchState
       }
     });
 
-    return Column(
-      children: [
-        // Search field row: an always-visible, pre-focused text field plus the
-        // mode toggle and the songbook filter, so switching source never
-        // means closing and reopening a popup.
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: Row(
-            children: [
+    return Focus(
+      // Wraps the field *and* the results, so Enter projects the highlighted
+      // row while the operator is still typing. A Focus around only the
+      // results would not sit above the text field and would never see the
+      // keystroke.
+      onKeyEvent: (node, event) => _handleKey(event, searchState),
+      child: Column(
+        children: [
+          // Search field row: an always-visible, pre-focused text field plus
+          // the mode toggle and the songbook filter, so switching source never
+          // means closing and reopening a popup.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
               Expanded(
-              child: SearchBar(
-                controller: _searchController,
-                focusNode: _focusNode,
-                hintText: searchState.isBibleMode
-                    ? 'Search Bible…'
-                    : 'Search songs…',
+                child: SearchBar(
+                  controller: _searchController,
+                  focusNode: _focusNode,
+                  hintText: searchState.isBibleMode
+                      ? 'Search Bible…'
+                      : 'Search songs…',
+                  // A single-line field consumes Enter itself, so an ancestor
+                  // Focus never sees it. Hooking onSubmitted is the reliable
+                  // way to make Enter project the highlighted row.
+                  onSubmitted: (_) => _pickItem(
+                    _selectedIndex.value,
+                    searchState,
+                  ),
                   leading: Icon(
                     Icons.search,
                     color: theme.colorScheme.onSurfaceVariant,
@@ -2954,20 +2997,18 @@ class _InlineProjectionSearchState
               else
                 const SizedBox(height: 3),
               Expanded(
-                child: Focus(
-                  onKeyEvent: (node, event) => _handleKey(event, searchState),
-                  child: ProjectionSearchResultsList(
-                    searchState: searchState,
-                    selectedIndex: _selectedIndex.value,
-                    scrollController: _scrollController,
-                    onPick: (index, state) => _pickItem(index, state),
-                  ),
+                child: ProjectionSearchResultsList(
+                  searchState: searchState,
+                  selectedIndex: _selectedIndex.value,
+                  scrollController: _scrollController,
+                  onPick: (index, state) => _pickItem(index, state),
                 ),
               ),
             ],
           ),
         ),
       ],
+      ),
     );
   }
 }

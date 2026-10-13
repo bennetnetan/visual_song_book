@@ -415,4 +415,64 @@ void main() {
 
     await testDb.close();
   });
+
+  testWidgets('multi-word queries are kept, and Enter projects the top match',
+      (tester) async {
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    SharedPreferences.setMockInitialValues({'onboarding_complete': true});
+    final testDb = await seedDatabase();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(testDb),
+          appSeedProvider.overrideWith((ref) async {}),
+          bibleDatabaseInitProvider.overrideWith((ref) async {}),
+        ],
+        child: const MyApp(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    await tester.tap(find.text('Projection'));
+    await tester.pumpAndSettle();
+
+    // Song mode, so the seeded song is searchable.
+    await tester.tap(find.text('Song'));
+    await tester.pumpAndSettle();
+
+    // A query containing a space must survive: the projection tab used to
+    // swallow the space bar for its slide-advance shortcut, which left the
+    // operator unable to type more than one word.
+    final multiWordQuery = 'Recorded Hymn';
+    expect(multiWordQuery.contains(' '), isTrue);
+    await tester.enterText(find.byType(SearchBar), multiWordQuery);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump();
+
+    final fieldText =
+        tester.widget<SearchBar>(find.byType(SearchBar)).controller?.text;
+    expect(fieldText, multiWordQuery, reason: 'the space must be preserved');
+    // The song matched, so the row is on screen.
+    expect(find.byType(Card), findsWidgets);
+
+    // Enter projects the highlighted row, which swaps the empty window for
+    // the active controls.
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(SearchBar), findsNothing);
+    expect(find.text('LIVE PREVIEW'), findsOneWidget);
+
+    await testDb.close();
+  });
 }
