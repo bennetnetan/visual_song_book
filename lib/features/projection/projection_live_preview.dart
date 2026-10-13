@@ -5,6 +5,7 @@ import 'package:visual_song_book/core/utils/layout_utils.dart';
 import 'package:visual_song_book/features/lower_third/lower_third_controller.dart';
 import 'package:visual_song_book/features/lower_third/widgets/lower_third_overlay.dart';
 import 'package:visual_song_book/features/projection/projection_controller.dart';
+import 'package:visual_song_book/features/projection/projection_state.dart';
 import 'package:visual_song_book/features/projection/projection_theme.dart';
 import 'package:visual_song_book/features/projection/projection_search_page.dart';
 

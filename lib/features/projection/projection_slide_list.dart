@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:visual_song_book/features/projection/projection_controller.dart';
+import 'package:visual_song_book/features/projection/projection_state.dart';
 
 
 class SlideList extends StatefulWidget {
