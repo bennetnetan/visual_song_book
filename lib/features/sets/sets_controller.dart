@@ -95,12 +95,19 @@ class SetsController extends StateNotifier<SetsState> {
     });
   }
 
-  void selectSet(int setId) {
+  /// Selects [setId] and subscribes to its items.
+  ///
+  /// Normally guards against selecting a set that is not in the loaded list,
+  /// which catches stale ids from another window or a deleted set.
+  /// [force] skips that check and is required for a set created in this
+  /// session: its stream event has not arrived yet, so the cached list would
+  /// reject it and clear the very selection the caller just made. That is why
+  /// duplicating and importing always pass `force: true`.
+  void selectSet(int setId, {bool force = false}) {
     _log.info('selectSet($setId)');
-    
-    // Strict check: Ensure setId exists in sets list before setting
+
     final exists = state.sets.any((s) => s.id == setId);
-    if (!exists && state.sets.isNotEmpty) {
+    if (!exists && state.sets.isNotEmpty && !force) {
       _log.warning('Attempted to select set $setId which does not exist in loaded DB sets.');
       clearSelection();
       return;
@@ -147,7 +154,7 @@ class SetsController extends StateNotifier<SetsState> {
         ? generateNextVersionName('${original.name} (Copy)')
         : null);
     final duplicated = await _repo.duplicateSet(setId, newName: nameToUse);
-    selectSet(duplicated.id);
+    selectSet(duplicated.id, force: true);
   }
 
   String generateNextVersionName(String name) {
@@ -418,7 +425,7 @@ class SetsController extends StateNotifier<SetsState> {
       }
       
       // Select the newly imported set in the UI
-      selectSet(newSet.id);
+      selectSet(newSet.id, force: true);
     } catch (e) {
       _log.severe('Error importing set', e);
       rethrow;
@@ -583,7 +590,7 @@ class SetsController extends StateNotifier<SetsState> {
         await _repo.addSongToSet(newSet.id, matchedSongId, pos, key: item.key);
       }
 
-      selectSet(newSet.id);
+      selectSet(newSet.id, force: true);
     } catch (e) {
       _log.severe('Error importing plain text set', e);
       rethrow;

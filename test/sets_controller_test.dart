@@ -73,7 +73,10 @@ void main() {
     expect(controller.state.selectedSetId, isNotNull);
     final selected = controller.selectedSet;
     expect(selected, isNotNull);
-    expect(selected!.name, 'Sunday Morning Service');
+    // The original set still exists, so importing the exported text creates a
+    // versioned copy rather than overwriting or duplicating under the same
+    // name — same rule as pasting any colliding set.
+    expect(selected!.name, 'Sunday Morning Service (v2)');
     expect(selected.occasion, 'Youth');
 
     final items = await setRepo.getSetItems(selected.id);
