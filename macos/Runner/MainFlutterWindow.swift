@@ -27,7 +27,10 @@ private func placeProjectionWindowOnSecondScreen(
   _ window: NSWindow,
   contentViewController: NSViewController
 ) {
-  guard let view = contentViewController.view else { return }
+  // NSViewController.view is a non-optional NSView, so there is nothing to
+  // conditionally bind. Reading it here also force-loads the view, which is
+  // what we want: the controller is about to go on screen anyway.
+  let view = contentViewController.view
 
   // Prefer a non-primary display; fall back to the primary screen.
   let targetScreen: NSScreen?
