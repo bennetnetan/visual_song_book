@@ -41,15 +41,25 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Flutter puts each desktop bundle in an architecture-specific
+          # folder, and the Windows/macOS layouts differ from Linux. These
+          # `path` values are the real output locations — the previous
+          # `build/<name>/release/bundle` form never matched, so the
+          # artifacts silently uploaded nothing.
           - os: ubuntu-latest
             name: linux
             command: flutter build linux --release
+            path: build/linux/x64/release/bundle
           - os: windows-latest
             name: windows
             command: flutter build windows --release
+            path: build/windows/x64/runner/Release
           - os: macos-latest
             name: macos
             command: flutter build macos --release
+            # The Xcode target is `Runner`, so the bundle is Runner.app —
+            # not the pub package name.
+            path: build/macos/Build/Products/Release/Runner.app
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -71,16 +81,113 @@ jobs:
       - name: Build
         run: ${{ matrix.command }}
 
-      - name: Upload build artifacts
+      # Fails loudly with a useful message if Flutter ever moves its output
+      # layout again, which the old silent artifact upload would have hidden.
+      - name: Verify build output exists
+        shell: bash
+        run: |
+          target="${{ matrix.path }}"
+          if [ ! -d "$target" ]; then
+            echo "::error::Expected build output at '$target' but it does not exist."
+            echo "Flutter's desktop output layout changed — update the matrix paths."
+            ls -R build 2>/dev/null | head -40
+            exit 1
+          fi
+
+      # Archives are created on the platform that produced them. A macOS .app
+      # is full of symlinks (in Frameworks/), and copying one through a Linux
+      # runner risks breaking them — so it is tarred where it was built.
+      - name: Package Linux build
+        if: matrix.name == 'linux'
+        run: tar -czf "$RUNNER_TEMP/visual_song_book-linux-x64.tar.gz" -C "${{ matrix.path }}" .
+
+      - name: Package Windows build
+        if: matrix.name == 'windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "${{ matrix.path }}/*" `
+            -DestinationPath "$env:RUNNER_TEMP\visual_song_book-windows-x64.zip" `
+            -Force
+
+      - name: Package macOS build
+        if: matrix.name == 'macos'
+        run: tar -czf "$RUNNER_TEMP/visual_song_book-macos.tar.gz" -C "${{ matrix.path }}" .
+
+      - name: Upload archive
         uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.name }}
-          path: build/${{ matrix.name }}/release/bundle
-          if-no-files-found: warn
+          name: package-${{ matrix.name }}
+          path: ${{ runner.temp }}/visual_song_book-*
+          if-no-files-found: error
+
+  # Inno Setup only runs on Windows, so the installer is compiled on a Windows
+  # runner and shipped as the artifact the release job publishes.
+  windows-installer:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Build Windows release bundle
+        run: flutter build windows --release
+
+      - name: Download VC++ redistributable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path installer/windows/redist |
+            Out-Null
+          Invoke-WebRequest `
+            -Uri https://aka.ms/vs/17/release/vc_redist.x64.exe `
+            -OutFile installer/windows/redist/vc_redist.x64.exe
+          Write-Host "Downloaded $((Get-Item installer/windows/redist/vc_redist.x64.exe).Length) bytes"
+
+      - name: Resolve app version from pubspec
+        id: version
+        shell: pwsh
+        run: |
+          $raw = (Select-String -Path pubspec.yaml `
+            -Pattern '^version:\s*(\S+)' | Select-Object -First 1).Matches[0].Groups[1].Value
+          $version = $raw.Split('+')[0]
+          Write-Host "App version: $version"
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          $iscc = @(
+            'C:\Program Files (x86)\Inno Setup 6\ISCC.exe',
+            'C:\Program Files\Inno Setup 6\ISCC.exe',
+            'ISCC.exe'
+          ) | Where-Object {
+            ($_ -eq 'ISCC.exe') -or (Test-Path -LiteralPath $_)
+          } | Select-Object -First 1
+
+          if (-not $iscc) { throw 'ISCC.exe was not found after installing Inno Setup.' }
+
+          & $iscc `
+            "/DMyAppVersion=${{ steps.version.outputs.version }}" `
+            "/DMyAppSourceDir=${{ github.workspace }}\build\windows\x64\runner\Release" `
+            installer/windows/setup.iss
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/*.exe
+          if-no-files-found: error
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [build, windows-installer]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -90,25 +197,38 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Install Linux build deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            clang cmake ninja-build pkg-config \
-            libgtk-3-dev liblzma-dev libstdc++-12-dev \
-            mdbtools
-
       # NOTE: Android release builds currently use Flutter's default debug
       # signing. Configure a keystore and wire up signConfig + the
       # ANDROID_SIGNING_KEY/STOREPASS secrets to produce a signed APK/AAB.
       - name: Build Android APK (release)
         run: flutter build apk --release
 
-      - name: Build Linux (release)
-        run: flutter build linux --release
+      # Every desktop archive (Linux, Windows, macOS) plus the Windows
+      # installer is packaged on the runners that produced it, then gathered
+      # here — this job only adds the Android APK.
+      - name: Download Linux package
+        uses: actions/download-artifact@v4
+        with:
+          name: package-linux
+          path: staging
 
-      - name: Package Linux build
-        run: tar -czf visual_song_book-linux-x64.tar.gz -C build/linux/x64/release/bundle .
+      - name: Download Windows package
+        uses: actions/download-artifact@v4
+        with:
+          name: package-windows
+          path: staging
+
+      - name: Download macOS package
+        uses: actions/download-artifact@v4
+        with:
+          name: package-macos
+          path: staging
+
+      - name: Download Windows installer
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: staging
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
@@ -116,11 +236,11 @@ jobs:
           name: release-builds
           path: |
             build/app/outputs/flutter-apk/app-release.apk
-            visual_song_book-linux-x64.tar.gz
+            staging/*
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             build/app/outputs/flutter-apk/app-release.apk
-            visual_song_book-linux-x64.tar.gz
+            staging/*

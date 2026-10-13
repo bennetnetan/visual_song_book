@@ -197,6 +197,40 @@ flutter build apk --release
 ./scripts/package_appimage.sh   # Linux AppImage
 ```
 
+**Windows builds cannot be produced on Linux.** Flutter compiles Windows
+binaries with MSVC, so `flutter build windows` exits with "only supported on
+Windows hosts". Desktop release artifacts are therefore built by CI.
+
+### Releases & the Windows installer
+Releases are produced by `.github/workflows/ci.yml` when a `v*.*.*` tag is
+pushed (`git tag v2.3.0 && git push --tags`):
+
+| Job | Runner | Produces |
+|---|---|---|
+| `build` | linux/windows/macos | per-platform archive (tar/zip) |
+| `windows-installer` | windows-latest | Inno Setup `.exe` installer |
+| `release` | ubuntu-latest | Android APK, then publishes everything to the GitHub Release |
+
+Notes:
+- Each archive is created on the runner that built it. A macOS `.app` is full
+  of symlinks in `Frameworks/`, so rezipping it on Linux would break them.
+- Real output paths are `build/linux/x64/release/bundle`,
+  `build/windows/x64/runner/Release` and
+  `build/macos/Build/Products/Release/Runner.app` (Xcode target is `Runner`).
+  The CI verifies these exist before packaging, so a Flutter layout change
+  fails the build instead of publishing an empty release.
+- The installer script is `installer/windows/setup.iss`. It is a full wizard
+  (Welcome → MIT licence → all-users/per-user → install location → Start Menu
+  → install → finish with a "Launch now" checkbox), not a silent extract.
+- `dist/` (installer output) and `installer/windows/redist/` (the VC++
+  redistributable CI downloads before compiling) are git-ignored.
+- Flutter's Windows bundle does not include `msvcp140.dll`; the installer
+  detects the VC++ runtime from the registry and installs the bundled
+  `vc_redist.x64.exe` silently when missing, and continues (with a log) if
+  that step fails.
+- To compile the installer locally on Windows:
+  `ISCC.exe /DMyAppVersion=<x.y.z> installer\windows\setup.iss`
+
 ### Running tests
 ```bash
 flutter test

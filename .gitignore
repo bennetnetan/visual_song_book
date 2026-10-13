@@ -56,6 +56,11 @@ tools/appimagetool*.AppImage
 *.tar.gz
 *.exe
 
+# Windows installer build outputs (produced by CI from installer/windows/setup.iss)
+/dist/
+# VC++ redistributable downloaded by CI before compiling the installer
+/installer/windows/redist/
+
 # Node.js (mdb-reader converter toolchain)
 node_modules/
 
