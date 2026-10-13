@@ -114,8 +114,11 @@ Source: "*"; DestDir: "{app}"; Excludes: "*.pdb,*.lib,*.exp"; \
 ; when the runtime is actually missing, and Setup removes the temp copy itself.
 ; uninsneveruninstall cannot be combined with {tmp} or deleteafterinstall,
 ; and is meaningless here: Setup always reaps temp files.
+;
+; The source is an absolute path because a relative Source resolves against
+; SourceDir, which points at the Flutter bundle — not at this script's folder.
 #ifdef BundleVCRedist
-Source: "redist\vc_redist.x64.exe"; DestDir: "{tmp}"; \
+Source: "{#ScriptDir}redist\vc_redist.x64.exe"; DestDir: "{tmp}"; \
     Flags: deleteafterinstall
 #endif
 
