@@ -155,17 +155,24 @@ var
 begin
   Result := False;
 
+  // Exit takes no argument in Inno Setup's Pascal Script — set Result first.
   if RegQueryDWORDValue(HKLM,
       'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64',
       'Installed', Installed) then
     if Installed = 1 then
-      Exit(True);
+    begin
+      Result := True;
+      Exit;
+    end;
 
   if RegQueryDWORDValue(HKCU,
       'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64',
       'Installed', Installed) then
     if Installed = 1 then
-      Exit(True);
+    begin
+      Result := True;
+      Exit;
+    end;
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
