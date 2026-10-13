@@ -115,10 +115,46 @@ jobs:
         run: tar -czf "$RUNNER_TEMP/visual_song_book-macos.tar.gz" -C "${{ matrix.path }}" .
 
       - name: Upload archive
+        if: matrix.name != 'android'
         uses: actions/upload-artifact@v4
         with:
           name: package-${{ matrix.name }}
           path: ${{ runner.temp }}/visual_song_book-*
+          if-no-files-found: error
+
+  # The Android build gets its own runner. It shares none of the disk pressure
+  # of the release job, which downloads every other artifact and re-archives
+  # them — that job previously ran out of space mid-Gradle-build when it also
+  # compiled the APK.
+  android:
+    needs: analyze-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # Android SDK, NDK and Gradle caches are large; reclaim what the runner
+      # image does not need before building so this does not run the release
+      # runner's disk dry.
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/local/lib/android/sdk/ndk/{*,.*} 2>/dev/null || true
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup 2>/dev/null || true
+          df -h /
+
+      - name: Build APK (release)
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-android
+          path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 
   # Inno Setup only runs on Windows, so the installer is compiled on a Windows
@@ -188,21 +224,22 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [build, windows-installer]
+    needs: [build, windows-installer, android]
     runs-on: ubuntu-latest
+    # No toolchain needed: every asset arrives as an artifact.
     steps:
       - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
 
       # NOTE: Android release builds currently use Flutter's default debug
       # signing. Configure a keystore and wire up signConfig + the
       # ANDROID_SIGNING_KEY/STOREPASS secrets to produce a signed APK/AAB.
-      - name: Build Android APK (release)
-        run: flutter build apk --release
+      # The APK itself is built by the `android` job so this one never compiles
+      # anything and cannot exhaust the runner's disk.
+      - name: Download APK
+        uses: actions/download-artifact@v4
+        with:
+          name: package-android
+          path: staging
 
       # Every desktop archive (Linux, Windows, macOS) plus the Windows
       # installer is packaged on the runners that produced it, then gathered
@@ -235,13 +272,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-builds
-          path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            staging/*
+          path: staging/*
+
+      - name: List what will be published
+        run: ls -lh staging/
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          # Everything was downloaded into staging/, so publishing it publishes
+          # exactly what was listed there.
           files: |
-            build/app/outputs/flutter-apk/app-release.apk
             staging/*
