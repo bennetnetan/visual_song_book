@@ -185,8 +185,8 @@ begin
   if Exec(RedistPath, '/install /quiet /norestart', '', SW_HIDE,
       ewWaitUntilTerminated, ResultCode) then
   begin
-    Log(Format('VC++ redistributable installed, result code %d.',
-      [ResultCode]));
+    Log(Format(
+      'VC++ redistributable installed, result code %d.', [ResultCode]));
     { 3010 == installed, but a restart is required. }
     if ResultCode = 3010 then
       NeedsRestart := True;
