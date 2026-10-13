@@ -60,6 +60,30 @@ lib/features/
 - **Dart-side IPC is a secondary mechanism**: `set_window_bounds` + `go_fullscreen` are forwarded to the secondary engine. It only succeeds on Linux (the only runner that calls `fl_register_plugins` in secondary engines); calls are wrapped in try/catch **with a 2s timeout** so they fail safely on Windows/macOS.
 - If no second display is detected, auto-projection is skipped and the operator can still use the manual "Open Projector Output Window" button in the Projection controls app bar.
 
+### Projection feature layout
+`lib/features/projection/` is split into focused modules — keep new widgets in
+their own file here rather than growing any single file past ~500 lines:
+
+| File | Contents |
+|---|---|
+| `projection_tab.dart` | `ProjectionTab` shell, app bar, focus + slide-key handling |
+| `empty_projection_state.dart` | empty-window layout and the narrow Search/History tabs |
+| `projection_history_panel.dart` | recently projected Songs/Bible/Sets/Bookmarks, `HistoryTabButton` |
+| `projection_slide_list.dart` | slide list and slide-label badges |
+| `projection_live_preview.dart` | live preview panel and lower-third overlay |
+| `projection_header.dart` | header row, mode badge, clear + auto-chorus toggles |
+| `projection_set_navigator.dart` | set navigator panel |
+| `projection_search_field.dart` | `InlineProjectionSearch` |
+| `projection_search_page.dart` | search chip anchor + full-screen search dialog |
+| `projection_search_widgets.dart` | `SearchModeToggle`, `ModeChip` |
+| `projection_search_results.dart` | result dispatch + `composeSearchResults`/`countSearchResults`/`shareSearchItem` |
+| `projection_bible_search_results.dart` | Bible verse result rows |
+| `projection_song_search_results.dart` | song result rows |
+| `projection_sets_drawer.dart` | sets bottom sheet + button |
+| `projection_output_view.dart` | secondary-window output view |
+| `projection_controller.dart` | projection state + IPC orchestration |
+| `projection_appearance_widgets.dart` | appearance controls |
+
 ### Routing
 - **GoRouter** with 3 routes: `/` (dashboard), `/projection`, `/song-editor`.
 - Projection window has its own `projectionRouter` (single `/projection` route).
@@ -158,7 +182,7 @@ lib/features/
 - **IPC**: Main window ↔ secondary via `desktop_multi_window`
 - **Theme sync**: `ProjectionThemeNotifier` persists appearance settings
 - **Auto-project**: Content setters (`setSong`, `setBiblePassage`, `projectVerse`, `projectSongSet`) auto-open the projector window on the second screen. Gated on `ProjectionMode.extended` + an existing non-primary display — see "Multi-Window Projection" above.
-- **Empty projection page**: search is embedded in the body of the window as a focused `SearchBar` (`_InlineProjectionSearch`) rather than a chip in a top bar that opens a dialog. Results render in place, with the Bible/Songs mode chips and the songbook filter beside the field. On wide screens the recently projected history keeps its own rail (`_buildHistorySidebar`); on narrow screens an explicit Search / History tab pair (`_buildSectionTabs`, `_emptySectionProvider`) decides what fills the window. Sets are also reachable through a bottom sheet with track number, key and notes.
+- **Empty projection page**: search is embedded in the body of the window as a focused `SearchBar` (`InlineProjectionSearch`) rather than a chip in a top bar that opens a dialog. Results render in place, with the Bible/Songs mode chips and the songbook filter beside the field. On wide screens the recently projected history keeps its own rail; on narrow screens an explicit Search / History tab pair (`EmptyProjectionSection`) decides what fills the window. Sets are reachable through `showProjectionSetsDrawer`.
 - **Search while projecting**: once content is on screen the controls app bar carries a search action that opens the full-screen dialog; a compact search shortcut also sits in the live-preview header.
 - **Result rendering is shared** by the inline search and the dialog: `ProjectionSearchResultsList` plus `composeSearchResults` / `countSearchResults` / `shareSearchItem`. Add new result behaviour there, not in either widget.
 - **Chunked results**: both modes page their results `ProjectionSearchState.pageSize` (10) at a time via `LIMIT/OFFSET`, then append on `loadMoreBible()` / `loadMoreSongs()`. Without this a common word in a large songbook matched every song and loaded every body at once. `HighlightedText.maxLines` caps preview text (3 lines for verse text, 2 for titles) so long passages stay readable.
