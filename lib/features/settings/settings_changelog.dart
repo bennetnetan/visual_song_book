@@ -17,6 +17,15 @@ class _ChangelogCardState extends State<ChangelogCard> {
     final theme = Theme.of(context);
     final recentEntries = [
       const _ChangelogEntryWidget(
+        version: 'v2.5.0',
+        date: '2026-11-01',
+        changes: [
+          'Songbooks: import .vsb / .mdb Access files using the converter bundled with desktop and mobile builds',
+          'Linked songbooks: import immediately when linked and sync detected changes without restarting',
+          'iOS: bundle Node Mobile and converter dependencies; add an unsigned iOS build to CI',
+        ],
+      ),
+      const _ChangelogEntryWidget(
         version: 'v2.4.0',
         date: '2026-10-13',
         changes: [

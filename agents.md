@@ -1,7 +1,7 @@
 # Visual Song Book — Agent Guide
 
 > **Project**: Flutter desktop-first app for church worship teams — songbook management, KJV Bible reader, live projection to a secondary screen.
-> **Version**: 2.2.0 · **Dart SDK**: ^3.12.1 · **License**: MIT
+> **Version**: 2.5.0 · **Dart SDK**: ^3.12.1 · **License**: MIT
 
 ---
 
@@ -218,6 +218,7 @@ flutter run -d chrome      # web (no projection window support)
 
 ### Building
 ```bash
+npm ci --omit=dev                     # Before desktop builds; use npm.cmd in PowerShell
 flutter build linux --release
 flutter build windows --release
 flutter build macos --release
@@ -231,13 +232,14 @@ Windows hosts". Desktop release artifacts are therefore built by CI.
 
 ### Releases & the Windows installer
 Releases are produced by `.github/workflows/ci.yml` when a `v*.*.*` tag is
-pushed (`git tag v2.4.0 && git push --tags`):
+pushed (`git tag v2.5.0 && git push --tags`):
 
 | Job | Runner | Produces |
 |---|---|---|
 | `build` | linux/windows/macos | per-platform archive (tar/zip) |
 | `windows-installer` | windows-latest | Inno Setup `.exe` installer |
-| `release` | ubuntu-latest | Android APK, then publishes everything to the GitHub Release |
+| `ios` | macos-latest | unsigned iOS build validation |
+| `release` | ubuntu-latest | Android APK, then publishes desktop and Android artifacts to the GitHub Release |
 
 Notes:
 - Each archive is created on the runner that built it. A macOS `.app` is full
@@ -256,6 +258,13 @@ Notes:
   detects the VC++ runtime from the registry and installs the bundled
   `vc_redist.x64.exe` silently when missing, and continues (with a log) if
   that step fails.
+- The Windows, Linux, and macOS desktop builds bundle Node.js and the `.vsb`
+  converter. Run `npm.cmd ci --omit=dev` in PowerShell or `npm ci --omit=dev`
+  in a Unix shell before building.
+- Android bundles the Java Access reader through Gradle dependencies.
+- iOS bundles Node Mobile and the converter dependencies in the app. The first
+  iOS build downloads the official Node Mobile framework; `npm ci --omit=dev`
+  installs the converter modules before `flutter build ios`.
 - To compile the installer locally on Windows:
   `ISCC.exe /DMyAppVersion=<x.y.z> installer\windows\setup.iss`
 

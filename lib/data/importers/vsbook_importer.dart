@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite3;
@@ -74,8 +75,8 @@ class VsBookImporter implements SongbookImporter {
           final converted = await _convertMdbToVsbook(file.path);
           if (converted == null) {
             return ImportResult.failure(
-              'Failed to convert .vsb/.mdb file. '
-              'Ensure Node.js is installed and the converter script is present.',
+              'Could not read this .vsb/.mdb file. Check that it is a valid, '
+              'unencrypted Access songbook.',
             );
           }
           bytes = converted;
@@ -292,8 +293,8 @@ class VsBookImporter implements SongbookImporter {
         final converted = await _convertMdbToVsbook(filePath);
         if (converted == null) {
           return ImportResult.failure(
-            'Failed to convert .vsb/.mdb file. '
-            'Ensure Node.js is installed.',
+            'Could not read this .vsb/.mdb file. Check that it is a valid, '
+            'unencrypted Access songbook.',
           );
         }
         bytes = converted;
@@ -696,26 +697,54 @@ class VsBookImporter implements SongbookImporter {
     });
   }
 
-  /// Converts a .vsb/.mdb (Microsoft Access) file to a .vsbook ZIP archive
-  /// in-memory by shelling out to the bundled Node.js mdb-reader script.
+  /// Converts a .vsb/.mdb (Microsoft Access) file to a .vsbook ZIP archive.
+  /// Desktop builds use their bundled Node.js runtime; mobile uses its
+  /// bundled native Access reader through a platform channel.
   ///
   /// Returns the converted ZIP bytes, or null on failure.
   Future<Uint8List?> _convertMdbToVsbook(String mdbPath) async {
     try {
-      // Find the converter script relative to the project root.
-      // In development: tools/convert_vsb_to_vsbook.mjs
-      // In packaged builds: tools/convert_vsb_to_vsbook.mjs
-      final scriptDir = _findProjectRoot();
-      if (scriptDir == null) {
-        _log.warning('Cannot find project root for MDB converter');
-        return null;
+      if (Platform.isAndroid || Platform.isIOS) {
+        final convertedPath = await const MethodChannel(
+          'visual_song_book/vsb_converter',
+        ).invokeMethod<String>('convertAccessFile', {'path': mdbPath});
+        if (convertedPath == null) return null;
+        final convertedFile = File(convertedPath);
+        try {
+          return await convertedFile.readAsBytes();
+        } finally {
+          if (await convertedFile.exists()) await convertedFile.delete();
+        }
       }
 
-      final scriptPath = '$scriptDir/tools/convert_vsb_to_vsbook.mjs';
-      final scriptFile = File(scriptPath);
-      if (!await scriptFile.exists()) {
-        _log.warning('MDB converter script not found at $scriptPath');
-        return null;
+      final bundledConverterDir =
+          p.join(p.dirname(Platform.resolvedExecutable), 'converter');
+      final nodeFileName = Platform.isWindows ? 'node.exe' : 'node';
+      final bundledNode = File(p.join(bundledConverterDir, nodeFileName));
+      final bundledScript = File(p.join(
+        bundledConverterDir,
+        'tools',
+        'convert_vsb_to_vsbook.mjs',
+      ));
+
+      String nodeExecutable;
+      String scriptPath;
+      if (await bundledNode.exists() && await bundledScript.exists()) {
+        nodeExecutable = bundledNode.path;
+        scriptPath = bundledScript.path;
+      } else {
+        // Development fallback for running from a source checkout.
+        final projectDir = _findProjectRoot();
+        if (projectDir == null) {
+          _log.warning('Bundled VSB converter is missing and project root was not found');
+          return null;
+        }
+        scriptPath = p.join(projectDir, 'tools', 'convert_vsb_to_vsbook.mjs');
+        if (!await File(scriptPath).exists()) {
+          _log.warning('MDB converter script not found at $scriptPath');
+          return null;
+        }
+        nodeExecutable = 'node';
       }
 
       // Output to a temp .vsbook file
@@ -724,7 +753,7 @@ class VsBookImporter implements SongbookImporter {
 
       _log.info('Converting MDB to .vsbook: $mdbPath');
       final result = await Process.run(
-        'node',
+        nodeExecutable,
         [scriptPath, mdbPath, outputPath],
         runInShell: true,
       );

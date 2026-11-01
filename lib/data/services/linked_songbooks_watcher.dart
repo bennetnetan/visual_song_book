@@ -70,8 +70,7 @@ class LinkedSongbooksWatcher {
       _setupFileSystemWatcher(book);
     }
 
-    // Start periodic polling as fallback for cloud-synced files
-    _startPolling();
+    updateWatchedFiles(linkedBooks);
   }
 
   /// Update the set of watched files (call when linked books change).
@@ -96,6 +95,16 @@ class LinkedSongbooksWatcher {
         _cacheLastModified(book);
         _setupFileSystemWatcher(book);
       }
+    }
+
+    // `updateWatchedFiles` is the entry point used by the app provider.
+    // Keep polling active even when no file-system watcher could be created
+    // (common for cloud-synced folders and files added after startup).
+    if (linkedBooks.isNotEmpty) {
+      _startPolling();
+    } else {
+      _pollTimer?.cancel();
+      _pollTimer = null;
     }
   }
 
@@ -167,8 +176,6 @@ class LinkedSongbooksWatcher {
     for (final book in linkedBooks) {
       if (!book.fileExists) continue;
       if (!book.isSupportedFormat) continue;
-      // Only handle .vsbook — .vsb requires mdb-tools
-      if (!book.path.toLowerCase().endsWith('.vsbook')) continue;
 
       final currentModified = book.fileLastModified;
       if (currentModified == null) continue;

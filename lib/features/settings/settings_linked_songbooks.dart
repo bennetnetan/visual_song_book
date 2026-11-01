@@ -242,9 +242,23 @@ class LinkedSongbooksCard extends ConsumerWidget {
       // Link it
       await ref.read(linkedSongbooksProvider.notifier).add(path, name: name);
 
+      // Import immediately so the linked source can be used without a restart.
+      final importer = VsBookImporter(ref.read(databaseProvider));
+      final importResult = await importer.reimportSource(path);
+      if (importResult.success) {
+        await ref.read(linkedSongbooksProvider.notifier).markImported(path);
+      }
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Linked "$name". Songs will sync on next startup.')),
+          SnackBar(
+            content: Text(
+              importResult.success
+                  ? 'Linked "$name" and imported ${importResult.songsImported} songs.'
+                  : 'Linked "$name", but import failed: ${importResult.errorMessage}',
+            ),
+            duration: const Duration(seconds: 6),
+          ),
         );
       }
     } catch (e) {

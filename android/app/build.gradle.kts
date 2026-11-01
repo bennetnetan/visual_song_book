@@ -10,6 +10,7 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -42,4 +43,46 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Pure-Java Access reader bundled into Android builds for .vsb/.mdb imports.
+    implementation("com.healthmarketscience.jackcess:jackcess:4.0.12")
+    // Jackcess uses java.nio.file; backport it for the app's Android 21 minimum.
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.0.2")
+}
+
+val jackcessAndroidResources = layout.buildDirectory.dir("generated/jackcess-res")
+android.sourceSets.getByName("main").res.srcDir(jackcessAndroidResources)
+
+val extractJackcessAndroidResources by tasks.registering {
+    val jackcessRuntime = configurations.getByName("debugRuntimeClasspath")
+    inputs.files(jackcessRuntime)
+    outputs.dir(jackcessAndroidResources)
+
+    doLast {
+        val jackcessJar = jackcessRuntime.files.firstOrNull {
+            it.name.startsWith("jackcess-") && it.extension == "jar"
+        } ?: error("Jackcess dependency was not resolved")
+        copy {
+            from(zipTree(jackcessJar)) {
+                include("com/healthmarketscience/jackcess/*.txt")
+                include("com/healthmarketscience/jackcess/*.mdb")
+                include("com/healthmarketscience/jackcess/*.accdb")
+                eachFile {
+                    val extension = name.substringAfterLast('.', "").lowercase()
+                    val baseName = name.substringBeforeLast('.', name)
+                        .lowercase()
+                        .replace(Regex("[^a-z0-9_]"), "_")
+                    path = "raw/$baseName.$extension"
+                }
+                includeEmptyDirs = false
+            }
+            into(jackcessAndroidResources)
+        }
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(extractJackcessAndroidResources)
 }

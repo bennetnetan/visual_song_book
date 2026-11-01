@@ -20,7 +20,7 @@
 - **Live Projection** — dedicated secondary window (desktop) or fullscreen mode (mobile), adjustable font size, slide transitions, auto-insert chorus
 - **Unified Search** — search Bible or songs directly from the projection tab with structured reference parsing
 - **History** — tracks projected songs, sets, and Bible passages
-- **Import** — legacy `.mdb` (via mdb-tools), `.vsbook` backup archives, bundled JSON songbooks
+- **Import** — legacy `.vsb` / `.mdb` Access songbooks, `.vsbook` backup archives, bundled JSON songbooks
 - **Export** — set sharing (JSON), database backup (`.vsbook`)
 - **Linked Songbooks** — link `.vsbook` files from Google Drive or shared folders for automatic sync
 - **Onboarding** — first-launch setup wizard for initial configuration
@@ -87,6 +87,7 @@ Contents:
 
 ```bash
 flutter pub get
+npm ci --omit=dev                     # PowerShell: npm.cmd ci --omit=dev
 
 # Desktop (Linux)
 flutter build linux --release
@@ -97,6 +98,9 @@ flutter build windows --release
 
 # Desktop (macOS)
 flutter build macos --release
+
+# iOS (first build downloads the bundled Node Mobile framework)
+flutter build ios --release --no-codesign
 
 # Android per-ABI
 # versionCode comes from --build-number; pass an explicit --build-name and
@@ -124,7 +128,12 @@ See [docs/SUPPORTED_PLATFORMS.md](docs/SUPPORTED_PLATFORMS.md) for details.
 
 ## Version
 
-Current: **v2.4.0** — see About → Changelog in the app for full history.
+Current: **v2.5.0** — see About → Changelog in the app for full history.
+
+### v2.5.0 Changes
+- Self-contained `.vsb` / `.mdb` Access songbook conversion on desktop, Android, and iOS
+- Linked songbooks import when linked and sync detected file changes without an app restart
+- iOS conversion runtime and dependencies are bundled in the app; iOS builds are checked by CI
 
 ### v2.4.0 Changes
 - Projection opens automatically: picking a song, Bible passage or set opens the projector window without any manual button

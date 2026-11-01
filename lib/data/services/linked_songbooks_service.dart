@@ -114,7 +114,9 @@ class LinkedSongbook {
 
   bool get isSupportedFormat {
     final lower = path.toLowerCase();
-    return lower.endsWith('.vsbook') || lower.endsWith('.vsb');
+    return lower.endsWith('.vsbook') ||
+        lower.endsWith('.vsb') ||
+        lower.endsWith('.mdb');
   }
 }
 
@@ -236,11 +238,12 @@ final linkedSongbooksSyncProvider = FutureProvider<int>((ref) async {
     return 0;
   }
 
-  final db = ref.watch(databaseProvider);
-  final linkedRegistries = await db.getAllLinkedSongbooks();
-  if (linkedRegistries.isEmpty) return 0;
+  // Await the provider so its legacy SharedPreferences migration completes
+  // before we inspect the database registry.
+  final linked = await ref.watch(linkedSongbooksProvider.future);
+  if (linked.isEmpty) return 0;
 
-  final linked = linkedRegistries.map(LinkedSongbook.fromRegistry).toList();
+  final db = ref.watch(databaseProvider);
   final needingSync =
       linked.where((s) => s.hasChangedSinceLastImport && s.fileExists).toList();
   if (needingSync.isEmpty) return 0;

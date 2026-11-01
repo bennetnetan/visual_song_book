@@ -7,7 +7,7 @@
 ; exactly what is installed and where it goes.
 ;
 ; Build from CI:
-;   ISCC.exe /DMyAppVersion=2.4.0 ^
+;   ISCC.exe /DMyAppVersion=2.5.0 ^
 ;       /DMyAppSourceDir=<repo>\build\windows\x64\runner\Release ^
 ;       installer\windows\setup.iss
 ;

@@ -2,6 +2,18 @@
 
 All notable changes to Visual Song Book are documented here. Newest first.
 
+## [2.5.0] - 2026-11-01
+
+### Features
+- **Songbooks** — `.vsb` / `.mdb` Access files can be imported with the converter bundled in each desktop and mobile build; Android uses its bundled Java reader and iOS embeds Node Mobile.
+- **Linked songbooks** — linking a book imports it immediately, and detected changes sync without waiting for an app restart.
+
+### Bug Fixes
+- **Linked songbooks** — fixed change detection and sync handling for linked files, including clearer errors when a file cannot be read.
+
+### Build
+- Added an unsigned iOS build to CI and packaged the iOS conversion runtime and JavaScript dependencies with the app.
+
 ## [2.4.0] - 2026-10-13
 
 ### Features

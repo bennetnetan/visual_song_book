@@ -72,6 +72,36 @@ endif()
 set(INSTALL_BUNDLE_DATA_DIR "${CMAKE_INSTALL_PREFIX}/data")
 set(INSTALL_BUNDLE_LIB_DIR "${CMAKE_INSTALL_PREFIX}")
 
+# The .vsb/.mdb importer uses a small Node.js converter. Bundle the runtime,
+# converter, and production npm dependencies so installed Windows builds do
+# not depend on Node being installed on the user's machine.
+find_program(NODE_EXECUTABLE NAMES node.exe node)
+if(NOT NODE_EXECUTABLE)
+  message(FATAL_ERROR "Node.js is required to bundle the VSB converter runtime.")
+endif()
+set(VSB_CONVERTER_DIR "${CMAKE_SOURCE_DIR}/../tools")
+set(VSB_NODE_MODULES_DIR "${CMAKE_SOURCE_DIR}/../node_modules")
+if(NOT EXISTS "${VSB_CONVERTER_DIR}/convert_vsb_to_vsbook.mjs")
+  message(FATAL_ERROR "Missing tools/convert_vsb_to_vsbook.mjs")
+endif()
+if(NOT EXISTS "${VSB_NODE_MODULES_DIR}/mdb-reader/package.json" OR
+   NOT EXISTS "${VSB_NODE_MODULES_DIR}/archiver/package.json")
+  message(FATAL_ERROR "Missing VSB converter dependencies. Run npm ci --omit=dev before building Windows.")
+endif()
+
+install(FILES "${NODE_EXECUTABLE}"
+  DESTINATION "${INSTALL_BUNDLE_LIB_DIR}/converter")
+get_filename_component(NODE_INSTALL_DIR "${NODE_EXECUTABLE}" DIRECTORY)
+if(EXISTS "${NODE_INSTALL_DIR}/LICENSE")
+  install(FILES "${NODE_INSTALL_DIR}/LICENSE"
+    DESTINATION "${INSTALL_BUNDLE_LIB_DIR}/converter")
+endif()
+install(FILES "${VSB_CONVERTER_DIR}/convert_vsb_to_vsbook.mjs"
+  DESTINATION "${INSTALL_BUNDLE_LIB_DIR}/converter/tools")
+install(DIRECTORY "${VSB_NODE_MODULES_DIR}/"
+  DESTINATION "${INSTALL_BUNDLE_LIB_DIR}/converter/node_modules"
+  PATTERN ".cache" EXCLUDE)
+
 install(TARGETS ${BINARY_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
   COMPONENT Runtime)
 

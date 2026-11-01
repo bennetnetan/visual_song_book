@@ -16,24 +16,16 @@
  */
 
 import fs from 'fs';
+import { pathToFileURL } from 'url';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 import MDBReader from 'mdb-reader';
 const archiver = require('archiver');
 
 // ── Parse args ──────────────────────────────────────────────────────────────
-const inputPath = process.argv[2];
-if (!inputPath) {
-  console.error('Usage: node convert_vsb_to_vsbook.js <input.vsb> [output.vsbook]');
-  process.exit(1);
-}
-
-const outputPath = process.argv[3] || inputPath.replace(/\.(vsb|mdb)$/i, '.vsbook');
-
-if (!fs.existsSync(inputPath)) {
-  console.error(`File not found: ${inputPath}`);
-  process.exit(1);
-}
+export async function convertAccessFile(inputPath, outputPath) {
+  outputPath ??= inputPath.replace(/\.(vsb|mdb)$/i, '.vsbook');
+  if (!fs.existsSync(inputPath)) throw new Error(`File not found: ${inputPath}`);
 
 // ── Read MDB ────────────────────────────────────────────────────────────────
 const buffer = fs.readFileSync(inputPath);
@@ -63,8 +55,7 @@ if (categoriesTable) {
 const songs = [];
 const songsTable = db.getTable('Songs');
 if (!songsTable) {
-  console.error('No Songs table found in the database');
-  process.exit(1);
+  throw new Error('No Songs table found in the database');
 }
 
 const rows = songsTable.getData();
@@ -126,7 +117,7 @@ function writeVsbook() {
     archive.append(
       JSON.stringify({
         app: 'Visual Song Book',
-        version: '2.2.0',
+        version: '2.5.0',
         exported_at: new Date().toISOString(),
         format: 'json',
         song_count: songs.length,
@@ -150,6 +141,9 @@ function writeVsbook() {
 /**
  * Parses MDB date format "MM/DD/YY HH:MM:SS" to ISO string.
  */
+  await writeVsbook();
+}
+
 function parseMdbDate(dateStr) {
   try {
     const parts = dateStr.split(' ');
@@ -186,7 +180,15 @@ function parseMdbDate(dateStr) {
 }
 
 // ── Run ─────────────────────────────────────────────────────────────────────
-writeVsbook().catch((err) => {
-  console.error('Error writing .vsbook:', err);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const inputPath = process.argv[2];
+  if (!inputPath) {
+    console.error('Usage: node convert_vsb_to_vsbook.mjs <input.vsb> [output.vsbook]');
+    process.exitCode = 1;
+  } else {
+    convertAccessFile(inputPath, process.argv[3]).catch((err) => {
+      console.error('VSB conversion failed:', err);
+      process.exitCode = 1;
+    });
+  }
+}

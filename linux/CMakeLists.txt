@@ -91,6 +91,37 @@ install(CODE "
 set(INSTALL_BUNDLE_DATA_DIR "${CMAKE_INSTALL_PREFIX}/data")
 set(INSTALL_BUNDLE_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib")
 
+# Bundle the converter runtime and dependencies with the relocatable app.
+find_program(NODE_EXECUTABLE NAMES node)
+if(NOT NODE_EXECUTABLE)
+  message(FATAL_ERROR "Node.js is required to bundle the VSB converter runtime.")
+endif()
+set(VSB_CONVERTER_DIR "${CMAKE_SOURCE_DIR}/../tools")
+set(VSB_NODE_MODULES_DIR "${CMAKE_SOURCE_DIR}/../node_modules")
+if(NOT EXISTS "${VSB_NODE_MODULES_DIR}/mdb-reader/package.json" OR
+   NOT EXISTS "${VSB_NODE_MODULES_DIR}/archiver/package.json")
+  message(FATAL_ERROR "Missing VSB converter dependencies. Run npm ci --omit=dev before building Linux.")
+endif()
+
+install(PROGRAMS "${NODE_EXECUTABLE}"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/converter")
+get_filename_component(NODE_INSTALL_DIR "${NODE_EXECUTABLE}" DIRECTORY)
+if(EXISTS "${NODE_INSTALL_DIR}/LICENSE")
+  install(FILES "${NODE_INSTALL_DIR}/LICENSE"
+    DESTINATION "${CMAKE_INSTALL_PREFIX}/converter")
+else()
+  get_filename_component(NODE_ROOT_DIR "${NODE_INSTALL_DIR}" DIRECTORY)
+  if(EXISTS "${NODE_ROOT_DIR}/LICENSE")
+    install(FILES "${NODE_ROOT_DIR}/LICENSE"
+      DESTINATION "${CMAKE_INSTALL_PREFIX}/converter")
+  endif()
+endif()
+install(FILES "${VSB_CONVERTER_DIR}/convert_vsb_to_vsbook.mjs"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/converter/tools")
+install(DIRECTORY "${VSB_NODE_MODULES_DIR}/"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/converter/node_modules"
+  PATTERN ".cache" EXCLUDE)
+
 install(TARGETS ${BINARY_NAME} RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
   COMPONENT Runtime)
 
