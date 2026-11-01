@@ -279,7 +279,7 @@
 			outputPaths = ();
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/scripts/prepare_node_mobile.sh\"";
+			shellScript = "/bin/sh \"${SRCROOT}/scripts/prepare_node_mobile.sh\"";
 		};
 		A11E00000000000000000004 /* Bundle Node converter and framework */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -290,7 +290,7 @@
 			outputPaths = ();
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${SRCROOT}/scripts/bundle_node_project.sh\"";
+			shellScript = "/bin/sh \"${SRCROOT}/scripts/bundle_node_project.sh\"";
 		};
 /* End PBXShellScriptBuildPhase section */
 
