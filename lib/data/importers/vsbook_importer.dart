@@ -717,8 +717,10 @@ class VsBookImporter implements SongbookImporter {
         }
       }
 
-      final bundledConverterDir =
-          p.join(p.dirname(Platform.resolvedExecutable), 'converter');
+      final executableDir = p.dirname(Platform.resolvedExecutable);
+      final bundledConverterDir = Platform.isMacOS
+          ? p.join(p.dirname(executableDir), 'Resources', 'converter')
+          : p.join(executableDir, 'converter');
       final nodeFileName = Platform.isWindows ? 'node.exe' : 'node';
       final bundledNode = File(p.join(bundledConverterDir, nodeFileName));
       final bundledScript = File(p.join(

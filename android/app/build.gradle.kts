@@ -45,23 +45,31 @@ flutter {
     source = "../.."
 }
 
+val jackcessCoordinate = "com.healthmarketscience.jackcess:jackcess:4.0.12"
+
 dependencies {
     // Pure-Java Access reader bundled into Android builds for .vsb/.mdb imports.
-    implementation("com.healthmarketscience.jackcess:jackcess:4.0.12")
+    implementation(jackcessCoordinate)
     // Jackcess uses java.nio.file; backport it for the app's Android 21 minimum.
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.0.2")
 }
+
+val jackcessResourceExtraction by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+
+dependencies.add(jackcessResourceExtraction.name, jackcessCoordinate)
 
 val jackcessAndroidResources = layout.buildDirectory.dir("generated/jackcess-res")
 android.sourceSets.getByName("main").res.srcDir(jackcessAndroidResources)
 
 val extractJackcessAndroidResources by tasks.registering {
-    val jackcessRuntime = configurations.getByName("debugRuntimeClasspath")
-    inputs.files(jackcessRuntime)
+    inputs.files(jackcessResourceExtraction)
     outputs.dir(jackcessAndroidResources)
 
     doLast {
-        val jackcessJar = jackcessRuntime.files.firstOrNull {
+        val jackcessJar = jackcessResourceExtraction.files.firstOrNull {
             it.name.startsWith("jackcess-") && it.extension == "jar"
         } ?: error("Jackcess dependency was not resolved")
         copy {

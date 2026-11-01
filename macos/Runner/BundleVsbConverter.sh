@@ -2,7 +2,7 @@
 set -eu
 
 ROOT="$SRCROOT/.."
-DEST="$TARGET_BUILD_DIR/$EXECUTABLE_FOLDER_PATH/converter"
+DEST="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/converter"
 NODE_BIN="$(command -v node || true)"
 
 if [ -z "$NODE_BIN" ] || [ ! -x "$NODE_BIN" ]; then

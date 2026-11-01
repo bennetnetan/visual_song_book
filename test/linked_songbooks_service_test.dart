@@ -33,6 +33,52 @@ void main() {
     await db.close();
   });
 
+  group('LinkedSongbook file status', () {
+    test('recognizes supported formats without regard to case', () {
+      for (final path in ['Hymns.vsbook', 'Hymns.VSB', 'Hymns.MDB']) {
+        expect(
+          LinkedSongbook(path: path, name: 'Hymns').isSupportedFormat,
+          isTrue,
+          reason: path,
+        );
+      }
+      expect(
+        LinkedSongbook(path: 'Hymns.zip', name: 'Hymns').isSupportedFormat,
+        isFalse,
+      );
+    });
+
+    test('treats unimported and newer files as needing sync', () {
+      final tempDir = Directory.systemTemp.createTempSync('linked_status_');
+      final file = File('${tempDir.path}/hymns.vsbook')..writeAsStringSync('x');
+      try {
+        final modified = file.statSync().modified;
+        expect(
+          LinkedSongbook(path: file.path, name: 'Hymns').hasChangedSinceLastImport,
+          isTrue,
+        );
+        expect(
+          LinkedSongbook(
+            path: file.path,
+            name: 'Hymns',
+            lastImportedAt: modified.subtract(const Duration(seconds: 1)),
+          ).hasChangedSinceLastImport,
+          isTrue,
+        );
+        expect(
+          LinkedSongbook(
+            path: file.path,
+            name: 'Hymns',
+            lastImportedAt: modified.add(const Duration(seconds: 1)),
+          ).hasChangedSinceLastImport,
+          isFalse,
+        );
+      } finally {
+        tempDir.deleteSync(recursive: true);
+      }
+    });
+  });
+
   group('LinkedSongbookRegistry DB table', () {
     test('insert and getAll linked songbooks', () async {
       await db.insertLinkedSongbook(

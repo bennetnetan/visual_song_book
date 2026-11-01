@@ -14,11 +14,11 @@ final _log = AppLogger.get('LinkedSongbooksWatcher');
 /// Polling interval for cloud-synced files (Google Drive, Dropbox, etc.).
 /// These providers often modify files through temp paths that don't trigger
 /// OS file events, so polling is the only reliable detection method.
-const _pollingInterval = Duration(minutes: 5);
+const _defaultPollingInterval = Duration(minutes: 5);
 
 /// Debounce window to avoid re-importing the same file multiple times in
 /// quick succession (e.g. a file write that triggers multiple OS events).
-const _debounceDuration = Duration(seconds: 3);
+const _defaultDebounceDuration = Duration(seconds: 3);
 
 /// Monitors linked .vsbook files for changes and auto-syncs them.
 ///
@@ -48,6 +48,8 @@ class LinkedSyncEvent {
 
 class LinkedSongbooksWatcher {
   final AppDatabase _db;
+  final Duration _pollingInterval;
+  final Duration _debounceDuration;
   final Map<String, StreamSubscription<FileSystemEvent>> _watchers = {};
   Timer? _pollTimer;
   final Map<String, DateTime> _lastModifiedCache = {};
@@ -57,7 +59,12 @@ class LinkedSongbooksWatcher {
   final _syncEventsController = StreamController<LinkedSyncEvent>.broadcast();
   Stream<LinkedSyncEvent> get syncEvents => _syncEventsController.stream;
 
-  LinkedSongbooksWatcher(this._db);
+  LinkedSongbooksWatcher(
+    this._db, {
+    Duration? pollingInterval,
+    Duration? debounceDuration,
+  }) : _pollingInterval = pollingInterval ?? _defaultPollingInterval,
+       _debounceDuration = debounceDuration ?? _defaultDebounceDuration;
 
   /// Start watching all currently linked songbooks.
   /// Call this after the app seed completes.

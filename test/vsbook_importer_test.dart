@@ -32,6 +32,24 @@ void main() {
     await db.close();
   });
 
+  test('recognizes linked archive and Access songbook extensions', () {
+    for (final path in [
+      '/library/hymns.vsbook',
+      '/library/hymns.vsb',
+      '/library/hymns.mdb',
+    ]) {
+      expect(
+        importer.canImport(ImportSource.fromFile(path)),
+        isTrue,
+        reason: path,
+      );
+    }
+    expect(
+      importer.canImport(ImportSource.fromFile('/library/hymns.txt')),
+      isFalse,
+    );
+  });
+
   /// Builds a `.vsbook` archive containing a sqlite `songs.db` (the format the
   /// backup/export produces) plus `metadata.json`.
   Uint8List buildVsbookWithSqlite(List<Map<String, Object?>> rows) {
