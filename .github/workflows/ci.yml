@@ -331,3 +331,10 @@ jobs:
           # exactly what was listed there.
           files: |
             staging/*
+          body: |
+            ## Visual Song Book 2.6.0
+
+            - Added automatic update checks on startup and a manual check in Settings, with release notes and a link to the platform download.
+            - Bundled Access songbook conversion support across desktop and mobile platforms.
+            - Improved linked songbook change detection, automatic syncing, and failure retries.
+            - Published desktop packages for Linux, Windows, and macOS, plus an Android APK. iOS builds are validated by CI.
