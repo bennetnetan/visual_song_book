@@ -15,6 +15,7 @@ import 'package:visual_song_book/data/services/app_storage.dart';
 import 'package:visual_song_book/data/services/linked_songbooks_service.dart';
 import 'package:visual_song_book/data/services/linked_songbooks_watcher.dart';
 import 'package:visual_song_book/features/onboarding/onboarding_page.dart';
+import 'package:visual_song_book/features/settings/update_notification_listener.dart';
 import 'package:visual_song_book/routing/app_router.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -190,7 +191,12 @@ class MyApp extends ConsumerWidget {
       );
     }
 
-    return _SyncNotificationListener(child: _LifecycleGuard(child: app));
+    return _SyncNotificationListener(
+      child: UpdateNotificationListener(
+        enabled: !isProjectionWindow,
+        child: _LifecycleGuard(child: app),
+      ),
+    );
   }
 }
 
