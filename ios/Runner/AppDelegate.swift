@@ -14,7 +14,9 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-    let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "VsbAccessConverter")
+    guard let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "VsbAccessConverter") else {
+      return
+    }
     let channel = FlutterMethodChannel(
       name: Self.converterChannel,
       binaryMessenger: registrar.messenger()
