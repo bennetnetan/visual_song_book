@@ -28,6 +28,10 @@ class ProjectionState {
   /// Defaults to true so operators never open it by hand.
   final bool autoOpenProjector;
 
+  /// When true, up/down caret cues appear at the bottom right of projected
+  /// slides (down on first slide, both in middle, up on last slide).
+  final bool showContinuationCarets;
+
   ProjectionState({
     this.currentSong,
     required this.slides,
@@ -43,6 +47,7 @@ class ProjectionState {
     this.bibleBookName,
     required this.projectionMode,
     this.autoOpenProjector = true,
+    this.showContinuationCarets = true,
   });
 
   ProjectionState copyWith({
@@ -60,6 +65,7 @@ class ProjectionState {
     String? Function()? bibleBookName,
     ProjectionMode? projectionMode,
     bool? autoOpenProjector,
+    bool? showContinuationCarets,
   }) {
     return ProjectionState(
       currentSong: currentSong != null ? currentSong() : this.currentSong,
@@ -77,6 +83,8 @@ class ProjectionState {
       bibleBookName: bibleBookName != null ? bibleBookName() : this.bibleBookName,
       projectionMode: projectionMode ?? this.projectionMode,
       autoOpenProjector: autoOpenProjector ?? this.autoOpenProjector,
+      showContinuationCarets:
+          showContinuationCarets ?? this.showContinuationCarets,
     );
   }
 
@@ -96,6 +104,7 @@ class ProjectionState {
       bibleBookName: null,
       projectionMode: ProjectionMode.extended,
       autoOpenProjector: true,
+      showContinuationCarets: true,
     );
   }
 
@@ -109,4 +118,76 @@ class ProjectionState {
   }
 
   bool get hasContent => slides.isNotEmpty;
+
+  /// Whether the current slide has a preceding slide in the same song or chapter.
+  bool get hasPrevInSong {
+    if (slides.isEmpty || currentSlideIndex <= 0 || currentSlideIndex >= slides.length) {
+      return false;
+    }
+    if (isBibleMode) return true;
+    final current = slides[currentSlideIndex];
+    final prev = slides[currentSlideIndex - 1];
+    return current.songTitle == null || prev.songTitle == current.songTitle;
+  }
+
+  /// Whether the current slide has a subsequent slide in the same song or chapter.
+  bool get hasNextInSong {
+    if (slides.isEmpty || currentSlideIndex < 0 || currentSlideIndex >= slides.length - 1) {
+      return false;
+    }
+    if (isBibleMode) return true;
+    final current = slides[currentSlideIndex];
+    final next = slides[currentSlideIndex + 1];
+    return current.songTitle == null || next.songTitle == current.songTitle;
+  }
+
+  /// Caret visibility for bottom-right indicators.
+  bool get showUpCaret => showContinuationCarets && hasPrevInSong;
+  bool get showDownCaret => showContinuationCarets && hasNextInSong;
+
+  /// Whether the current slide is the concluding slide of the current song or chapter.
+  bool get isEndSlide {
+    if (slides.isEmpty || currentSlideIndex < 0 || currentSlideIndex >= slides.length) {
+      return false;
+    }
+    return !hasNextInSong;
+  }
+
+  /// Whether the current slide is the end of a song within a multi-song set.
+  bool get isEndOfSongInSet {
+    if (isBibleMode || slides.isEmpty) return false;
+    if (currentSlideIndex < 0 || currentSlideIndex >= slides.length - 1) return false;
+    final current = slides[currentSlideIndex];
+    final next = slides[currentSlideIndex + 1];
+    return current.songTitle != null &&
+        next.songTitle != null &&
+        current.songTitle != next.songTitle;
+  }
+
+  /// The title of the next song in the queued set, if available.
+  String? get nextSongTitle {
+    if (isEndOfSongInSet) {
+      return slides[currentSlideIndex + 1].songTitle;
+    }
+    return null;
+  }
+
+  /// Operator-facing alert text explaining the end-slide change.
+  String? get endNotificationText {
+    if (!isEndSlide) return null;
+    if (isBibleMode) {
+      final book = bibleBookName ?? '';
+      final ch = bibleChapter != null ? ' $bibleChapter' : '';
+      return 'End of $book$ch'.trim();
+    }
+    if (isEndOfSongInSet) {
+      final next = nextSongTitle;
+      return next != null ? 'End of song — Next: $next' : 'End of song';
+    }
+    if (currentSlideIndex == slides.length - 1) {
+      final isSet = slides.any((s) => s.songTitle != null && s.songTitle != slides.first.songTitle);
+      return isSet ? 'End of set' : 'End of song';
+    }
+    return 'End of song';
+  }
 }

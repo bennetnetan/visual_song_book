@@ -57,6 +57,41 @@ class ProjectionPreferencesCard extends ConsumerWidget {
               ),
             ],
           ),
+          const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Slide Continuation Carets',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Show up/down caret cues at the bottom right of projected slides '
+                      'indicating song and chapter boundaries',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: state.showContinuationCarets,
+                onChanged: notifier.setShowContinuationCarets,
+              ),
+            ],
+          ),
           if (isLargeScreen) ...[
             const SizedBox(height: 20),
             const Divider(),

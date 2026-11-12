@@ -76,6 +76,8 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       // Auto-opening the projector window is on by default: operators expect
       // projection to start the moment they pick content.
       final savedAutoOpen = _prefs?.getBool('projection_auto_open') ?? true;
+      final savedShowCarets =
+          _prefs?.getBool('projection_show_carets') ?? true;
       final savedMode = _prefs?.getString('projection_mode') ?? 'extended';
       // 'duplicate' is not implemented yet — fall back to 'extended'.
       final effectiveMode =
@@ -89,6 +91,7 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         keepAwake: savedKeepAwake,
         autoInsertChorus: savedAutoChorus,
         autoOpenProjector: savedAutoOpen,
+        showContinuationCarets: savedShowCarets,
         projectionMode: effectiveMode,
       );
 
@@ -109,10 +112,14 @@ class ProjectionController extends StateNotifier<ProjectionState> {
       parsedVerses,
       autoInsertChorus: state.autoInsertChorus,
     );
+    final taggedSequence = sequence.map((v) => v.copyWith(
+      songTitle: song.title,
+      songNum: song.songNum,
+    )).toList();
 
     state = state.copyWith(
       currentSong: () => song,
-      slides: sequence,
+      slides: taggedSequence,
       currentSlideIndex: 0,
       isBibleMode: false,
       contentTitle: () => song.title,
@@ -218,6 +225,14 @@ class ProjectionController extends StateNotifier<ProjectionState> {
     if (enabled && state.slides.isNotEmpty) {
       _triggerAutoProjection();
     }
+  }
+
+  /// Toggles whether up/down continuation carets appear at the bottom right
+  /// of projected slides.
+  Future<void> setShowContinuationCarets(bool enabled) async {
+    state = state.copyWith(showContinuationCarets: enabled);
+    await _prefs?.setBool('projection_show_carets', enabled);
+    _syncSecondaryWindow();
   }
 
   /// Project a list of Bible verses. [title] is the passage heading shown in
@@ -648,6 +663,9 @@ class ProjectionController extends StateNotifier<ProjectionState> {
         // Appearance settings so the secondary engine renders the same
         // background + text color as the main projection.
         'slideTheme': projTheme.toJson(),
+        // Caret cues for verse/song/chapter boundary indicators.
+        'showUpCaret': state.showUpCaret,
+        'showDownCaret': state.showDownCaret,
       });
       return true;
     } catch (e) {

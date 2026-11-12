@@ -8,6 +8,8 @@ import 'package:visual_song_book/features/projection/projection_controller.dart'
 import 'package:visual_song_book/features/projection/projection_state.dart';
 import 'package:visual_song_book/features/projection/projection_theme.dart';
 import 'package:visual_song_book/features/projection/projection_search_page.dart';
+import 'package:visual_song_book/features/projection/projection_preview_glow.dart';
+import 'package:visual_song_book/features/projection/slide_carets_indicator.dart';
 
 
 class LivePreviewPanel extends ConsumerWidget {
@@ -96,14 +98,10 @@ class LivePreviewPanel extends ConsumerWidget {
             ),
           AspectRatio(
             aspectRatio: 16 / 9,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                  width: 3,
-                ),
-              ),
+            child: ProjectionPreviewGlow(
+              isEndSlide: state.isEndSlide,
+              notificationText: state.endNotificationText,
+              borderWidth: 3,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Stack(
@@ -169,6 +167,16 @@ class LivePreviewPanel extends ConsumerWidget {
                             ],
                           ],
                         ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 8,
+                      bottom: 6 + mobileClearance,
+                      child: SlideCaretsIndicator(
+                        showUp: state.showUpCaret,
+                        showDown: state.showDownCaret,
+                        color: Colors.white,
+                        size: 14,
                       ),
                     ),
                     LowerThirdOverlay(
@@ -258,18 +266,14 @@ class LivePreviewPanel extends ConsumerWidget {
         // 16:9 preview canvas
         Expanded(
           child: Center(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: theme.colorScheme.outline.withValues(alpha: 0.3),
-                  width: 4,
-                ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: AspectRatio(
-                  aspectRatio: 16 / 9,
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: ProjectionPreviewGlow(
+                isEndSlide: state.isEndSlide,
+                notificationText: state.endNotificationText,
+                borderWidth: 4,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
                   child: Stack(
                     children: [
                       Container(
@@ -333,6 +337,16 @@ class LivePreviewPanel extends ConsumerWidget {
                               ],
                             ],
                           ),
+                        ),
+                      ),
+                      Positioned(
+                        right: 10,
+                        bottom: 8 + desktopClearance,
+                        child: SlideCaretsIndicator(
+                          showUp: state.showUpCaret,
+                          showDown: state.showDownCaret,
+                          color: Colors.white,
+                          size: 16,
                         ),
                       ),
                       LowerThirdOverlay(

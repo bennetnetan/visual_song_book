@@ -19,6 +19,7 @@ import 'package:visual_song_book/features/lower_third/lower_third_controller.dar
 import 'package:visual_song_book/features/lower_third/lower_third_state.dart';
 import 'package:visual_song_book/features/lower_third/widgets/lower_third_overlay.dart';
 import 'package:visual_song_book/features/projection/projection_theme.dart';
+import 'package:visual_song_book/features/projection/slide_carets_indicator.dart';
 import 'package:visual_song_book/features/sets/sets_tab.dart';
 
 final _log = AppLogger.get('ProjectionOutputView');
@@ -40,6 +41,8 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
   int _ipcCurrentIndex = 0;
   ProjectionTheme _ipcTheme = const ProjectionTheme();
   LowerThirdState _ipcLowerThirdState = LowerThirdState.initial();
+  bool _ipcShowUpCaret = false;
+  bool _ipcShowDownCaret = false;
   bool _isSecondaryWindow = false;
   late final FocusNode _focusNode;
   bool _isClosing = false;
@@ -167,6 +170,12 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
             _ipcTheme = ProjectionTheme.fromJson(
               Map<String, dynamic>.from(args['slideTheme'] as Map),
             );
+          }
+          if (args['showUpCaret'] != null) {
+            _ipcShowUpCaret = args['showUpCaret'] as bool;
+          }
+          if (args['showDownCaret'] != null) {
+            _ipcShowDownCaret = args['showDownCaret'] as bool;
           }
         });
       } else if (call.method == 'update_lower_third') {
@@ -1001,6 +1010,24 @@ class _ProjectionOutputViewState extends ConsumerState<ProjectionOutputView> {
               // Position indicator — mobile fullscreen only (bottom bar above).
               // Hidden on desktop (Linux / macOS / Windows) so the projection
               // screen shows lyrics alone.
+
+              // Continuation carets: bottom-right corner of the presentation screen.
+              // Shows down arrow on first slide, both in middle, up arrow on final slide.
+              Positioned(
+                right: 28,
+                bottom: (_isMobile &&
+                        !_isSecondaryWindow &&
+                        state.slides.isNotEmpty
+                    ? (_isPortraitMode ? 104.0 : 44.0)
+                    : 28.0) +
+                    lowerThirdClearance,
+                child: SlideCaretsIndicator(
+                  showUp: _isSecondaryWindow ? _ipcShowUpCaret : state.showUpCaret,
+                  showDown: _isSecondaryWindow ? _ipcShowDownCaret : state.showDownCaret,
+                  color: projTheme.effectiveTextColor,
+                  size: 24,
+                ),
+              ),
             ],
           ),
         ),
