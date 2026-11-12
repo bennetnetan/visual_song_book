@@ -14,7 +14,7 @@ class ImageBackgroundEditor extends StatelessWidget {
 
   Future<void> _pickFromDisk(BuildContext context) async {
     final result = await FilePicker.pickFiles(type: FileType.image);
-    if (result == null) return;
+    if (result.isEmpty) return;
     final path = result.single.path;
     if (path == null) {
       if (context.mounted) {
@@ -92,7 +92,7 @@ class VideoBackgroundEditor extends StatelessWidget {
 
   Future<void> _pickFromDisk(BuildContext context) async {
     final result = await FilePicker.pickFiles(type: FileType.video);
-    if (result == null) return;
+    if (result.isEmpty) return;
     final path = result.single.path;
     if (path == null) {
       if (context.mounted) {

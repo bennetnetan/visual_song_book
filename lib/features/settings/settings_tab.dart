@@ -244,7 +244,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     try {
       final result = await FilePicker.pickFiles(type: FileType.any);
 
-      if (result == null || result.single.path == null) {
+      if (result.isEmpty || result.single.path == null) {
         setState(() {
           _isImporting = false;
           _importStatus = null;
@@ -379,7 +379,6 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
       final uri = await FilePicker.saveFile(
         dialogTitle: 'Save Backup File',
         fileName: 'songbook_backup.vsbook',
-        type: FileType.any,
         bytes: bytes,
       );
 

@@ -54,7 +54,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
         type: FileType.custom,
         allowedExtensions: ['vsbook', 'vsb'],
       );
-      if (result != null && result.isNotEmpty) {
+      if (result.isNotEmpty) {
         final service = ref.read(linkedSongbooksProvider.notifier);
         for (final file in result) {
           if (file.path != null) {

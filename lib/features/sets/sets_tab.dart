@@ -48,7 +48,7 @@ class SetsTab extends ConsumerWidget {
                       type: FileType.custom,
                       allowedExtensions: ['json', 'vsbset'],
                     );
-                    if (result != null && result.single.path != null) {
+                    if (result.isNotEmpty && result.single.path != null) {
                       final path = result.single.path!;
                       final file = File(path);
                       final content = await file.readAsString();
@@ -150,8 +150,6 @@ Future<void> _handleShareJson(
       final uri = await FilePicker.saveFile(
         dialogTitle: 'Export Set List (.json)',
         fileName: '${sanitizedName}_set.json',
-        type: FileType.custom,
-        allowedExtensions: ['json'],
         bytes: Uint8List.fromList(jsonString.codeUnits),
       );
 

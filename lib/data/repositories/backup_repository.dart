@@ -41,7 +41,7 @@ class BackupRepository {
     );
 
     // Encode Zip file
-    return ZipEncoder().encodeBytes(archive)!;
+    return ZipEncoder().encodeBytes(archive);
   }
 
   /// Exports the current database to a [.vsbook] archive file at the specified [targetPath].

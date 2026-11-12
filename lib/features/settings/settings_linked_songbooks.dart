@@ -211,7 +211,7 @@ class LinkedSongbooksCard extends ConsumerWidget {
         type: FileType.custom,
         allowedExtensions: ['vsbook', 'vsb', 'mdb'],
       );
-      if (result == null || result.single.path == null) return;
+      if (result.isEmpty || result.single.path == null) return;
       final path = result.single.path!;
       final name = result.single.name;
 
