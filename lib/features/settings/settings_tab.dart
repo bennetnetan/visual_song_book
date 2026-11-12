@@ -244,7 +244,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     try {
       final result = await FilePicker.pickFiles(type: FileType.any);
 
-      if (result == null || result.files.single.path == null) {
+      if (result == null || result.single.path == null) {
         setState(() {
           _isImporting = false;
           _importStatus = null;
@@ -252,7 +252,7 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
         return;
       }
 
-      final path = result.files.single.path!;
+      final path = result.single.path!;
       final lower = path.toLowerCase();
 
       setState(() => _importStatus = 'Importing...');
@@ -373,23 +373,25 @@ class _SettingsTabState extends ConsumerState<SettingsTab> {
     setState(() => _isExporting = true);
 
     try {
-      final String? targetPath = await FilePicker.saveFile(
+      final backupRepo = ref.read(backupRepositoryProvider);
+      final bytes = await backupRepo.exportBackupBytes();
+
+      final uri = await FilePicker.saveFile(
         dialogTitle: 'Save Backup File',
         fileName: 'songbook_backup.vsbook',
         type: FileType.any,
+        bytes: bytes,
       );
 
-      if (targetPath == null) {
+      if (uri == null) {
         setState(() => _isExporting = false);
         return;
       }
 
-      final cleanPath = targetPath.toLowerCase().endsWith('.vsbook')
-          ? targetPath
-          : '$targetPath.vsbook';
-
-      final backupRepo = ref.read(backupRepositoryProvider);
-      await backupRepo.exportBackup(cleanPath);
+      final path = uri.toFilePath();
+      final cleanPath = path.toLowerCase().endsWith('.vsbook')
+          ? path
+          : '$path.vsbook';
 
       scaffoldMessenger.showSnackBar(
         SnackBar(content: Text('Backup exported to: $cleanPath')),

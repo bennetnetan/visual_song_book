@@ -6,7 +6,7 @@ import FlutterMacOS
 import Foundation
 
 import desktop_multi_window
-import file_picker
+import file_picker_darwin
 import fvp
 import package_info_plus
 import screen_retriever_macos

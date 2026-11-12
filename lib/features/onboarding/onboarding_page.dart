@@ -53,11 +53,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['vsbook', 'vsb'],
-        allowMultiple: true,
       );
-      if (result != null && result.files.isNotEmpty) {
+      if (result != null && result.isNotEmpty) {
         final service = ref.read(linkedSongbooksProvider.notifier);
-        for (final file in result.files) {
+        for (final file in result) {
           if (file.path != null) {
             await service.add(file.path!);
           }

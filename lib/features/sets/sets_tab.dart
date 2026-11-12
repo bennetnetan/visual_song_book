@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,8 +48,8 @@ class SetsTab extends ConsumerWidget {
                       type: FileType.custom,
                       allowedExtensions: ['json', 'vsbset'],
                     );
-                    if (result != null && result.files.single.path != null) {
-                      final path = result.files.single.path!;
+                    if (result != null && result.single.path != null) {
+                      final path = result.single.path!;
                       final file = File(path);
                       final content = await file.readAsString();
                       await ref.read(setsControllerProvider.notifier).importSetFromJson(content);
@@ -135,25 +137,26 @@ class SetsTab extends ConsumerWidget {
     );
   }
 
-  Future<void> _handleShareJson(
-    BuildContext context,
-    WidgetRef ref,
-    int setId,
-    String setName,
-  ) async {
+Future<void> _handleShareJson(
+      BuildContext context,
+      WidgetRef ref,
+      int setId,
+      String setName,
+    ) async {
     try {
       final jsonString = await ref.read(setsControllerProvider.notifier).getSetJsonString(setId);
       final sanitizedName = setName.replaceAll(RegExp(r'[^\w\s\-]'), '').replaceAll(' ', '_');
 
-      final path = await FilePicker.saveFile(
+      final uri = await FilePicker.saveFile(
         dialogTitle: 'Export Set List (.json)',
         fileName: '${sanitizedName}_set.json',
         type: FileType.custom,
         allowedExtensions: ['json'],
+        bytes: Uint8List.fromList(jsonString.codeUnits),
       );
 
-      if (path != null) {
-        final file = File(path);
+      if (uri != null) {
+        final file = File.fromUri(uri);
         await file.writeAsString(jsonString);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

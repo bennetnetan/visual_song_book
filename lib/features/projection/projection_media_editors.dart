@@ -15,7 +15,7 @@ class ImageBackgroundEditor extends StatelessWidget {
   Future<void> _pickFromDisk(BuildContext context) async {
     final result = await FilePicker.pickFiles(type: FileType.image);
     if (result == null) return;
-    final path = result.files.single.path;
+    final path = result.single.path;
     if (path == null) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -93,7 +93,7 @@ class VideoBackgroundEditor extends StatelessWidget {
   Future<void> _pickFromDisk(BuildContext context) async {
     final result = await FilePicker.pickFiles(type: FileType.video);
     if (result == null) return;
-    final path = result.files.single.path;
+    final path = result.single.path;
     if (path == null) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -211,9 +211,9 @@ class LinkedSongbooksCard extends ConsumerWidget {
         type: FileType.custom,
         allowedExtensions: ['vsbook', 'vsb', 'mdb'],
       );
-      if (result == null || result.files.single.path == null) return;
-      final path = result.files.single.path!;
-      final name = result.files.single.name;
+      if (result == null || result.single.path == null) return;
+      final path = result.single.path!;
+      final name = result.single.name;
 
       // Check if already linked
       final existing = ref.read(linkedSongbooksProvider).value ?? [];

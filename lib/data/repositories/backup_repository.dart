@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:visual_song_book/data/services/app_storage.dart';
 
@@ -10,12 +11,8 @@ class BackupRepository {
     return File(dbPath);
   }
 
-  /// Exports the current database to a [.vsbook] archive file at the specified [targetPath].
-  ///
-  /// [databasePath] overrides the active database file location (used by tests
-  /// to keep the round-trip hermetic); when omitted the app-storage database
-  /// is used.
-  Future<void> exportBackup(String targetPath, {String? databasePath}) async {
+  /// Returns the backup as [Uint8List] bytes.
+  Future<Uint8List> exportBackupBytes({String? databasePath}) async {
     final dbFile = databasePath != null
         ? File(databasePath)
         : await _getDatabaseFile();
@@ -44,10 +41,17 @@ class BackupRepository {
     );
 
     // Encode Zip file
-    final zipBytes = ZipEncoder().encodeBytes(archive);
+    return ZipEncoder().encodeBytes(archive)!;
+  }
 
-    // Write to destination
+  /// Exports the current database to a [.vsbook] archive file at the specified [targetPath].
+  ///
+  /// [databasePath] overrides the active database file location (used by tests
+  /// to keep the round-trip hermetic); when omitted the app-storage database
+  /// is used.
+  Future<void> exportBackup(String targetPath, {String? databasePath}) async {
+    final bytes = await exportBackupBytes(databasePath: databasePath);
     final targetFile = File(targetPath);
-    await targetFile.writeAsBytes(zipBytes);
+    await targetFile.writeAsBytes(bytes);
   }
 }
