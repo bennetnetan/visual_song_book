@@ -7,7 +7,9 @@ import 'package:visual_song_book/data/importers/mdb_tools_importer.dart';
 import 'package:visual_song_book/data/importers/vsb_importer.dart';
 
 void main() {
-  test('populate in-memory database with default songbooks', () async {
+  test(
+    'populate in-memory database with default songbooks',
+    () async {
     // Hermetic: no ~/Documents or other user-directory writes. The importer
     // only writes through the drift executor, so an in-memory DB is enough.
     final database = AppDatabase.forTesting();
@@ -45,5 +47,9 @@ void main() {
     final allSongs = await database.select(database.songs).get();
     print('Total songs now in database: ${allSongs.length} (Imported this session: $totalSongs)');
     expect(allSongs, isNotEmpty);
-  });
+  },
+  skip: !Platform.isLinux && !Platform.isMacOS
+      ? 'MdbToolsImporter requires mdbtools CLI (available on Linux/macOS)'
+      : null,
+);
 }
