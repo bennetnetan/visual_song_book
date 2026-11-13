@@ -1,3 +1,10 @@
+import com.android.build.api.variant.SourceDirectories
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -65,19 +72,28 @@ val jackcessResourceExtraction by configurations.creating {
 
 dependencies.add(jackcessResourceExtraction.name, jackcessCoordinate)
 
-val jackcessAndroidResources = layout.buildDirectory.dir("generated/jackcess-res")
-android.sourceSets.getByName("main").res.srcDir(jackcessAndroidResources)
+// AGP 8.x+ forbids passing a Provider to the old SourceSet srcDir() API.
+// Define the task with a proper @OutputDirectory DirectoryProperty so that
+// addGeneratedSourceDirectory (via the androidComponents Variant API) can wire
+// it up without touching the deprecated SourceSet path.
+abstract class ExtractJackcessResTask : DefaultTask() {
+    @get:InputFiles
+    abstract val jackcessConfig: org.gradle.api.file.ConfigurableFileCollection
 
-val extractJackcessAndroidResources by tasks.registering {
-    inputs.files(jackcessResourceExtraction)
-    outputs.dir(jackcessAndroidResources)
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
 
-    doLast {
-        val jackcessJar = jackcessResourceExtraction.files.firstOrNull {
+    @TaskAction
+    fun extract() {
+        val outDir = outputDir.get().asFile
+        outDir.mkdirs()
+
+        val jackcessJar = jackcessConfig.files.firstOrNull {
             it.name.startsWith("jackcess-") && it.extension == "jar"
         } ?: error("Jackcess dependency was not resolved")
-        copy {
-            from(zipTree(jackcessJar)) {
+
+        project.copy {
+            from(project.zipTree(jackcessJar)) {
                 include("com/healthmarketscience/jackcess/*.txt")
                 include("com/healthmarketscience/jackcess/*.mdb")
                 include("com/healthmarketscience/jackcess/*.accdb")
@@ -90,11 +106,25 @@ val extractJackcessAndroidResources by tasks.registering {
                 }
                 includeEmptyDirs = false
             }
-            into(jackcessAndroidResources)
+            into(outDir)
         }
     }
 }
 
-tasks.named("preBuild").configure {
-    dependsOn(extractJackcessAndroidResources)
+val extractJackcessAndroidResources by tasks.registering(ExtractJackcessResTask::class) {
+    jackcessConfig.from(jackcessResourceExtraction)
+    outputDir.set(layout.buildDirectory.dir("generated/jackcess-res"))
+}
+
+// Wire the generated res directory into every variant using the AGP Variant API.
+// addGeneratedSourceDirectory requires a task with a DirectoryProperty output,
+// which is why we use the typed ExtractJackcessResTask above instead of a plain
+// task with outputs.dir().
+androidComponents {
+    onVariants { variant ->
+        variant.sources.res?.addGeneratedSourceDirectory(
+            extractJackcessAndroidResources,
+            ExtractJackcessResTask::outputDir,
+        )
+    }
 }
