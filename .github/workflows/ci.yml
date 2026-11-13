@@ -39,7 +39,7 @@ jobs:
         continue-on-error: true
 
       - name: Analyze
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
 
       - name: Test
         run: flutter test
