@@ -192,10 +192,12 @@ jobs:
           PLUGIN_GRADLE="$HOME/.pub-cache/hosted/pub.dev/android_file_picker-2.1.6/android/build.gradle.kts"
           if [ -f "$PLUGIN_GRADLE" ]; then
             echo "Patching $PLUGIN_GRADLE"
-            # Apply the new Flutter plugin loader before accessing the flutter extension
-            sed -i '/apply(plugin = "com.android.library")/a apply(plugin = "dev.flutter.flutter-plugin-loader")' "$PLUGIN_GRADLE"
-            # Also fix any 'flutter' extension usage to use the proper API
-            sed -i 's/extension\.flutter\./flutter./' "$PLUGIN_GRADLE"
+            # Remove the flutter extension access and hardcode compileSdk (matches app's compileSdk=36)
+            sed -i '/val flutterExtension = extensions.getByName("flutter") as GroovyObject/d' "$PLUGIN_GRADLE"
+            sed -i '/val flutterCompileSdkVersion = flutterExtension.intProperty("compileSdkVersion")/d' "$PLUGIN_GRADLE"
+            sed -i 's/compileSdk = flutterCompileSdkVersion/compileSdk = 36/' "$PLUGIN_GRADLE"
+            # Also remove any flutter-plugin-loader apply if present (must be in settings, not build script)
+            sed -i '/apply(plugin = "dev.flutter.flutter-plugin-loader")/d' "$PLUGIN_GRADLE"
             echo "Patch applied"
             cat "$PLUGIN_GRADLE"
           else
