@@ -192,11 +192,12 @@ jobs:
           PLUGIN_GRADLE="$HOME/.pub-cache/hosted/pub.dev/android_file_picker-2.1.6/android/build.gradle.kts"
           if [ -f "$PLUGIN_GRADLE" ]; then
             echo "Patching $PLUGIN_GRADLE"
-            # Replace old flutter extension with new plugin application
-            sed -i 's/id("flutter")/id("dev.flutter.flutter-plugin-loader")/' "$PLUGIN_GRADLE"
+            # Apply the new Flutter plugin loader before accessing the flutter extension
+            sed -i '/apply(plugin = "com.android.library")/a apply(plugin = "dev.flutter.flutter-plugin-loader")' "$PLUGIN_GRADLE"
             # Also fix any 'flutter' extension usage to use the proper API
             sed -i 's/extension\.flutter\./flutter./' "$PLUGIN_GRADLE"
             echo "Patch applied"
+            cat "$PLUGIN_GRADLE"
           else
             echo "Plugin gradle file not found at $PLUGIN_GRADLE"
           fi
