@@ -20,7 +20,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.9'
+          flutter-version: '3.49.0'
           cache: true
 
       - name: Install Linux build deps
@@ -96,7 +96,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.9'
+          flutter-version: '3.49.0'
           cache: true
 
       - name: Install Linux build deps
@@ -169,7 +169,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.9'
+          flutter-version: '3.49.0'
           cache: true
 
       # Android SDK, NDK and Gradle caches are large; reclaim what the runner
@@ -240,7 +240,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.9'
+          flutter-version: '3.49.0'
           cache: true
 
       - name: Build iOS app (unsigned)
@@ -270,7 +270,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.9'
+          flutter-version: '3.49.0'
           cache: true
 
       - name: Install Inno Setup
