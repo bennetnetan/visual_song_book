@@ -182,6 +182,10 @@ jobs:
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup 2>/dev/null || true
           df -h /
 
+      # Fetch dependencies so the android_file_picker plugin is downloaded
+      - name: Get dependencies
+        run: flutter pub get
+
       # Patch android_file_picker plugin to work with AGP 8.x (removed 'flutter' extension)
       - name: Patch android_file_picker plugin
         run: |
