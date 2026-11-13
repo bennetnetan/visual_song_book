@@ -182,6 +182,21 @@ jobs:
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup 2>/dev/null || true
           df -h /
 
+      # Patch android_file_picker plugin to work with AGP 8.x (removed 'flutter' extension)
+      - name: Patch android_file_picker plugin
+        run: |
+          PLUGIN_GRADLE="$HOME/.pub-cache/hosted/pub.dev/android_file_picker-2.1.6/android/build.gradle.kts"
+          if [ -f "$PLUGIN_GRADLE" ]; then
+            echo "Patching $PLUGIN_GRADLE"
+            # Replace old flutter extension with new plugin application
+            sed -i 's/id("flutter")/id("dev.flutter.flutter-plugin-loader")/' "$PLUGIN_GRADLE"
+            # Also fix any 'flutter' extension usage to use the proper API
+            sed -i 's/extension\.flutter\./flutter./' "$PLUGIN_GRADLE"
+            echo "Patch applied"
+          else
+            echo "Plugin gradle file not found at $PLUGIN_GRADLE"
+          fi
+
       - name: Build APK (release)
         run: flutter build apk --release --android-skip-build-dependency-validation
 
