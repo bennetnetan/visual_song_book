@@ -17,7 +17,7 @@ import 'package:visual_song_book/data/services/linked_songbooks_watcher.dart';
 import 'package:visual_song_book/features/onboarding/onboarding_page.dart';
 import 'package:visual_song_book/features/settings/update_notification_listener.dart';
 import 'package:visual_song_book/routing/app_router.dart';
-import 'package:window_manager/window_manager.dart';
+import 'package:window_manager/legacy.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();

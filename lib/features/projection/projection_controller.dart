@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:desktop_multi_window/desktop_multi_window.dart';
-import 'package:screen_retriever/screen_retriever.dart';
+import 'package:screen_retriever/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
