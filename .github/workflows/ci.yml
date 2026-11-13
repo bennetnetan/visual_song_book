@@ -196,7 +196,10 @@ jobs:
             sed -i '/val flutterExtension = extensions.getByName("flutter") as GroovyObject/d' "$PLUGIN_GRADLE"
             sed -i '/val flutterCompileSdkVersion = flutterExtension.intProperty("compileSdkVersion")/d' "$PLUGIN_GRADLE"
             sed -i 's/compileSdk = flutterCompileSdkVersion/compileSdk = 36/' "$PLUGIN_GRADLE"
-            # Also remove any flutter-plugin-loader apply if present (must be in settings, not build script)
+            # Also update the plugin's buildscript to use matching AGP/Kotlin versions
+            sed -i 's/classpath("com.android.tools.build:gradle:8.5.2")/classpath("com.android.tools.build:gradle:8.11.1")/' "$PLUGIN_GRADLE"
+            sed -i 's/classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.22")/classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.20")/' "$PLUGIN_GRADLE"
+            # Remove any flutter-plugin-loader apply if present (must be in settings, not build script)
             sed -i '/apply(plugin = "dev.flutter.flutter-plugin-loader")/d' "$PLUGIN_GRADLE"
             echo "Patch applied"
             cat "$PLUGIN_GRADLE"
